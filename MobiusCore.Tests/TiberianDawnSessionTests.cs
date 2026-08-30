@@ -20,6 +20,8 @@ namespace MobiusCore.Tests
             Assert.Equal(GameType.TiberianDawn, plugin.GameInfo.GameType);
             Assert.Empty(errors);
             Assert.True(plugin.Map.Templates.Count() > 100, "map has no terrain; BIN not loaded?");
+            Assert.Equal(64, plugin.Map.Metrics.Width);
+            Assert.Equal(64, plugin.Map.Metrics.Height);
             Assert.True(plugin.Map.Bounds.Width > 10);
         }
     }

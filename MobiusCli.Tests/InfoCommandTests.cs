@@ -47,6 +47,7 @@ namespace MobiusCli.Tests
             Assert.True(code == 0, stderr);
             Assert.Contains("game: TiberianDawn", stdout);
             Assert.Contains("theater: Desert", stdout);
+            Assert.Contains("size: 64x64", stdout);
             Assert.Contains("bounds: 1,1 52x54", stdout);
             Assert.Contains("load errors: 0", stdout);
         }

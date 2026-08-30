@@ -82,10 +82,12 @@ namespace MobiusEditor.Headless
             }
             Globals.TheTilesetManager = manager;
             foreach (TheaterType t in GameInfo.AllTheaters) t.IsRemasterTilesetFound = manager.TilesetExists(t.MainTileset);
-            IGamePlugin plugin = GameInfo.CreatePlugin(false, true);
             FileType ft = FileType.INI;
             string binPath = GameType == GameType.RedAlert ? null : SiblingBin(mapPath);
             byte[] binContent = binPath == null ? null : File.ReadAllBytes(binPath);
+            // Classic TD terrain is 64x64 (8 KiB of cells); the editor's 128x128 "megamap" .bin is four times that.
+            bool megaMap = GameType == GameType.RedAlert || (binContent != null && binContent.Length >= 128 * 128 * 2);
+            IGamePlugin plugin = GameInfo.CreatePlugin(false, megaMap);
             errors = plugin.Load(mapPath, mapPath, File.ReadAllBytes(mapPath), binPath, binContent, ref ft).ToArray();
             return plugin;
         }
