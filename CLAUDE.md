@@ -11,8 +11,11 @@ MobiusCore/          net8 class library: the Mobius editor core (Model/ Utility/
                      TiberianDawn/ SoleSurvivor/ Render/ Interface/), copied once from the fork
                      and owned here. Drawing/ = Skia-backed System.Drawing shim. Properties/ =
                      settings + embedded resources. Shell hooks: Utility/CoreDiagnostics.cs.
-MobiusCli/           `cncmap` console tool over MobiusCore/Headless/EditorSession (info, render, save).
+MobiusCli/           `cncmap` console tool over MobiusCore/Headless/EditorSession (info, validate, render, save, mods).
 MobiusCli.Tests/     xUnit, drives Cli.Run in-process.
+MobiusEditor.Shell/  GUI view-models with no toolkit types (MapDocument); tested headless in MobiusEditor.Shell.Tests.
+MobiusEditor.App/    Avalonia 12 window over the Shell. `dotnet run --project MobiusEditor.App -- [map] [--mod <dir>]`.
+cnc-map-editor.slnx  solution for Rider.
 MobiusCore.Tests/    xUnit. EditorHost brings the core up headlessly; MapRenderOracleTests is the
                      renderer oracle; DrawingShimTests pin GDI+ semantics.
 oracle/              regen.sh renders reference PNGs with the fork's mono RenderProbe (PNGs are
@@ -26,7 +29,9 @@ artifacts/           test output (gitignored).
 export PATH="$HOME/.dotnet:$PATH"
 dotnet build MobiusCore
 env -u DISPLAY dotnet test MobiusCore.Tests --filter Category!=Oracle   # inner loop, seconds
-env -u DISPLAY dotnet test MobiusCli.Tests                              # CLI, ~30 s
+env -u DISPLAY dotnet test MobiusCli.Tests                              # CLI, ~1 min
+env -u DISPLAY dotnet test MobiusEditor.Shell.Tests                     # GUI view-models, seconds
+env -u DISPLAY dotnet test MobiusEditor.App.Tests                       # Avalonia headless UI, seconds
 env -u DISPLAY dotnet test MobiusCore.Tests                              # + oracle tier (~3 min): 2 renders, 31 round trips
 dotnet run --project MobiusCli -- info <map> [--mod <dir>]              # the CLI itself
 ```
@@ -47,6 +52,8 @@ display and anything that tries to open one is a bug.
 - The shim implements only what the core calls; extend it when a new call site appears, with a
   test in `DrawingShimTests`. Keep the 1:1 blit path exact (pixman rounding).
 - Core must never reference WinForms, Steamworks, or a display. Shell concerns go through
-  `CoreDiagnostics` hooks.
+  `CoreDiagnostics` hooks. GUI logic lives in `MobiusEditor.Shell` (no Avalonia types) so it is
+  tested headless; `MobiusEditor.App` views stay thin. Don't launch the app on Luke's desktop to
+  check it — use the Avalonia headless tests.
 - Unknown ≠ delete: loading stays lossless (see PLAN.md, "Mod awareness").
 - Licence GPL v3 + EA Section 7; keep upstream attribution. No `Co-Authored-By` trailers.
