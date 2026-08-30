@@ -252,7 +252,15 @@ would only tempt the native editor to slip. Not part of the plan.
    `scmd0`–`scmm9`), not the 124 the display list shows; they join the round-trip oracle
    (`oracle/saves-official/`). Still to add: `validate`, query/mutate commands.
 3. Mod profiles + manifest format (contract with the mod repo; provisional names
-   `mapeditor.json` / `[MapEditor]`), lossless loading of unknown entities.
+   `mapeditor.json` / `[MapEditor]`). STARTED: `ModDiscovery` reads `ccmod.json` under a Mods
+   root (Proton prefix Documents on Linux) and the Workshop cache; `cncmap mods` lists them in
+   load order; `EditorSession` takes the ordered mod list; `cncmap validate` = load errors +
+   unknown entries + the plugin's blocking-save check. Not yet: per-mod editor manifest, map
+   remembering its profile, vanilla-safe classification. ~~Lossless loading of unknown entities~~ DONE 2026-08-30:
+   `Map.UnknownEntries` keeps unknown structures/units/infantry/aircraft/ships/terrain/smudge
+   verbatim and the RA save writes them back after the known entries (`LosslessLoadTests`);
+   `cncmap info` lists them. Not yet covered: `[OVERLAY]` text entries, unknown trigger/team
+   references, TD plugin.
 4. The Avalonia shell with triggers designed in.
 
 Open shim gaps to close as they are hit: `RotateFlip` rotations, sub-byte indexed writes,

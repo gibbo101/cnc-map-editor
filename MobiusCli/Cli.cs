@@ -41,7 +41,7 @@ namespace MobiusCli
 
     public static class Cli
     {
-        public const string Usage = "usage: cncmap <info|render|save> <map> [args] [--game <dir>] [--mod <dir>]...";
+        public const string Usage = "usage: cncmap <info|validate|render|save> <map> [args] [--game <dir>] [--mod <dir>]...\n       cncmap mods [--mods-root <dir>] [--no-workshop]";
 
         /// <summary>Runs one command; returns the process exit code. Errors go to stderr, results to stdout.</summary>
         public static int Run(string[] args, TextWriter stdout, TextWriter stderr)
@@ -53,6 +53,8 @@ namespace MobiusCli
                 switch (inv.Command)
                 {
                     case "info": return Commands.Info(inv, OpenSession(inv), stdout);
+                    case "validate": return Commands.Validate(inv, OpenSession(inv), stdout);
+                    case "mods": return Commands.Mods(inv, stdout);
                     case "render": return Commands.Render(inv, OpenSession(inv), stdout);
                     case "save": return Commands.Save(inv, OpenSession(inv), stdout);
                     case null: stderr.WriteLine(Usage); return 2;

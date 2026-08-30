@@ -47,6 +47,37 @@ namespace MobiusCli
             return 0;
         }
 
+        /// <summary>Exit 0 when the map would save cleanly with no unknown entries; 1 otherwise, with the reasons on stdout.</summary>
+        public static int Validate(Invocation inv, EditorSession session, TextWriter o)
+        {
+            string mapPath = MapArg(inv);
+            IGamePlugin plugin = session.Load(mapPath, out string[] errors);
+            int problems = 0;
+            foreach (string e in errors) { o.WriteLine("load: " + e); problems++; }
+            foreach (UnknownEntry u in plugin.Map.UnknownEntries) { o.WriteLine("unknown: " + u); problems++; }
+            string blocking = plugin.Validate(FileType.INI, false, true);
+            if (!string.IsNullOrWhiteSpace(blocking)) { o.WriteLine("validate: " + blocking.Trim()); problems++; }
+            o.WriteLine(problems == 0 ? "ok" : problems + " problem(s)");
+            return problems == 0 ? 0 : 1;
+        }
+
+        public static int Mods(Invocation inv, TextWriter o)
+        {
+            string gameType = inv.Option("game-type", "RA");
+            string root = inv.Option("mods-root") ?? ModDiscovery.DefaultModsRoot(MobiusEditor.Program.RemasterSteamId);
+            int n = 0;
+            if (root != null && Directory.Exists(root))
+            {
+                foreach (ModInfo m in ModDiscovery.Scan(root, gameType)) { o.WriteLine(m.ToString()); n++; }
+            }
+            if (inv.Option("no-workshop", "false") != "true")
+            {
+                foreach (ModInfo m in ModDiscovery.ScanWorkshop(MobiusEditor.Program.RemasterSteamId, gameType)) { o.WriteLine(m.ToString()); n++; }
+            }
+            o.WriteLine(n + " mod(s)");
+            return 0;
+        }
+
         public static int Render(Invocation inv, EditorSession session, TextWriter o)
         {
             string mapPath = MapArg(inv);
