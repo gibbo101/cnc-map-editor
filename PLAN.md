@@ -129,9 +129,12 @@ Note this cuts both ways. `TriggersDialog` is the largest and fiddliest thing in
 half-done trigger editor that silently writes bad triggers is worse than WinForms under Wine.
 But EA's trigger UI is also raw event and action rows, and our 17 missions use a narrow,
 repeating pattern set: pre-placed enemy base, triggered attack waves, reinforcements,
-destroy-all win, briefing. A purpose-built UI could offer **mission-pattern templates** instead
-of raw trigger rows. That is the strongest version of the flexibility argument: genuinely better
-than EA's, not just the same thing on Linux.
+destroy-all win, briefing. **DECIDED (Luke, 2026-08-30 evening): templates are generators over
+real raw rows, never a replacement.** The foundation is a complete raw trigger/teamtype model,
+byte-round-trip tested against real maps; mission-pattern templates expand into ordinary raw
+triggers the user can still open, tweak or delete. Generators are pure functions (spec in →
+trigger lines out): headless-testable and CLI-drivable, which is how campaign scaffolding gets
+generated from a mission spec. Raw rows stay visible in an advanced view by choice.
 
 Timing gives us runway. Campaign authoring is deferred behind the AI milestone, so nothing is
 blocked today. That is runway, not permission to descope triggers.
