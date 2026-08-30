@@ -26,15 +26,6 @@ using System.Text.RegularExpressions;
 namespace MobiusEditor.Utility
 {
 
-    public class CustomComponentResourceManager : ComponentResourceManager
-    {
-        public CustomComponentResourceManager(Type type, string resourceName)
-           : base(type)
-        {
-            this.BaseNameField = resourceName;
-        }
-    }
-
     /// <summary>
     /// Compares strings in the way Windows Explorer does, detecting numbers
     /// inside the strings and logically ordering them by numeric value.

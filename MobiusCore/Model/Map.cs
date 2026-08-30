@@ -15,7 +15,7 @@
 using MobiusEditor.Event;
 using MobiusEditor.Interface;
 using MobiusEditor.Render;
-using MobiusEditor.Tools;
+
 using MobiusEditor.Utility;
 using System;
 using System.Collections.Generic;
@@ -689,7 +689,7 @@ namespace MobiusEditor.Model
                     {
                         message = GeneralUtils.RecoverArgExceptionMessage(argex, false);
                     }
-                    System.Windows.Forms.MessageBox.Show("An error occurred while initialising the map data for the current theater.\n\n" + ex.Message + "\n" + ex.StackTrace, "Whoops!");
+                    CoreDiagnostics.Report("Whoops!", "An error occurred while initialising the map data for the current theater.\n\n" + message + "\n" + ex.StackTrace);
                 }
             }
         }
@@ -2009,7 +2009,7 @@ namespace MobiusEditor.Model
                     MapRenderer.Render(plugin.GameInfo, this, g, locations, toRender, tileScale, highlightFlags, shapeCache);
                     if (toRender.HasAnyFlags(MapLayerFlag.Indicators))
                     {
-                        ViewTool.RenderIndicators(g, plugin, this, tileScale, toRender, MapLayerFlag.None, false, plugin.Map.Metrics.Bounds);
+                        IndicatorRenderer.RenderIndicators(g, plugin, this, tileScale, toRender, MapLayerFlag.None, false, plugin.Map.Metrics.Bounds);
                     }
                 }
                 using (Graphics g = Graphics.FromImage(croppedBitmap))

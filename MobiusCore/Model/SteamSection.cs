@@ -12,7 +12,6 @@
 // distributed with this program. You should have received a copy of the
 // GNU General Public License along with permitted additional restrictions
 // with this program. If not, see https://github.com/electronicarts/CnC_Remastered_Collection
-using Steamworks;
 using System;
 using System.Linq;
 using System.ComponentModel;
@@ -22,6 +21,15 @@ using MobiusEditor.Utility;
 
 namespace MobiusEditor.Model
 {
+    /// <summary>Workshop visibility values, named as Steamworks names them so INI round-trips are unchanged.</summary>
+    public enum ERemoteStoragePublishedFileVisibility
+    {
+        k_ERemoteStoragePublishedFileVisibilityPublic = 0,
+        k_ERemoteStoragePublishedFileVisibilityFriendsOnly = 1,
+        k_ERemoteStoragePublishedFileVisibilityPrivate = 2,
+        k_ERemoteStoragePublishedFileVisibilityUnlisted = 3,
+    }
+
     public class SteamSection
     {
         [NonSerializedINIKey]
