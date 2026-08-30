@@ -3,8 +3,9 @@
 Decision record and plan, 2026-08-23. Written at the end of a session that set out to edit the
 official RA skirmish maps and instead spent most of its time fighting the mono runtime.
 
-**Status: DECIDED IN PRINCIPLE, NOT STARTED.** One de-risking spike gates the whole thing.
-Pick this up at the start of the next map-editor session, before any map content work.
+**Status (2026-08-30): RENDERER SPIKE PASSED. Core builds and renders on net8/Linux; next is
+the scaffold (headless CLI, mod profiles, then the Avalonia shell).** Repo: `cnc-map-editor/`
+(this file); the mono fork `../mobius-editor/` is the reference and oracle.
 
 ---
 
@@ -69,6 +70,29 @@ core we are counting on reusing, not in the UI we are planning to replace.
 - Scaled renders: not compared to GDI+ at all; a Skia-only golden reviewed by eye then locked.
 - If a map-layer pixel refuses to match, suspect the oracle as well as the port (the blossom
   tree that never draws is a candidate) and say which it was.
+
+**RESULT (2026-08-30): PASSED.** `MobiusCore/` (the fork's core, copied once and owned) builds
+on net8 with a Skia-backed `System.Drawing` shim (`MobiusCore/Drawing/`, ~15 types, only the
+surface the core calls). `MobiusCore.Tests/MapRenderOracleTests` renders `scm05ea` (official)
+and TF CustomMap 06 (mod tiles + entities) at scale 1.0 and compares against the mono
+`RenderProbe` PNGs: **zero pixels anywhere differ by more than 3, and zero pixels outside
+partial-alpha sprite coverage differ at all.** 0.17% of pixels differ by ≤3, all under a
+partially transparent sprite pixel. 19 tests, ~1 minute.
+
+Findings on the way to green, each of which would have been a silent bug:
+- **Pfim version:** the fork pins Pfim 0.10.1; 0.11.2 decodes DXT with different rounding →
+  two-thirds of all terrain pixels off by one. The core must pin the same version as any oracle.
+- **`Point.GetHashCode` is randomised per process on modern .NET.** `Map.UpdateResourceOverlays`
+  seeded `Random` with it to pick ore/gem variants, so variants would change every run.
+  Replaced with `DeterministicRandom` (the Framework Knuth generator, pinned by tests) seeded
+  from the corefx point hash the mono editor computes (`((X << 5) + X) ^ Y`).
+- **libgdiplus is the lossy one.** Its drawn bitmaps live as premultiplied cairo surfaces; a
+  brute-force search showed two truncating premultiply/unpremultiply round trips on the sprite
+  plus pixman's OVER reproduce 99.3% of the oracle's semi-transparent pixels. Our 1:1 blit uses
+  pixman rounding on the untouched source art, so those pixels are more faithful than the
+  oracle. Criterion adjusted to bound them (≤3, only under partial alpha) rather than emulate.
+- The shim's 1:1 `DrawImage` path is a C# blit (also faster); Skia handles scaled draws, shapes
+  and text. `PixelOffsetMode.Half` maps to a −0.5 translate for scaled draws.
 
 Same de-risking pattern as the TS asset spike and the desert theatre spike: prove the one hard
 thing in isolation before committing to the surrounding work.
@@ -219,8 +243,16 @@ would only tempt the native editor to slip. Not part of the plan.
 
 ## Order of work for the next session
 
-1. **The renderer spike.** Gate on the whole plan.
-2. Only if 1 passes: scaffold core + headless CLI, then the GUI shell with triggers designed in.
+1. ~~The renderer spike.~~ PASSED 2026-08-30.
+2. **Scaffold the headless CLI** over `MobiusCore` (open / query / validate / render / save),
+   test-first; the round-trip test over all 31 CustomMaps + the 124 official maps is the next
+   oracle (byte-identical save, using the mono editor's saves as reference).
+3. Mod profiles + manifest format (contract with the mod repo; provisional names
+   `mapeditor.json` / `[MapEditor]`), lossless loading of unknown entities.
+4. The Avalonia shell with triggers designed in.
+
+Open shim gaps to close as they are hit: `RotateFlip` rotations, sub-byte indexed writes,
+text metrics are approximate (annotation layers only), `Region.Exclude` on infinite regions.
 
 Current blocker if you go back to the existing editor first: tool dialogs never become visible.
 Diagnosis and the prime suspect are at the top of `NATIVE_PORT_HANDOVER.md`.
