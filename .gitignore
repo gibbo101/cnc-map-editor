@@ -6,4 +6,6 @@ obj/
 TestResults/
 /artifacts/
 oracle/*.png
+oracle/saves/
+oracle/saves-official/
 artifacts/

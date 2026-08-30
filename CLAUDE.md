@@ -18,8 +18,11 @@ MobiusEditor.App/    Avalonia 12 window over the Shell. `dotnet run --project Mo
 cnc-map-editor.slnx  solution for Rider.
 MobiusCore.Tests/    xUnit. EditorHost brings the core up headlessly; MapRenderOracleTests is the
                      renderer oracle; DrawingShimTests pin GDI+ semantics.
-oracle/              regen.sh renders reference PNGs with the fork's mono RenderProbe (PNGs are
-                     gitignored, 50-70 MB each; regenerate when the fork changes).
+oracle/              regen.sh generates every oracle fixture with the fork's mono probes: the
+                     reference PNGs (50-70 MB each) and the saves/ + saves-official/ reference
+                     saves. ALL fixtures are gitignored — the saves derive from EA map data, so
+                     they must never be committed; each machine regenerates them from its own
+                     game install (and again whenever the fork changes).
 artifacts/           test output (gitignored).
 ```
 

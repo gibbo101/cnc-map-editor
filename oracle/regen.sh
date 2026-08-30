@@ -8,6 +8,7 @@ OUT=$(cd "$(dirname "$0")" && pwd)
 MAPS=$HOME/Documents/development/cnc-remastered-mods/map-edits
 TF=$HOME/Documents/development/cnc-remastered-mods/cnc-ra-tiberian-factions/build/remaster/Vanilla_RA/CustomMaps
 mono-csc -nologo -r:$REL/MobiusMapEditor.exe -r:System.Drawing.dll -out:/tmp/renderprobe.exe $FORK/tools/probes/RenderProbe.cs
+mono-csc -nologo -r:$REL/MobiusMapEditor.exe -r:System.Drawing.dll -out:/tmp/rtprobe.exe $FORK/tools/probes/RoundTripProbe.cs
 cd $REL
 run() { env -u DISPLAY MONO_PATH=$REL:$REL/bin mono /tmp/renderprobe.exe "$1" "$OUT/$2" "${3:-1.0}" | tail -1; }
 run $MAPS/scm05ea.ini scm05ea-maplayers-1.0.png
