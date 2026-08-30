@@ -14,7 +14,7 @@ See `PLAN.md` for the decision record and `CLAUDE.md` for working conventions.
 ```bash
 export PATH="$HOME/.dotnet:$PATH"
 dotnet run --project MobiusCli -- info <map> [--mod <dir>]...        # describe a map (game, theater, bounds, counts, unknown entries)
-dotnet run --project MobiusCli -- validate <map>                      # exit 0 when it would save cleanly
+dotnet run --project MobiusCli -- validate <map>                      # exit 0 when nothing would be lost (legacy conversions are notes)
 dotnet run --project MobiusCli -- render <map> out.png --scale 0.25 --bounds-only
 dotnet run --project MobiusCli -- save <map> <out>                    # never overwrites the input
 dotnet run --project MobiusCli -- mods                                # installed mods (Mods root + Workshop cache)
