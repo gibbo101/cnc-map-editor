@@ -40,6 +40,8 @@ namespace MobiusCli
             o.WriteLine("triggers: " + map.Triggers.Count);
             o.WriteLine("teamtypes: " + map.TeamTypes.Count);
             o.WriteLine("waypoints: " + map.Waypoints.Count(w => w.Cell.HasValue));
+            o.WriteLine("unknown entries: " + map.UnknownEntries.Count);
+            foreach (UnknownEntry u in map.UnknownEntries) o.WriteLine("  " + u);
             o.WriteLine("load errors: " + errors.Length);
             foreach (string e in errors) o.WriteLine("  " + e);
             return 0;

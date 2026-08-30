@@ -1756,8 +1756,8 @@ namespace MobiusEditor.RedAlert
                 SmudgeType smudgeType = badCrater ? SmudgeTypes.Crater1 : Map.SmudgeTypes.Where(t => t.Equals(tokens[0])).FirstOrDefault();
                 if (smudgeType == null)
                 {
-                    errors.Add(String.Format("Smudge '{0}' references unknown smudge.", tokens[0]));
-                    modified = true;
+                    errors.Add(String.Format("Smudge '{0}' references unknown smudge; kept as-is.", tokens[0]));
+                    Map.UnknownEntries.Add(new UnknownEntry("SMUDGE", kvp.Key, kvp.Value, "unknown type " + tokens[0]));
                     continue;
                 }
                 if (Globals.FilterTheaterObjects && !smudgeType.ExistsInTheater)
@@ -1819,8 +1819,8 @@ namespace MobiusEditor.RedAlert
                 UnitType unitType = Map.AllUnitTypes.Where(t => t.IsGroundUnit && t.Equals(tokens[1])).FirstOrDefault();
                 if (unitType == null)
                 {
-                    errors.Add(String.Format("Unit '{0}' references unknown unit.", tokens[1]));
-                    modified = true;
+                    errors.Add(String.Format("Unit '{0}' references unknown unit; kept as-is.", tokens[1]));
+                    Map.UnknownEntries.Add(new UnknownEntry("UNITS", kvp.Key, kvp.Value, "unknown type " + tokens[1]));
                     continue;
                 }
                 if (!Map.BasicSection.ExpansionEnabled && unitType.IsExpansionOnly)
@@ -1984,8 +1984,8 @@ namespace MobiusEditor.RedAlert
                 UnitType aircraftType = Map.AllUnitTypes.Where(t => t.IsAircraft && t.Equals(tokens[1])).FirstOrDefault();
                 if (aircraftType == null)
                 {
-                    errors.Add(String.Format("Aircraft '{0}' references unknown aircraft.", tokens[1]));
-                    modified = true;
+                    errors.Add(String.Format("Aircraft '{0}' references unknown aircraft; kept as-is.", tokens[1]));
+                    Map.UnknownEntries.Add(new UnknownEntry("AIRCRAFT", kvp.Key, kvp.Value, "unknown type " + tokens[1]));
                     continue;
                 }
                 if (!Map.BasicSection.ExpansionEnabled && aircraftType.IsExpansionOnly)
@@ -2123,8 +2123,8 @@ namespace MobiusEditor.RedAlert
                 UnitType vesselType = Map.AllUnitTypes.Where(t => t.IsVessel && t.Equals(tokens[1])).FirstOrDefault();
                 if (vesselType == null)
                 {
-                    errors.Add(String.Format("Ship '{0}' references unknown ship.", tokens[1]));
-                    modified = true;
+                    errors.Add(String.Format("Ship '{0}' references unknown ship; kept as-is.", tokens[1]));
+                    Map.UnknownEntries.Add(new UnknownEntry("SHIPS", kvp.Key, kvp.Value, "unknown type " + tokens[1]));
                     continue;
                 }
                 if (!Map.BasicSection.ExpansionEnabled && vesselType.IsExpansionOnly)
@@ -2277,8 +2277,8 @@ namespace MobiusEditor.RedAlert
                 InfantryType infantryType = Map.AllInfantryTypes.Where(t => t.Equals(tokens[1])).FirstOrDefault();
                 if (infantryType == null)
                 {
-                    errors.Add(String.Format("Infantry '{0}' references unknown infantry.", tokens[1]));
-                    modified = true;
+                    errors.Add(String.Format("Infantry '{0}' references unknown infantry; kept as-is.", tokens[1]));
+                    Map.UnknownEntries.Add(new UnknownEntry("INFANTRY", kvp.Key, kvp.Value, "unknown type " + tokens[1]));
                     continue;
                 }
                 if (!Map.BasicSection.ExpansionEnabled && infantryType.IsExpansionOnly)
@@ -2456,8 +2456,8 @@ namespace MobiusEditor.RedAlert
                 BuildingType buildingType = Map.BuildingTypes.Where(t => t.Equals(tokens[1])).FirstOrDefault();
                 if (buildingType == null)
                 {
-                    errors.Add(String.Format("Structure '{0}' references unknown structure.", tokens[1]));
-                    modified = true;
+                    errors.Add(String.Format("Structure '{0}' references unknown structure; kept as-is.", tokens[1]));
+                    Map.UnknownEntries.Add(new UnknownEntry("STRUCTURES", kvp.Key, kvp.Value, "unknown type " + tokens[1]));
                     continue;
                 }
                 if (Globals.FilterTheaterObjects && buildingType.IsTheaterDependent && !buildingType.ExistsInTheater)
@@ -2726,8 +2726,8 @@ namespace MobiusEditor.RedAlert
                 TerrainType terrainType = Map.TerrainTypes.Where(t => t.Equals(name)).FirstOrDefault();
                 if (terrainType == null)
                 {
-                    errors.Add(String.Format("Terrain '{0}' references unknown terrain.", name));
-                    modified = true;
+                    errors.Add(String.Format("Terrain '{0}' references unknown terrain; kept as-is.", name));
+                    Map.UnknownEntries.Add(new UnknownEntry("TERRAIN", kvp.Key, kvp.Value, "unknown type " + name));
                     continue;
                 }
                 if (Globals.FilterTheaterObjects && !terrainType.ExistsInTheater)
@@ -3948,6 +3948,7 @@ namespace MobiusEditor.RedAlert
                     resolvedSmudge[actualCell] = smudge;
                 }
             }
+            AppendUnknownEntries(smudgeSection, "SMUDGE");
             foreach (int cell in resolvedSmudge.Keys.OrderBy(c => c))
             {
                 Smudge smudge = resolvedSmudge[cell];
@@ -3961,6 +3962,7 @@ namespace MobiusEditor.RedAlert
                     terrainSection[cell.ToString()] = terrain.Type.Name.ToUpperInvariant();
                 }
             }
+            AppendUnknownEntries(terrainSection, "TERRAIN");
             INISection cellTriggersSection = ini.Sections.Add("CellTriggers");
             foreach (var (cell, cellTrigger) in Map.CellTriggers.OrderBy(t => t.Cell))
             {
@@ -4028,6 +4030,7 @@ namespace MobiusEditor.RedAlert
                     );
                 }
             }
+            AppendUnknownEntries(infantrySection, "INFANTRY", ref infantryIndex);
             INISection structuresSection = ini.Sections.Add("STRUCTURES");
             int structureIndex = 0;
             foreach (var (location, building) in Map.Buildings.OfType<Building>().Where(x => x.Occupier.IsPrebuilt).OrderBy(b => Map.Metrics.GetCell(b.Location)))
@@ -4049,6 +4052,7 @@ namespace MobiusEditor.RedAlert
                     building.Rebuild ? 1 : 0
                 );
             }
+            AppendUnknownEntries(structuresSection, "STRUCTURES", ref structureIndex);
             INISection baseSectionOld = ini.Sections.Extract("Base");
             if (baseSectionOld != null)
             {
@@ -4099,6 +4103,7 @@ namespace MobiusEditor.RedAlert
                     unit.Trigger
                 );
             }
+            AppendUnknownEntries(unitsSection, "UNITS", ref unitIndex);
             // Classic game does not support this, so it's disabled by default.
             if (!Globals.DisableAirUnits)
             {
@@ -4121,6 +4126,7 @@ namespace MobiusEditor.RedAlert
                         String.IsNullOrEmpty(aircraft.Mission) ? "Guard" : aircraft.Mission
                     );
                 }
+                AppendUnknownEntries(aircraftSection, "AIRCRAFT", ref aircraftIndex);
             }
             INISection shipsSection = ini.Sections.Add("SHIPS");
             int shipsIndex = 0;
@@ -4142,6 +4148,7 @@ namespace MobiusEditor.RedAlert
                     ship.Trigger
                 );
             }
+            AppendUnknownEntries(shipsSection, "SHIPS", ref shipsIndex);
             INISection triggersSection = ini.Sections.Add("Trigs");
             foreach (var trigger in Map.Triggers)
             {
@@ -5932,5 +5939,22 @@ namespace MobiusEditor.RedAlert
             Dispose(true);
         }
         #endregion
+
+        /// <summary>Writes back entries the profile could not interpret, after the known ones in the same section.</summary>
+        private void AppendUnknownEntries(INISection section, string sectionName, ref int nextIndex)
+        {
+            foreach (UnknownEntry entry in Map.UnknownEntries.Where(u => string.Equals(u.Section, sectionName, StringComparison.OrdinalIgnoreCase)))
+            {
+                section[(nextIndex++).ToString("D3")] = entry.Value;
+            }
+        }
+
+        private void AppendUnknownEntries(INISection section, string sectionName)
+        {
+            foreach (UnknownEntry entry in Map.UnknownEntries.Where(u => string.Equals(u.Section, sectionName, StringComparison.OrdinalIgnoreCase)))
+            {
+                if (!section.Keys.Contains(entry.Key)) section[entry.Key] = entry.Value;
+            }
+        }
     }
 }

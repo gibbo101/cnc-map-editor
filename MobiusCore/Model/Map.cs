@@ -234,6 +234,9 @@ namespace MobiusEditor.Model
 
         public readonly SteamSection SteamSection = new SteamSection();
 
+        /// <summary>Entries kept verbatim because the active profile does not know their type; written back on save.</summary>
+        public readonly List<UnknownEntry> UnknownEntries = new List<UnknownEntry>();
+
         public TheaterType Theater { get => MapSection.Theater; set => MapSection.Theater = value; }
 
         public Point TopLeft
@@ -1535,6 +1538,7 @@ namespace MobiusEditor.Model
             BriefingSection.CopyTo(map.BriefingSection);
             // Ignore processing-only "VisibilityAsEnum".
             SteamSection.CopyTo(map.SteamSection, typeof(NonSerializedINIKeyAttribute));
+            map.UnknownEntries.AddRange(UnknownEntries);
             Array.Copy(Houses, map.Houses, map.Houses.Length);
             map.Triggers.AddRange(Triggers);
             Templates.CopyTo(map.Templates);

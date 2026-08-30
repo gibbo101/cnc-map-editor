@@ -29,6 +29,18 @@ namespace MobiusCli.Tests
         }
 
         [Fact]
+        public void ListsUnknownEntries()
+        {
+            string[] lines = File.ReadAllLines(Path.Combine(TestPaths.MapEdits, "scm111ea.ini"));
+            string path = TestPaths.Output("cli-unknown.ini");
+            File.WriteAllLines(path, System.Linq.Enumerable.Concat(lines, new[] { "", "[STRUCTURES]", "0=Spain,ZZUNKNOWN,256,4500,0,None,1,1" }));
+            (int code, string stdout, string stderr) = Run("info", path, "--game", TestPaths.GameDir);
+            Assert.True(code == 0, stderr);
+            Assert.Contains("unknown entries: 1", stdout);
+            Assert.Contains("[STRUCTURES] 0=Spain,ZZUNKNOWN,256,4500,0,None,1,1 (unknown type ZZUNKNOWN)", stdout);
+        }
+
+        [Fact]
         public void ReportsMissingMapAsAnError()
         {
             (int code, string _, string stderr) = Run("info", "/nonexistent/map.ini", "--game", TestPaths.GameDir);
