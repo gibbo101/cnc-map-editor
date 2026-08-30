@@ -47,17 +47,21 @@ namespace MobiusCli
             return 0;
         }
 
-        /// <summary>Exit 0 when the map would save cleanly with no unknown entries; 1 otherwise, with the reasons on stdout.</summary>
+        /// <summary>
+        /// Exit 0 when the map would save cleanly with nothing lost: unknown entries and blocking
+        /// checks are problems (exit 1); load-time conversions of legacy content are notes only.
+        /// </summary>
         public static int Validate(Invocation inv, EditorSession session, TextWriter o)
         {
             string mapPath = MapArg(inv);
-            IGamePlugin plugin = session.Load(mapPath, out string[] errors);
+            IGamePlugin plugin = session.Load(mapPath, out string[] notes);
             int problems = 0;
-            foreach (string e in errors) { o.WriteLine("load: " + e); problems++; }
+            foreach (string n in notes) o.WriteLine("note: " + n);
             foreach (UnknownEntry u in plugin.Map.UnknownEntries) { o.WriteLine("unknown: " + u); problems++; }
             string blocking = plugin.Validate(FileType.INI, false, true);
-            if (!string.IsNullOrWhiteSpace(blocking)) { o.WriteLine("validate: " + blocking.Trim()); problems++; }
-            o.WriteLine(problems == 0 ? "ok" : problems + " problem(s)");
+            if (!string.IsNullOrWhiteSpace(blocking)) { o.WriteLine("blocking: " + blocking.Trim()); problems++; }
+            string suffix = notes.Length == 0 ? "" : $" ({notes.Length} note(s))";
+            o.WriteLine(problems == 0 ? "ok" + suffix : problems + " problem(s)" + suffix);
             return problems == 0 ? 0 : 1;
         }
 
