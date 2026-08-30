@@ -71,8 +71,19 @@ namespace System.Drawing
             }
         }
 
-        public Bitmap(Stream stream) : this(SKBitmap.Decode(stream)) { }
-        public Bitmap(string path) : this(SKBitmap.Decode(path)) { }
+        public Bitmap(Stream stream) : this(DecodeUnpremul(SKCodec.Create(stream))) { }
+        public Bitmap(string path) : this(DecodeUnpremul(SKCodec.Create(path))) { }
+
+        /// <summary>Decodes without premultiplying so file pixels survive a load/save round trip untouched.</summary>
+        private static SKBitmap DecodeUnpremul(SKCodec codec)
+        {
+            if (codec == null) throw new ArgumentException("Image could not be decoded.");
+            using (codec)
+            {
+                SKImageInfo info = new SKImageInfo(codec.Info.Width, codec.Info.Height, SKColorType.Bgra8888, SKAlphaType.Unpremul);
+                return SKBitmap.Decode(codec, info);
+            }
+        }
 
         private Bitmap(SKBitmap decoded) : this(decoded?.Width ?? throw new ArgumentException("Image could not be decoded."), decoded.Height, PixelFormat.Format32bppArgb)
         {
@@ -212,11 +223,26 @@ namespace System.Drawing
 
         public override void Save(Stream stream, ImageFormat format)
         {
-            using (SKImage img = ToSkia())
-            using (SKData data = img.Encode(format.Skia, 100))
+            // Encode straight from the unpremultiplied pixels so a save/load round trip is lossless.
+            SKImageInfo info = new SKImageInfo(Width, Height, SKColorType.Bgra8888, SKAlphaType.Unpremul);
+            byte[] bgra = Pixels;
+            int stride = Stride;
+            if (PixelFormat != PixelFormat.Format32bppArgb)
             {
-                data.SaveTo(stream);
+                stride = Width * 4;
+                bgra = new byte[stride * Height];
+                ConvertOut(new Rectangle(0, 0, Width, Height), PixelFormat.Format32bppArgb, bgra, stride);
             }
+            GCHandle h = GCHandle.Alloc(bgra, GCHandleType.Pinned);
+            try
+            {
+                using (SKPixmap pm = new SKPixmap(info, h.AddrOfPinnedObject(), stride))
+                using (SKData data = pm.Encode(format.Skia, 100))
+                {
+                    data.SaveTo(stream);
+                }
+            }
+            finally { h.Free(); }
         }
 
         public override void Dispose() { Invalidate(); Pixels = null; }
