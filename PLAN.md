@@ -273,7 +273,9 @@ would only tempt the native editor to slip. Not part of the plan.
    (headless view-model layer, `MapDocument`: open / render at scale / cell hit-test / describe /
    save; tested without a window) + `MobiusEditor.App` (Avalonia 12, net8): open dialog, zoom
    (buttons + Ctrl+wheel), scrollable map canvas, cell status line, save-as that refuses to
-   overwrite the open map. Builds; not yet launched on a display. Next: docked tool panels,
+   overwrite the open map. Verified with Avalonia headless UI tests (`MobiusEditor.App.Tests`,
+   xunit v3): the window opens a map from its arguments and its painted frame matches the CLI
+   render pixel-mean for pixel-mean — never launched on the desktop. Next: docked tool panels,
    templates/overlay brushes, and the trigger editor with mission-pattern templates.
 
 Open shim gaps to close as they are hit: `RotateFlip` rotations, sub-byte indexed writes,
