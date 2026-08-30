@@ -244,9 +244,11 @@ would only tempt the native editor to slip. Not part of the plan.
 ## Order of work for the next session
 
 1. ~~The renderer spike.~~ PASSED 2026-08-30.
-2. **Scaffold the headless CLI** over `MobiusCore` (open / query / validate / render / save),
-   test-first; the round-trip test over all 31 CustomMaps + the 124 official maps is the next
-   oracle (byte-identical save, using the mono editor's saves as reference).
+2. ~~Scaffold the headless CLI~~ STARTED 2026-08-30: `MobiusCore/Headless/EditorSession` +
+   `MobiusCli` (`cncmap info|render|save`, `--game` autodetected from Steam, `--mod` repeatable
+   and ordered). Save path is **byte-identical to the mono editor's saves on all 31 CustomMaps**
+   (`SaveRoundTripTests`, oracle in `oracle/saves/`). Still to add: `validate`, query/mutate
+   commands, the 124 official maps in the round-trip oracle.
 3. Mod profiles + manifest format (contract with the mod repo; provisional names
    `mapeditor.json` / `[MapEditor]`), lossless loading of unknown entities.
 4. The Avalonia shell with triggers designed in.

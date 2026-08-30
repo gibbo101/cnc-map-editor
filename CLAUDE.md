@@ -11,6 +11,8 @@ MobiusCore/          net8 class library: the Mobius editor core (Model/ Utility/
                      TiberianDawn/ SoleSurvivor/ Render/ Interface/), copied once from the fork
                      and owned here. Drawing/ = Skia-backed System.Drawing shim. Properties/ =
                      settings + embedded resources. Shell hooks: Utility/CoreDiagnostics.cs.
+MobiusCli/           `cncmap` console tool over MobiusCore/Headless/EditorSession (info, render, save).
+MobiusCli.Tests/     xUnit, drives Cli.Run in-process.
 MobiusCore.Tests/    xUnit. EditorHost brings the core up headlessly; MapRenderOracleTests is the
                      renderer oracle; DrawingShimTests pin GDI+ semantics.
 oracle/              regen.sh renders reference PNGs with the fork's mono RenderProbe (PNGs are
@@ -24,7 +26,9 @@ artifacts/           test output (gitignored).
 export PATH="$HOME/.dotnet:$PATH"
 dotnet build MobiusCore
 env -u DISPLAY dotnet test MobiusCore.Tests --filter Category!=Oracle   # inner loop, seconds
+env -u DISPLAY dotnet test MobiusCli.Tests                              # CLI, ~30 s
 env -u DISPLAY dotnet test MobiusCore.Tests                              # + oracle tier (~3 min): 2 renders, 31 round trips
+dotnet run --project MobiusCli -- info <map> [--mod <dir>]              # the CLI itself
 ```
 
 Tests read the game from `~/.steam/steam/steamapps/common/CnCRemastered` and the mod build from
