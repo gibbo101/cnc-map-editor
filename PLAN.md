@@ -269,7 +269,12 @@ would only tempt the native editor to slip. Not part of the plan.
    verbatim and the RA save writes them back after the known entries (`LosslessLoadTests`);
    `cncmap info` lists them. Not yet covered: `[OVERLAY]` text entries, unknown trigger/team
    references, TD plugin.
-4. The Avalonia shell with triggers designed in.
+4. The Avalonia shell with triggers designed in. STARTED 2026-08-30: `MobiusEditor.Shell`
+   (headless view-model layer, `MapDocument`: open / render at scale / cell hit-test / describe /
+   save; tested without a window) + `MobiusEditor.App` (Avalonia 12, net8): open dialog, zoom
+   (buttons + Ctrl+wheel), scrollable map canvas, cell status line, save-as that refuses to
+   overwrite the open map. Builds; not yet launched on a display. Next: docked tool panels,
+   templates/overlay brushes, and the trigger editor with mission-pattern templates.
 
 Open shim gaps to close as they are hit: `RotateFlip` rotations, sub-byte indexed writes,
 text metrics are approximate (annotation layers only), `Region.Exclude` on infinite regions.

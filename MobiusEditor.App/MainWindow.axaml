@@ -1,0 +1,21 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="MobiusEditor.App.MainWindow"
+        Title="C&amp;C Map Editor" Width="1280" Height="800">
+  <DockPanel>
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="6">
+      <Button Name="OpenButton" Content="Open…" />
+      <Button Name="SaveAsButton" Content="Save as…" IsEnabled="False" />
+      <Separator Width="12" />
+      <Button Name="ZoomOutButton" Content="−" IsEnabled="False" />
+      <TextBlock Name="ZoomLabel" VerticalAlignment="Center" Text="25%" />
+      <Button Name="ZoomInButton" Content="+" IsEnabled="False" />
+      <Separator Width="12" />
+      <TextBlock Name="TitleLabel" VerticalAlignment="Center" Text="No map" FontWeight="Bold" />
+    </StackPanel>
+    <TextBlock DockPanel.Dock="Bottom" Name="StatusLabel" Margin="6,3" Text="Open a map to begin." />
+    <ScrollViewer Name="Scroller" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Background="#202020">
+      <Image Name="MapImage" Stretch="None" HorizontalAlignment="Left" VerticalAlignment="Top" />
+    </ScrollViewer>
+  </DockPanel>
+</Window>

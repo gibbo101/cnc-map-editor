@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="MobiusCli.Tests/MobiusCli.Tests.csproj" />
+  <Project Path="MobiusCli/MobiusCli.csproj" />
+  <Project Path="MobiusCore.Tests/MobiusCore.Tests.csproj" />
+  <Project Path="MobiusCore/MobiusCore.csproj" />
+  <Project Path="MobiusEditor.App/MobiusEditor.App.csproj" />
+  <Project Path="MobiusEditor.Shell.Tests/MobiusEditor.Shell.Tests.csproj" />
+  <Project Path="MobiusEditor.Shell/MobiusEditor.Shell.csproj" />
+</Solution>
