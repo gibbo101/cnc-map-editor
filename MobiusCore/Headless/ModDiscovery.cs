@@ -19,6 +19,8 @@ namespace MobiusEditor.Headless
         public string Folder { get; set; }
         public string Path { get; set; }
         public string Source { get; set; }
+        /// <summary>Full path of the mod's mapeditor.json, when it ships one; null otherwise.</summary>
+        public string EditorManifestPath { get; set; }
         public override string ToString() => $"{Name} ({Version}) [{GameType}, load {LoadOrder}] {Path}";
     }
 
@@ -31,7 +33,7 @@ namespace MobiusEditor.Headless
         /// <summary>Reads one mod folder; null when it holds no manifest.</summary>
         public static ModInfo Read(string modDir, string source = "folder")
         {
-            string manifest = Directory.Exists(modDir) ? Directory.EnumerateFiles(modDir).FirstOrDefault(f => string.Equals(System.IO.Path.GetFileName(f), ManifestName, StringComparison.OrdinalIgnoreCase)) : null;
+            string manifest = FindFile(modDir, ManifestName);
             if (manifest == null) return null;
             JObject json;
             try { json = JObject.Parse(File.ReadAllText(manifest)); }
@@ -46,8 +48,12 @@ namespace MobiusEditor.Headless
                 Folder = System.IO.Path.GetFileName(modDir.TrimEnd(System.IO.Path.DirectorySeparatorChar)),
                 Path = System.IO.Path.GetFullPath(modDir),
                 Source = source,
+                EditorManifestPath = FindFile(modDir, ModManifest.FileName),
             };
         }
+
+        private static string FindFile(string dir, string fileName) =>
+            Directory.Exists(dir) ? Directory.EnumerateFiles(dir).FirstOrDefault(f => string.Equals(System.IO.Path.GetFileName(f), fileName, StringComparison.OrdinalIgnoreCase)) : null;
 
         /// <summary>Mods for one game under a Mods root (Mods/Red_Alert/*, Mods/Tiberian_Dawn/*), in load order.</summary>
         public static IEnumerable<ModInfo> Scan(string modsRoot, string gameType)

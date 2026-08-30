@@ -59,6 +59,16 @@ namespace MobiusCore.Tests
         }
 
         [Fact]
+        public void FindsTheEditorManifestBesideTheModManifest()
+        {
+            string root = FakeModsRoot();
+            string alpha = Path.Combine(root, "Red_Alert", "Alpha");
+            File.WriteAllText(Path.Combine(alpha, "MapEditor.JSON"), "{ \"format\": 1 }");
+            Assert.Equal(Path.Combine(alpha, "MapEditor.JSON"), ModDiscovery.Read(alpha).EditorManifestPath);
+            Assert.Null(ModDiscovery.Read(Path.Combine(root, "Red_Alert", "Beta")).EditorManifestPath);
+        }
+
+        [Fact]
         public void FindsTheTiberianFactionsBuildWhenPointedAtIt()
         {
             ModInfo mod = ModDiscovery.Read(TestPaths.ModDir);
