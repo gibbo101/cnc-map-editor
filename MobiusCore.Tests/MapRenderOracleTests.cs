@@ -34,7 +34,7 @@ namespace MobiusCore.Tests
             string mapPath = tfMap ? Path.Combine(TestPaths.ModDir, "CustomMaps", map) : Path.Combine(TestPaths.MapEdits, map);
             string oraclePath = TestPaths.Oracle(oracleName);
             Assert.True(File.Exists(oraclePath), "Oracle missing; run oracle/regen.sh: " + oraclePath);
-            EditorHost host = new EditorHost(TestPaths.GameDir, TestPaths.ModDir);
+            EditorHost host = EditorHost.Shared;
             IGamePlugin plugin = host.Load(mapPath, out string[] errors);
             output.WriteLine("load errors: " + errors.Length);
 

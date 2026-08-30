@@ -13,6 +13,15 @@ namespace MobiusCore.Tests
     /// <summary>Brings the editor core up headlessly for one game folder and one mod, like the mono RenderProbe does.</summary>
     public sealed class EditorHost
     {
+        private static readonly object gate = new object();
+        private static EditorHost shared;
+
+        /// <summary>One host for the whole test run: loading the game archives costs seconds, and Load() re-points the managers per map.</summary>
+        public static EditorHost Shared
+        {
+            get { lock (gate) { return shared ?? (shared = new EditorHost(TestPaths.GameDir, TestPaths.ModDir)); } }
+        }
+
         public MegafileManager Archives { get; }
         public GameInfo GameInfo { get; } = new GameInfoRedAlert();
 
