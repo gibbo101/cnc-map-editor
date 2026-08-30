@@ -24,12 +24,14 @@ namespace MobiusCore.Tests
 
         private static string FixtureWithUnknownObjects()
         {
-            string[] lines = File.ReadAllLines(Path.Combine(TestPaths.MapEdits, "scm111ea.ini"));
+            // The fixture map already has a [TERRAIN] section (a duplicate would be discarded), so inject into it.
+            System.Collections.Generic.List<string> lines = File.ReadAllLines(Path.Combine(TestPaths.MapEdits, "scm111ea.ini")).ToList();
+            int terrain = lines.IndexOf("[TERRAIN]");
+            Assert.True(terrain >= 0, "fixture has no [TERRAIN] section");
+            lines.Insert(terrain + 1, "4503=ZZTREE");
+            lines.AddRange(new[] { "", "[UNITS]", "0=Spain,ZZUNIT,256,4501,0,Guard,None", "", "[INFANTRY]", "0=Spain,ZZINF,256,4502,0,Guard,0,None" });
             string path = TestPaths.Output("unknown-objects.ini");
-            File.WriteAllLines(path, lines
-                .Append("").Append("[UNITS]").Append("0=Spain,ZZUNIT,256,4501,0,Guard,None")
-                .Append("").Append("[INFANTRY]").Append("0=Spain,ZZINF,256,4502,0,Guard,0,None")
-                .Append("").Append("[TERRAIN]").Append("4503=ZZTREE"));
+            File.WriteAllLines(path, lines);
             return path;
         }
 
