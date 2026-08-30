@@ -17,8 +17,11 @@ namespace MobiusCore.Tests
 
     public static class ImageCompare
     {
-        /// <summary>Per-pixel BGRA comparison; pixels whose every channel is within tolerance count as equal.</summary>
-        public static ImageDiff Compare(Bitmap a, Bitmap b, int tolerance = 0)
+        /// <summary>
+        /// Per-pixel BGRA comparison; pixels whose every channel is within tolerance count as equal.
+        /// Pixels flagged in the skip mask (row-major, one entry per pixel) are not compared.
+        /// </summary>
+        public static ImageDiff Compare(Bitmap a, Bitmap b, int tolerance = 0, bool[] skip = null)
         {
             if (a.Width != b.Width || a.Height != b.Height) throw new ArgumentException($"Size mismatch: {a.Width}x{a.Height} vs {b.Width}x{b.Height}");
             ImageDiff d = new ImageDiff { Total = (long)a.Width * a.Height };
@@ -33,9 +36,11 @@ namespace MobiusCore.Tests
                 {
                     Marshal.Copy(da.Scan0 + y * da.Stride, ra, 0, da.Stride);
                     Marshal.Copy(db.Scan0 + y * db.Stride, rb, 0, db.Stride);
+                    int rowIndex = y * a.Width;
                     for (int x = 0; x < a.Width; x++)
                     {
                         int i = x * 4;
+                        if (skip != null && skip[rowIndex + x]) continue;
                         // Fully transparent pixels compare equal regardless of their colour channels.
                         if (ra[i + 3] == 0 && rb[i + 3] == 0) continue;
                         int delta = Math.Max(Math.Max(Math.Abs(ra[i] - rb[i]), Math.Abs(ra[i + 1] - rb[i + 1])), Math.Max(Math.Abs(ra[i + 2] - rb[i + 2]), Math.Abs(ra[i + 3] - rb[i + 3])));

@@ -69,6 +69,15 @@ namespace System.Drawing.Imaging
         public float Matrix43 { get => this[4, 3]; set => this[4, 3] = value; }
         public float Matrix44 { get => this[4, 4]; set => this[4, 4] = value; }
 
+        public bool IsIdentity
+        {
+            get
+            {
+                for (int r = 0; r < 5; r++) for (int c = 0; c < 5; c++) if (m[r * 5 + c] != (r == c ? 1f : 0f)) return false;
+                return true;
+            }
+        }
+
         /// <summary>Skia's 4x5 row-major matrix: output channel per row, translate in 0..255.</summary>
         internal float[] ToSkia()
         {

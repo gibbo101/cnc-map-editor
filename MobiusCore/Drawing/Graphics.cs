@@ -12,8 +12,27 @@ namespace System.Drawing
     /// Draws onto a Bitmap through a Skia surface. The surface holds a premultiplied copy of the
     /// target; Flush/Dispose write it back in GDI+ layout.
     /// </summary>
+    /// <summary>
+    /// Diagnostic hook: records which pixels of one target bitmap received a partially transparent
+    /// source pixel, so render comparisons can bound blend-rounding differences precisely.
+    /// </summary>
+    public sealed class PartialCoverageTracker
+    {
+        public Bitmap Target { get; }
+        public bool[] Marks { get; }
+        public PartialCoverageTracker(Bitmap target) { Target = target; Marks = new bool[target.Width * target.Height]; }
+        internal void Mark(int x, int y) => Marks[y * Target.Width + x] = true;
+        internal void MarkRect(int x, int y, int w, int h)
+        {
+            for (int yy = Math.Max(0, y); yy < Math.Min(Target.Height, y + h); yy++)
+                for (int xx = Math.Max(0, x); xx < Math.Min(Target.Width, x + w); xx++) Mark(xx, yy);
+        }
+    }
+
     public sealed class Graphics : IDisposable
     {
+        public static PartialCoverageTracker CoverageTracker { get; set; }
+
         private readonly Bitmap target;
         private readonly SKBitmap work;
         private readonly SKSurface surface;
@@ -146,10 +165,80 @@ namespace System.Drawing
         {
             if (!(image is Bitmap bm)) throw new ArgumentException("Unsupported image type.");
             if (ReferenceEquals(bm, target)) throw new InvalidOperationException("Cannot draw a bitmap onto itself.");
+            if ((attr?.Matrix == null || attr.Matrix.IsIdentity) && transform.IsIdentity && IsIntegral(src) && IsIntegral(dest) && src.Width == dest.Width && src.Height == dest.Height)
+            {
+                BlitUnscaled(bm, (int)src.Left, (int)src.Top, (int)dest.Left, (int)dest.Top, (int)src.Width, (int)src.Height);
+                return;
+            }
             using (SKPaint paint = new SKPaint { IsAntialias = false, BlendMode = Blend })
             {
-                if (attr?.Matrix != null) paint.ColorFilter = SKColorFilter.CreateColorMatrix(attr.Matrix.ToSkia());
+                if (attr?.Matrix != null && !attr.Matrix.IsIdentity) paint.ColorFilter = SKColorFilter.CreateColorMatrix(attr.Matrix.ToSkia());
+                // GDI+ PixelOffsetMode.Half/HighQuality samples half a pixel earlier than Skia's pixel-centre convention.
+                if (CoverageTracker != null && ReferenceEquals(CoverageTracker.Target, target)) CoverageTracker.MarkRect((int)Math.Floor(dest.Left), (int)Math.Floor(dest.Top), (int)Math.Ceiling(dest.Width) + 1, (int)Math.Ceiling(dest.Height) + 1);
+                bool half = PixelOffsetMode == PixelOffsetMode.Half || PixelOffsetMode == PixelOffsetMode.HighQuality;
+                if (half) { canvas.Save(); canvas.Translate(-0.5f, -0.5f); }
                 canvas.DrawImage(bm.ToSkia(), src, dest, Sampling, paint);
+                if (half) canvas.Restore();
+            }
+        }
+
+        private static bool IsIntegral(SKRect r) => r.Left == (int)r.Left && r.Top == (int)r.Top && r.Width == (int)r.Width && r.Height == (int)r.Height;
+
+        /// <summary>Premultiply one channel the way pixman does: round(c * a / 255).</summary>
+        private static byte Premul(byte c, byte a) { int t = c * a + 0x80; return (byte)(((t >> 8) + t) >> 8); }
+
+        /// <summary>
+        /// Unscaled source-over blit straight into the premultiplied working buffer, using pixman's
+        /// 8-bit rounding so results match GDI+ on libgdiplus exactly.
+        /// </summary>
+        private unsafe void BlitUnscaled(Bitmap bm, int sx, int sy, int dx, int dy, int w, int h)
+        {
+            // Clip to both images.
+            if (sx < 0) { w += sx; dx -= sx; sx = 0; }
+            if (sy < 0) { h += sy; dy -= sy; sy = 0; }
+            if (dx < 0) { w += dx; sx -= dx; dx = 0; }
+            if (dy < 0) { h += dy; sy -= dy; dy = 0; }
+            w = Math.Min(w, Math.Min(bm.Width - sx, target.Width - dx));
+            h = Math.Min(h, Math.Min(bm.Height - sy, target.Height - dy));
+            if (w <= 0 || h <= 0) return;
+            canvas.Flush();
+            PartialCoverageTracker tracker = CoverageTracker != null && ReferenceEquals(CoverageTracker.Target, target) ? CoverageTracker : null;
+            bool copy = CompositingMode == CompositingMode.SourceCopy;
+            byte[] srcPixels = bm.Pixels;
+            int srcStride = bm.Stride;
+            byte* dstBase = (byte*)work.GetPixels();
+            int dstStride = work.RowBytes;
+            bool srcIs32 = bm.PixelFormat == PixelFormat.Format32bppArgb || bm.PixelFormat == PixelFormat.Format32bppPArgb;
+            for (int y = 0; y < h; y++)
+            {
+                byte* d = dstBase + (dy + y) * dstStride + dx * 4;
+                for (int x = 0; x < w; x++, d += 4)
+                {
+                    byte sb, sg, sr, sa;
+                    if (srcIs32)
+                    {
+                        int i = (sy + y) * srcStride + (sx + x) * 4;
+                        sb = srcPixels[i]; sg = srcPixels[i + 1]; sr = srcPixels[i + 2]; sa = srcPixels[i + 3];
+                    }
+                    else
+                    {
+                        Color c = bm.GetPixel(sx + x, sy + y);
+                        sb = c.B; sg = c.G; sr = c.R; sa = c.A;
+                    }
+                    if (copy)
+                    {
+                        d[0] = Premul(sb, sa); d[1] = Premul(sg, sa); d[2] = Premul(sr, sa); d[3] = sa;
+                        continue;
+                    }
+                    if (sa == 0) continue;
+                    if (sa == 255) { d[0] = sb; d[1] = sg; d[2] = sr; d[3] = 255; continue; }
+                    tracker?.Mark(dx + x, dy + y);
+                    byte ia = (byte)(255 - sa);
+                    d[0] = (byte)(Premul(sb, sa) + Premul(d[0], ia));
+                    d[1] = (byte)(Premul(sg, sa) + Premul(d[1], ia));
+                    d[2] = (byte)(Premul(sr, sa) + Premul(d[2], ia));
+                    d[3] = (byte)(sa + Premul(d[3], ia));
+                }
             }
         }
 

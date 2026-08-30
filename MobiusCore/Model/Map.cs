@@ -817,11 +817,11 @@ namespace MobiusEditor.Model
                 OverlayType ovType = overlay.Type;
                 if (ovType.IsGem && gemTypes != null)
                 {
-                    overlay.Type = gemTypes[new Random(randomSeed ^ location.GetHashCode()).Next(gemTypes.Length)];
+                    overlay.Type = gemTypes[new DeterministicRandom(randomSeed ^ DeterministicRandom.CellSeed(location)).Next(gemTypes.Length)];
                 }
                 else if (ovType.IsTiberiumOrGold && tiberiumOrGoldTypes != null)
                 {
-                    overlay.Type = tiberiumOrGoldTypes[new Random(randomSeed ^ location.GetHashCode()).Next(tiberiumOrGoldTypes.Length)];
+                    overlay.Type = tiberiumOrGoldTypes[new DeterministicRandom(randomSeed ^ DeterministicRandom.CellSeed(location)).Next(tiberiumOrGoldTypes.Length)];
                 }
                 overlay.Icon = overlay.Type.IsGem ? GemStages[count] : TiberiumStages[count];
             }
