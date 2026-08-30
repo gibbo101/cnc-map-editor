@@ -292,7 +292,9 @@ Diagnosis and the prime suspect are at the top of `NATIVE_PORT_HANDOVER.md`.
 
 ## Backlog
 
-- ~106 unlisted official maps in general.mix (230 files vs the 124-entry display list): survey
-  via contact sheet, then decide whether to ship the good ones as mod CustomMaps. Editing the
-  `[Missions]` list itself means general.mix surgery — check the data-vs-ClientG boundary first.
+- ~~Unlisted official maps~~ CORRECTED (Luke, 2026-08-30 evening): the 124-entry `[Missions]`
+  section is a legacy *name table*, not the Remaster's roster — the game's skirmish list already
+  offers the letter-coded Aftermath maps ("C&C" among them), and CONFIG.MEG ships tile patches
+  for them. All 230 files are game content. The contact sheet stands as a catalogue of the pool
+  (curation reference + editor fixtures), not as hidden content to surface.
 - Generalise the fork's RenderProbe to TD so TD rendering gets an oracle, not just eyeballs.

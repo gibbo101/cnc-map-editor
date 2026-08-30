@@ -7,8 +7,8 @@ namespace MobiusCore.Tests
 {
     /// <summary>
     /// The official RA skirmish maps live in MAIN.MIX → general.mix: 230 files (130 numeric,
-    /// 100 letter-coded Counterstrike/Aftermath), of which the game's [Missions] list shows 124.
-    /// The core must read them out unchanged.
+    /// 100 letter-coded Counterstrike/Aftermath). The [Missions] section is a legacy name table
+    /// covering 124 of them, not the game's roster. The core must read them out unchanged.
     /// </summary>
     [Trait("Category", "Oracle")]
     public class OfficialMapsTests
