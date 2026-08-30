@@ -35,6 +35,7 @@ namespace MobiusEditor.App.Tests
             Bitmap frame = window.CaptureRenderedFrame();
             Assert.NotNull(frame);
             Assert.True(frame.PixelSize.Width > 100 && frame.PixelSize.Height > 100);
+            frame.Save(TestPaths.Output("main-window.png"));
         }
 
         [AvaloniaFact]
