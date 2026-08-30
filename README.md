@@ -9,6 +9,10 @@ additional terms — see `LICENSE.txt`. The WinForms shell is replaced, not port
 
 See `PLAN.md` for the decision record and `CLAUDE.md` for working conventions.
 
+Verified against the original editor: the map-layer render matches pixel for pixel (bounded
+only by blend rounding under partially transparent sprites), and saving reproduces the original
+editor's output byte for byte on all 31 Tiberian Factions maps and all 230 official RA maps.
+
 ## Headless CLI
 
 ```bash

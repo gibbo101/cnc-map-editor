@@ -253,8 +253,10 @@ would only tempt the native editor to slip. Not part of the plan.
    and ordered). Save path is **byte-identical to the mono editor's saves on all 31 CustomMaps**
    (`SaveRoundTripTests`, oracle in `oracle/saves/`). `OfficialMaps.Extract` pulls the official
    skirmish maps out of `MAIN.MIX → general.mix`: **230 files** (130 numeric + 100 letter-coded
-   `scmd0`–`scmm9`), not the 124 the display list shows; they join the round-trip oracle
-   (`oracle/saves-official/`). Still to add: `validate`, query/mutate commands.
+   `scmd0`–`scmm9`), not the 124 the display list shows; **all 230 round-trip byte-identical**
+   to the mono editor's saves (`oracle/saves-official/`, ~12 min, oracle tier). `validate`
+   distinguishes notes (legacy conversions) from problems (lost content, blocking checks).
+   Still to add: query/mutate commands.
 3. Mod profiles + manifest format (contract with the mod repo; provisional names
    `mapeditor.json` / `[MapEditor]`). STARTED: `ModDiscovery` reads `ccmod.json` under a Mods
    root (Proton prefix Documents on Linux) and the Workshop cache; `cncmap mods` lists them in
