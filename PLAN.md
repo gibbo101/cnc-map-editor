@@ -60,6 +60,16 @@ core we are counting on reusing, not in the UI we are planning to replace.
 - **If a map renders correctly, everything after it is grunt work with no unknowns. If it fights
   us, we learn that in a day rather than a week.**
 
+**Pass criterion (agreed 2026-08-30).** Oracle = the mono fork's `RenderProbe` PNG.
+- Map layers at scale 1.0 (`MapLayerFlag.MapLayers`): **pixel-identical**, zero tolerance. This
+  is where codec, palette, remap and frame-index bugs live.
+- Annotation layers (labels, outlines): perceptual tolerance, numbers recorded in the test
+  (start ±8/255 per channel, <0.5% differing pixels, tune down). AA fringe passes, a misplaced
+  label fails.
+- Scaled renders: not compared to GDI+ at all; a Skia-only golden reviewed by eye then locked.
+- If a map-layer pixel refuses to match, suspect the oracle as well as the port (the blossom
+  tree that never draws is a candidate) and say which it was.
+
 Same de-risking pattern as the TS asset spike and the desert theatre spike: prove the one hard
 thing in isolation before committing to the surrounding work.
 
