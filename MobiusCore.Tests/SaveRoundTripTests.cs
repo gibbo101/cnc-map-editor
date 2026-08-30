@@ -14,6 +14,7 @@ namespace MobiusCore.Tests
     /// (oracle/saves, from oracle/regen.sh). Covers the INI writer, LCW/UUBlock packing,
     /// [MapPack]/[OverlayPack] and the mod's [TFTDTiles] layer.
     /// </summary>
+    [Trait("Category", "Oracle")]
     public class SaveRoundTripTests
     {
         private readonly ITestOutputHelper output;

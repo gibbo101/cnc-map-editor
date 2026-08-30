@@ -23,8 +23,8 @@ artifacts/           test output (gitignored).
 ```bash
 export PATH="$HOME/.dotnet:$PATH"
 dotnet build MobiusCore
-env -u DISPLAY dotnet test MobiusCore.Tests            # ~1 min; the two oracle renders are 30 s each
-env -u DISPLAY dotnet test MobiusCore.Tests --filter FullyQualifiedName~DrawingShimTests   # fast subset
+env -u DISPLAY dotnet test MobiusCore.Tests --filter Category!=Oracle   # inner loop, seconds
+env -u DISPLAY dotnet test MobiusCore.Tests                              # + oracle tier (~3 min): 2 renders, 31 round trips
 ```
 
 Tests read the game from `~/.steam/steam/steamapps/common/CnCRemastered` and the mod build from

@@ -23,6 +23,7 @@ namespace MobiusCore.Tests
         }
 
         public MegafileManager Archives { get; }
+        private readonly Dictionary<TheaterType, TilesetManager> tilesets = new Dictionary<TheaterType, TilesetManager>();
         public GameInfo GameInfo { get; } = new GameInfoRedAlert();
 
         public EditorHost(string gameDir, string modDir)
@@ -47,10 +48,14 @@ namespace MobiusCore.Tests
             string text = File.ReadAllText(mapPath);
             TheaterType theater = text.Contains("Theater=Interior") ? TheaterTypes.Interior : text.Contains("Theater=Snow") ? TheaterTypes.Snow : TheaterTypes.Temperate;
             Archives.Reset(GameType.RedAlert, theater);
-            TilesetManager tilesets = new TilesetManager(Archives, Globals.TilesetsXMLPath, Globals.TexturesPath);
-            tilesets.Reset(GameType.RedAlert, theater);
-            Globals.TheTilesetManager = tilesets;
-            foreach (TheaterType t in GameInfo.AllTheaters) t.IsRemasterTilesetFound = tilesets.TilesetExists(t.MainTileset);
+            if (!tilesets.TryGetValue(theater, out TilesetManager manager))
+            {
+                manager = new TilesetManager(Archives, Globals.TilesetsXMLPath, Globals.TexturesPath);
+                manager.Reset(GameType.RedAlert, theater);
+                tilesets[theater] = manager;
+            }
+            Globals.TheTilesetManager = manager;
+            foreach (TheaterType t in GameInfo.AllTheaters) t.IsRemasterTilesetFound = manager.TilesetExists(t.MainTileset);
             IGamePlugin plugin = GameInfo.CreatePlugin(false, true);
             FileType ft = FileType.INI;
             errors = plugin.Load(mapPath, mapPath, File.ReadAllBytes(mapPath), null, null, ref ft).ToArray();

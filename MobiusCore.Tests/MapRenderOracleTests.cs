@@ -21,6 +21,7 @@ namespace MobiusCore.Tests
     /// values there (the rest are one-off at very low alpha). Our pipeline blends the source art
     /// directly, so those pixels are more faithful than the oracle's. Everything else is exact.
     /// </summary>
+    [Trait("Category", "Oracle")]
     public class MapRenderOracleTests
     {
         private readonly ITestOutputHelper output;
