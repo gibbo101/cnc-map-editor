@@ -16,3 +16,11 @@ run $TF/UGC_F1BE000000000006_0000000000000006_MAPDATA.MPR tf-map06-maplayers-1.0
 # for the new core's save path). Produced by the fork's sweep into /tmp/sweep-out.
 env -u DISPLAY $FORK/tools/probes/sweep_maps.sh | tail -1
 mkdir -p "$OUT/saves" && cp /tmp/sweep-out/*.MPR "$OUT/saves/"
+# Official maps (130 in MAIN.MIX -> general.mix): extract with the new core, save each with the
+# mono editor. Needs artifacts/test-output/official from OfficialMapsTests (dotnet test creates it).
+OFFICIAL=$OUT/../artifacts/test-output/official
+mkdir -p "$OUT/saves-official"
+for map in "$OFFICIAL"/scm*.ini; do
+  (cd $REL && env -u DISPLAY MONO_PATH=$REL:$REL/bin timeout 300 mono /tmp/rtprobe.exe "$map" "$OUT/saves-official/$(basename "$map")" > /dev/null 2>&1) || echo "mono save failed: $map"
+done
+ls "$OUT/saves-official" | wc -l

@@ -28,12 +28,31 @@ namespace MobiusCore.Tests
             foreach (string f in Directory.GetFiles(dir, "*.MPR").OrderBy(f => f)) yield return new object[] { Path.GetFileName(f) };
         }
 
+        public static IEnumerable<object[]> OfficialMaps()
+        {
+            string dir = TestPaths.Oracle("saves-official");
+            if (!Directory.Exists(dir)) yield break;
+            foreach (string f in Directory.GetFiles(dir, "*.ini").OrderBy(f => f)) yield return new object[] { Path.GetFileName(f) };
+        }
+
+        [Theory]
+        [MemberData(nameof(OfficialMaps))]
+        public void SavedOfficialMapIsByteIdenticalToTheMonoEditorsSave(string mapName)
+        {
+            string extracted = TestPaths.Output("official");
+            if (!File.Exists(Path.Combine(extracted, mapName))) MobiusEditor.Headless.OfficialMaps.Extract(TestPaths.GameDir, extracted);
+            RoundTrip(Path.Combine(extracted, mapName), TestPaths.Oracle(Path.Combine("saves-official", mapName)), mapName);
+        }
+
         [Theory]
         [MemberData(nameof(CustomMaps))]
         public void SavedMapIsByteIdenticalToTheMonoEditorsSave(string mapName)
         {
-            string mapPath = Path.Combine(TestPaths.ModDir, "CustomMaps", mapName);
-            string oraclePath = TestPaths.Oracle(Path.Combine("saves", mapName));
+            RoundTrip(Path.Combine(TestPaths.ModDir, "CustomMaps", mapName), TestPaths.Oracle(Path.Combine("saves", mapName)), mapName);
+        }
+
+        private void RoundTrip(string mapPath, string oraclePath, string mapName)
+        {
             Assert.True(File.Exists(oraclePath), "Oracle save missing; run oracle/regen.sh: " + oraclePath);
             EditorSession host = EditorHost.Shared;
             IGamePlugin plugin = host.Load(mapPath, out string[] errors);

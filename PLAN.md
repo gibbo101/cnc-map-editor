@@ -247,8 +247,10 @@ would only tempt the native editor to slip. Not part of the plan.
 2. ~~Scaffold the headless CLI~~ STARTED 2026-08-30: `MobiusCore/Headless/EditorSession` +
    `MobiusCli` (`cncmap info|render|save`, `--game` autodetected from Steam, `--mod` repeatable
    and ordered). Save path is **byte-identical to the mono editor's saves on all 31 CustomMaps**
-   (`SaveRoundTripTests`, oracle in `oracle/saves/`). Still to add: `validate`, query/mutate
-   commands, the 124 official maps in the round-trip oracle.
+   (`SaveRoundTripTests`, oracle in `oracle/saves/`). `OfficialMaps.Extract` pulls the official
+   skirmish maps out of `MAIN.MIX → general.mix`: **230 files** (130 numeric + 100 letter-coded
+   `scmd0`–`scmm9`), not the 124 the display list shows; they join the round-trip oracle
+   (`oracle/saves-official/`). Still to add: `validate`, query/mutate commands.
 3. Mod profiles + manifest format (contract with the mod repo; provisional names
    `mapeditor.json` / `[MapEditor]`), lossless loading of unknown entities.
 4. The Avalonia shell with triggers designed in.
