@@ -280,7 +280,7 @@ namespace MobiusEditor.Utility
             {
                 throw new ArgumentNullException("steamId");
             }
-            string libraryInfo = Path.Combine(steamFolder, "steamapps\\libraryfolders.vdf");
+            string libraryInfo = Path.Combine(steamFolder, "steamapps", "libraryfolders.vdf");
             if (!File.Exists(libraryInfo))
                 return null;
             // Fairly naive implementation; the regex doesn't properly deal with escaping. But for this

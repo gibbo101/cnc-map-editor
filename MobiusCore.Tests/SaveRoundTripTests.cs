@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using MobiusEditor.Headless;
 using MobiusEditor.Interface;
 using MobiusEditor.Model;
 using Xunit;
@@ -34,7 +35,7 @@ namespace MobiusCore.Tests
             string mapPath = Path.Combine(TestPaths.ModDir, "CustomMaps", mapName);
             string oraclePath = TestPaths.Oracle(Path.Combine("saves", mapName));
             Assert.True(File.Exists(oraclePath), "Oracle save missing; run oracle/regen.sh: " + oraclePath);
-            EditorHost host = EditorHost.Shared;
+            EditorSession host = EditorHost.Shared;
             IGamePlugin plugin = host.Load(mapPath, out string[] errors);
             output.WriteLine("load errors: " + errors.Length);
             string outPath = TestPaths.Output(Path.Combine("saves", mapName));

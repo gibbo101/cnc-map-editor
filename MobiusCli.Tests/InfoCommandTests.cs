@@ -1,0 +1,47 @@
+using System.IO;
+using MobiusCli;
+using MobiusCore.Tests;
+using Xunit;
+
+namespace MobiusCli.Tests
+{
+    /// <summary>`info` describes a map without a display: game, theater, size, bounds and object counts.</summary>
+    public class InfoCommandTests
+    {
+        private static (int code, string stdout, string stderr) Run(params string[] args)
+        {
+            StringWriter o = new StringWriter(), e = new StringWriter();
+            int code = Cli.Run(args, o, e);
+            return (code, o.ToString(), e.ToString());
+        }
+
+        [Fact]
+        public void DescribesAnOfficialMap()
+        {
+            (int code, string stdout, string stderr) = Run("info", Path.Combine(TestPaths.MapEdits, "scm05ea.ini"), "--game", TestPaths.GameDir);
+            Assert.True(code == 0, stderr);
+            Assert.Contains("game: RedAlert", stdout);
+            Assert.Contains("theater: Temperate", stdout);
+            Assert.Contains("size: 128x128", stdout);
+            Assert.Contains("bounds: ", stdout);
+            Assert.Contains("name: ", stdout);
+            Assert.Contains("overlay: ", stdout);
+        }
+
+        [Fact]
+        public void ReportsMissingMapAsAnError()
+        {
+            (int code, string _, string stderr) = Run("info", "/nonexistent/map.ini", "--game", TestPaths.GameDir);
+            Assert.NotEqual(0, code);
+            Assert.Contains("/nonexistent/map.ini", stderr);
+        }
+
+        [Fact]
+        public void UnknownCommandIsAnError()
+        {
+            (int code, string _, string stderr) = Run("frobnicate");
+            Assert.NotEqual(0, code);
+            Assert.Contains("frobnicate", stderr);
+        }
+    }
+}
