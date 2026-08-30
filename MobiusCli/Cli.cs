@@ -41,7 +41,7 @@ namespace MobiusCli
 
     public static class Cli
     {
-        public const string Usage = "usage: cncmap <info|validate|render|save> <map> [args] [--game <dir>] [--mod <dir>]...\n       cncmap mods [--mods-root <dir>] [--no-workshop]";
+        public const string Usage = "usage: cncmap <info|validate|render|save> <map> [args] [--game <dir>] [--game-type RA|TD] [--mod <dir>]...\n       cncmap mods [--mods-root <dir>] [--no-workshop]";
 
         /// <summary>Runs one command; returns the process exit code. Errors go to stderr, results to stdout.</summary>
         public static int Run(string[] args, TextWriter stdout, TextWriter stderr)
@@ -72,7 +72,11 @@ namespace MobiusCli
         {
             string game = inv.GameDir ?? SteamAssist.TryGetSteamGameFolder(MobiusEditor.Program.RemasterSteamId, "TiberianDawn.dll", "RedAlert.dll")
                 ?? throw new DirectoryNotFoundException("Game install not found; pass --game <dir>.");
-            return new EditorSession(game, inv.ModDirs);
+            string gameType = inv.Option("game-type", "RA");
+            MobiusEditor.Model.GameType type = gameType.Equals("TD", StringComparison.OrdinalIgnoreCase) ? MobiusEditor.Model.GameType.TiberianDawn
+                : gameType.Equals("RA", StringComparison.OrdinalIgnoreCase) ? MobiusEditor.Model.GameType.RedAlert
+                : throw new ArgumentException("unknown --game-type " + gameType + " (RA or TD)");
+            return new EditorSession(game, type, inv.ModDirs);
         }
     }
 }

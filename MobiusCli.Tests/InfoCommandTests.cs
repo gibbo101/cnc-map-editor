@@ -41,6 +41,17 @@ namespace MobiusCli.Tests
         }
 
         [Fact]
+        public void DescribesATiberianDawnCommunityMap()
+        {
+            (int code, string stdout, string stderr) = Run("info", MobiusCore.Tests.TiberianDawnSessionTests.CommunityMap, "--game", TestPaths.GameDir, "--game-type", "TD");
+            Assert.True(code == 0, stderr);
+            Assert.Contains("game: TiberianDawn", stdout);
+            Assert.Contains("theater: Desert", stdout);
+            Assert.Contains("bounds: 1,1 52x54", stdout);
+            Assert.Contains("load errors: 0", stdout);
+        }
+
+        [Fact]
         public void ReportsMissingMapAsAnError()
         {
             (int code, string _, string stderr) = Run("info", "/nonexistent/map.ini", "--game", TestPaths.GameDir);
