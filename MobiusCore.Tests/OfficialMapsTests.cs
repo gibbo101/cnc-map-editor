@@ -24,12 +24,10 @@ namespace MobiusCore.Tests
                 .Select(l => l.Substring(0, l.IndexOf('=')).ToLowerInvariant()).ToArray();
             Assert.Equal(124, listed.Length);
             Assert.Empty(listed.Except(names));
-            foreach (string known in new[] { "scm05ea.ini", "scm111ea.ini" })
-            {
-                byte[] expected = File.ReadAllBytes(Path.Combine(TestPaths.MapEdits, known));
-                byte[] actual = File.ReadAllBytes(Path.Combine(outDir, known));
-                Assert.True(expected.SequenceEqual(actual), known + " differs from the map-edits copy");
-            }
+            // map-edits/scm111ea.ini is a pristine extract (scm05ea.ini there is an editor-saved copy).
+            byte[] expected = File.ReadAllBytes(Path.Combine(TestPaths.MapEdits, "scm111ea.ini"));
+            byte[] actual = File.ReadAllBytes(Path.Combine(outDir, "scm111ea.ini"));
+            Assert.True(expected.SequenceEqual(actual), "scm111ea.ini differs from the pristine map-edits copy");
         }
     }
 }
