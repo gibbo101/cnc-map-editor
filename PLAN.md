@@ -257,8 +257,11 @@ would only tempt the native editor to slip. Not part of the plan.
    to the mono editor's saves (`oracle/saves-official/`, ~12 min, oracle tier). `validate`
    distinguishes notes (legacy conversions) from problems (lost content, blocking checks).
    Still to add: query/mutate commands.
-3. Mod profiles + manifest format (contract with the mod repo; provisional names
-   `mapeditor.json` / `[MapEditor]`). STARTED: `ModDiscovery` reads `ccmod.json` under a Mods
+3. Mod profiles + manifest format. **DECIDED (Luke, 2026-08-30 evening): no `[MapEditor]`
+   section in saves — the editor computes "vanilla-safe / needs mod X" from map content, and
+   the 261-map byte-exact save oracle stays pristine. And the manifest seam comes before more
+   GUI: mod tables move from compiled-in C# to mod-build-time data (`mapeditor.json`), TF being
+   the first mod that ships one.** STARTED: `ModDiscovery` reads `ccmod.json` under a Mods
    root (Proton prefix Documents on Linux) and the Workshop cache; `cncmap mods` lists them in
    load order; `EditorSession` takes the ordered mod list; `cncmap validate` = load errors +
    unknown entries + the plugin's blocking-save check. `EditorSession` is game-aware
@@ -283,3 +286,10 @@ text metrics are approximate (annotation layers only), `Region.Exclude` on infin
 
 Current blocker if you go back to the existing editor first: tool dialogs never become visible.
 Diagnosis and the prime suspect are at the top of `NATIVE_PORT_HANDOVER.md`.
+
+## Backlog
+
+- ~106 unlisted official maps in general.mix (230 files vs the 124-entry display list): survey
+  via contact sheet, then decide whether to ship the good ones as mod CustomMaps. Editing the
+  `[Missions]` list itself means general.mix surgery — check the data-vs-ClientG boundary first.
+- Generalise the fork's RenderProbe to TD so TD rendering gets an oracle, not just eyeballs.
