@@ -3,9 +3,13 @@
 Decision record and plan, 2026-08-23. Written at the end of a session that set out to edit the
 official RA skirmish maps and instead spent most of its time fighting the mono runtime.
 
-**Status (2026-08-30): RENDERER SPIKE PASSED. Core builds and renders on net8/Linux; next is
-the scaffold (headless CLI, mod profiles, then the Avalonia shell).** Repo: `cnc-map-editor/`
-(this file); the mono fork `../mobius-editor/` is the reference and oracle.
+**Status (end of 2026-08-30): spike passed, headless surface real.** `MobiusCore` builds and
+renders on net8/Linux; `cncmap` (info / validate / render / save / mods) drives it for RA and
+TD; saves are byte-identical to the mono editor on every map tried; unknown entities survive
+load/save; installed mods are discovered from the Mods root and the Workshop cache. Next:
+the per-mod editor manifest and map/profile binding (names are provisional — Luke to confirm),
+then the Avalonia shell with triggers designed in. Repo: `cnc-map-editor/` (this file); the
+mono fork `../mobius-editor/` is the reference and oracle.
 
 ---
 
