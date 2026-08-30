@@ -261,7 +261,8 @@ would only tempt the native editor to slip. Not part of the plan.
    load order; `EditorSession` takes the ordered mod list; `cncmap validate` = load errors +
    unknown entries + the plugin's blocking-save check. `EditorSession` is game-aware
    (`--game-type RA|TD`): TD INI+BIN community maps load and render. Not yet: per-mod editor
-   manifest, map remembering its profile, vanilla-safe classification, TD lossless retention. ~~Lossless loading of unknown entities~~ DONE 2026-08-30:
+   manifest, map remembering its profile, vanilla-safe classification. (TD lossless retention
+   DONE.) ~~Lossless loading of unknown entities~~ DONE 2026-08-30:
    `Map.UnknownEntries` keeps unknown structures/units/infantry/aircraft/ships/terrain/smudge
    verbatim and the RA save writes them back after the known entries (`LosslessLoadTests`);
    `cncmap info` lists them. Not yet covered: `[OVERLAY]` text entries, unknown trigger/team
