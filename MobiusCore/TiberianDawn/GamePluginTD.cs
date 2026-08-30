@@ -1553,8 +1553,8 @@ namespace MobiusEditor.TiberianDawn
                 SmudgeType smudgeType = badCrater ? SmudgeTypes.Crater1 : Map.SmudgeTypes.Where(t => t.Equals(tokens[0])).FirstOrDefault();
                 if (smudgeType == null)
                 {
-                    errors.Add(String.Format("Smudge '{0}' on cell {1} references unknown smudge.", tokens[0], cell));
-                    modified = true;
+                    errors.Add(String.Format("Smudge '{0}' on cell {1} references unknown smudge; kept as-is.", tokens[0], cell));
+                    Map.UnknownEntries.Add(new UnknownEntry("SMUDGE", kvp.Key, kvp.Value, "unknown type " + tokens[0]));
                     continue;
                 }
                 if (Globals.FilterTheaterObjects && !smudgeType.ExistsInTheater)
@@ -1623,8 +1623,8 @@ namespace MobiusEditor.TiberianDawn
                 InfantryType infantryType = Map.InfantryTypes.Where(t => t.Equals(tokens[1])).FirstOrDefault();
                 if (infantryType == null)
                 {
-                    errors.Add(String.Format("Infantry '{0}' references unknown infantry; skipping.", tokens[1]));
-                    modified = true;
+                    errors.Add(String.Format("Infantry '{0}' references unknown infantry; skipping; kept as-is.", tokens[1]));
+                    Map.UnknownEntries.Add(new UnknownEntry("INFANTRY", kvp.Key, kvp.Value, "unknown type " + tokens[1]));
                     continue;
                 }
                 int strength;
@@ -1800,8 +1800,8 @@ namespace MobiusEditor.TiberianDawn
                 UnitType unitType = Map.UnitTypes.Where(t => t.IsGroundUnit && t.Equals(tokens[1])).FirstOrDefault();
                 if (unitType == null)
                 {
-                    errors.Add(String.Format("Unit '{0}' references unknown unit.", tokens[1]));
-                    modified = true;
+                    errors.Add(String.Format("Unit '{0}' references unknown unit; kept as-is.", tokens[1]));
+                    Map.UnknownEntries.Add(new UnknownEntry("UNITS", kvp.Key, kvp.Value, "unknown type " + tokens[1]));
                     continue;
                 }
                 int strength;
@@ -1961,8 +1961,8 @@ namespace MobiusEditor.TiberianDawn
                 UnitType aircraftType = Map.UnitTypes.Where(t => t.IsAircraft && t.Equals(tokens[1])).FirstOrDefault();
                 if (aircraftType == null)
                 {
-                    errors.Add(String.Format("Aircraft '{0}' references unknown aircraft.", tokens[1]));
-                    modified = true;
+                    errors.Add(String.Format("Aircraft '{0}' references unknown aircraft; kept as-is.", tokens[1]));
+                    Map.UnknownEntries.Add(new UnknownEntry("AIRCRAFT", kvp.Key, kvp.Value, "unknown type " + tokens[1]));
                     continue;
                 }
                 int strength;
@@ -2093,8 +2093,8 @@ namespace MobiusEditor.TiberianDawn
                 BuildingType buildingType = Map.BuildingTypes.Where(t => t.Equals(tokens[1])).FirstOrDefault();
                 if (buildingType == null)
                 {
-                    errors.Add(String.Format("Structure '{0}' references unknown structure.", tokens[1]));
-                    modified = true;
+                    errors.Add(String.Format("Structure '{0}' references unknown structure; kept as-is.", tokens[1]));
+                    Map.UnknownEntries.Add(new UnknownEntry("STRUCTURES", kvp.Key, kvp.Value, "unknown type " + tokens[1]));
                     continue;
                 }
                 if (Globals.FilterTheaterObjects && buildingType.IsTheaterDependent && !buildingType.ExistsInTheater)
@@ -2355,8 +2355,8 @@ namespace MobiusEditor.TiberianDawn
                 TerrainType terrainType = Map.TerrainTypes.Where(t => t.Equals(tokens[0])).FirstOrDefault();
                 if (terrainType == null)
                 {
-                    errors.Add(String.Format("Terrain '{0}' references unknown terrain.", tokens[0]));
-                    modified = true;
+                    errors.Add(String.Format("Terrain '{0}' references unknown terrain; kept as-is.", tokens[0]));
+                    Map.UnknownEntries.Add(new UnknownEntry("TERRAIN", kvp.Key, kvp.Value, "unknown type " + tokens[0]));
                     continue;
                 }
                 if (Globals.FilterTheaterObjects && !terrainType.ExistsInTheater)
@@ -3603,6 +3603,7 @@ namespace MobiusEditor.TiberianDawn
                     );
                 }
             }
+            AppendUnknownEntries(infantrySection, "INFANTRY", ref infantryIndex);
             return infantrySection;
         }
 
@@ -3627,6 +3628,7 @@ namespace MobiusEditor.TiberianDawn
                     building.Trigger
                 );
             }
+            AppendUnknownEntries(structuresSection, "STRUCTURES", ref structureIndex);
             return structuresSection;
         }
 
@@ -3652,6 +3654,7 @@ namespace MobiusEditor.TiberianDawn
                     unit.Trigger
                 );
             }
+            AppendUnknownEntries(unitsSection, "UNITS", ref unitIndex);
             return unitsSection;
         }
 
@@ -3681,6 +3684,7 @@ namespace MobiusEditor.TiberianDawn
                     String.IsNullOrEmpty(aircraft.Mission) ? "Guard" : aircraft.Mission
                 );
             }
+            AppendUnknownEntries(aircraftSection, "AIRCRAFT", ref aircraftIndex);
             return aircraftSection;
         }
 
@@ -3748,6 +3752,7 @@ namespace MobiusEditor.TiberianDawn
                     resolvedSmudge[actualCell] = smudge;
                 }
             }
+            AppendUnknownEntries(smudgeSection, "SMUDGE");
             foreach (int cell in resolvedSmudge.Keys.OrderBy(c => c))
             {
                 Smudge smudge = resolvedSmudge[cell];
@@ -3766,6 +3771,7 @@ namespace MobiusEditor.TiberianDawn
                     terrainSection[cell.ToString()] = String.Format("{0},{1}", terrain.Type.Name.ToUpperInvariant(), terrain.Trigger);
                 }
             }
+            AppendUnknownEntries(terrainSection, "TERRAIN");
             return terrainSection;
         }
 
@@ -4854,5 +4860,22 @@ namespace MobiusEditor.TiberianDawn
             Dispose(true);
         }
         #endregion
+
+        /// <summary>Writes back entries the profile could not interpret, after the known ones in the same section.</summary>
+        private void AppendUnknownEntries(INISection section, string sectionName, ref int nextIndex)
+        {
+            foreach (UnknownEntry entry in Map.UnknownEntries.Where(u => string.Equals(u.Section, sectionName, StringComparison.OrdinalIgnoreCase)))
+            {
+                section[(nextIndex++).ToString("D3")] = entry.Value;
+            }
+        }
+
+        private void AppendUnknownEntries(INISection section, string sectionName)
+        {
+            foreach (UnknownEntry entry in Map.UnknownEntries.Where(u => string.Equals(u.Section, sectionName, StringComparison.OrdinalIgnoreCase)))
+            {
+                if (!section.Keys.Contains(entry.Key)) section[entry.Key] = entry.Value;
+            }
+        }
     }
 }
