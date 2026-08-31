@@ -58,6 +58,7 @@ namespace MobiusEditor.Shell
         private readonly DeterministicRandom random = new DeterministicRandom(0x5EED);
         private Dictionary<int, Template> templateUndo = new Dictionary<int, Template>(), templateRedo = new Dictionary<int, Template>();
         private Dictionary<int, Overlay> overlayUndo = new Dictionary<int, Overlay>(), overlayRedo = new Dictionary<int, Overlay>();
+        private Dictionary<int, CellTrigger> cellTriggerUndo = new Dictionary<int, CellTrigger>(), cellTriggerRedo = new Dictionary<int, CellTrigger>();
         private bool inStroke;
 
         public bool CanUndo => undoRedo.CanUndo;
@@ -132,6 +133,71 @@ namespace MobiusEditor.Shell
             RequireOpen();
             OverlayEdit.Erase(Map, category, cell, overlayUndo, overlayRedo);
             AfterOperation();
+        }
+
+        /// <summary>Triggers a cell trigger may reference: only those whose event can fire from a cell.</summary>
+        public IReadOnlyList<string> AvailableCellTriggers() =>
+            Map == null ? (IReadOnlyList<string>)Array.Empty<string>()
+                        : Map.FilterCellTriggers().Select(t => t.Name).ToList();
+
+        /// <summary>Places a cell trigger; only into an empty cell, and only for an eligible trigger name.</summary>
+        public void PlaceCellTrigger(Point location, string trigger)
+        {
+            RequireOpen();
+            if (Trigger.IsEmpty(trigger)) return;
+            if (!AvailableCellTriggers().Contains(trigger, StringComparer.OrdinalIgnoreCase)) return;
+            if (!Map.Metrics.GetCell(location, out int cell) || Map.CellTriggers[cell] != null) return;
+            if (!cellTriggerUndo.ContainsKey(cell)) cellTriggerUndo[cell] = Map.CellTriggers[cell];
+            CellTrigger cellTrigger = new CellTrigger(trigger);
+            Map.CellTriggers[cell] = cellTrigger;
+            cellTriggerRedo[cell] = cellTrigger;
+            AfterOperation();
+        }
+
+        public void EraseCellTrigger(Point location)
+        {
+            RequireOpen();
+            if (!Map.Metrics.GetCell(location, out int cell) || Map.CellTriggers[cell] == null) return;
+            if (!cellTriggerUndo.ContainsKey(cell)) cellTriggerUndo[cell] = Map.CellTriggers[cell];
+            Map.CellTriggers[cell] = null;
+            cellTriggerRedo[cell] = null;
+            AfterOperation();
+        }
+
+        /// <summary>Places (or moves) a waypoint's flag; one cell per waypoint, one undo step per move.</summary>
+        public void PlaceWaypoint(int index, Point location)
+        {
+            RequireOpen();
+            if (index < 0 || index >= Map.Waypoints.Length || !Map.Metrics.GetCell(location, out int cell)) return;
+            MoveWaypoint(index, cell);
+        }
+
+        /// <summary>Clears the first waypoint flag found on the cell.</summary>
+        public void EraseWaypointAt(Point location)
+        {
+            RequireOpen();
+            if (!Map.Metrics.GetCell(location, out int cell)) return;
+            int index = Array.FindIndex(Map.Waypoints, w => w.Cell == cell);
+            if (index < 0) return;
+            MoveWaypoint(index, null);
+        }
+
+        private void MoveWaypoint(int index, int? cell)
+        {
+            Waypoint waypoint = Map.Waypoints[index];
+            int? oldCell = waypoint.Cell;
+            if (oldCell == cell) return;
+            IGamePlugin plugin = Plugin;
+            void Apply(int? value, int? dirtyToo)
+            {
+                waypoint.Cell = value;
+                plugin.Dirty = true;
+                if (value.HasValue) MarkDirty(value.Value.Yield());
+                if (dirtyToo.HasValue) MarkDirty(dirtyToo.Value.Yield());
+            }
+            Apply(cell, oldCell);
+            undoRedo.Track(_ => Apply(oldCell, cell), _ => Apply(cell, oldCell), this);
+            Changed?.Invoke(this, EventArgs.Empty);
         }
 
         /// <summary>Runs one trigger editing session and commits it as a single undo step; undo restores the previous list and every rewired referrer.</summary>
@@ -266,31 +332,35 @@ namespace MobiusEditor.Shell
         {
             MarkDirty(templateRedo.Keys);
             MarkDirty(overlayRedo.Keys);
+            MarkDirty(cellTriggerRedo.Keys);
             if (!inStroke) CommitStroke();
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
         private void CommitStroke()
         {
-            if (templateRedo.Count == 0 && overlayRedo.Count == 0)
+            if (templateRedo.Count == 0 && overlayRedo.Count == 0 && cellTriggerRedo.Count == 0)
             {
                 ResetStroke();
                 return;
             }
             Dictionary<int, Template> tUndo = templateUndo, tRedo = templateRedo;
             Dictionary<int, Overlay> oUndo = overlayUndo, oRedo = overlayRedo;
+            Dictionary<int, CellTrigger> cUndo = cellTriggerUndo, cRedo = cellTriggerRedo;
             Map map = Map;
             IGamePlugin plugin = Plugin;
             plugin.Dirty = true;
-            void Replay(Dictionary<int, Template> t, Dictionary<int, Overlay> o)
+            void Replay(Dictionary<int, Template> t, Dictionary<int, Overlay> o, Dictionary<int, CellTrigger> c)
             {
                 foreach (KeyValuePair<int, Template> kv in t) map.Templates[kv.Key] = kv.Value;
                 foreach (KeyValuePair<int, Overlay> kv in o) map.Overlay[kv.Key] = kv.Value;
+                foreach (KeyValuePair<int, CellTrigger> kv in c) map.CellTriggers[kv.Key] = kv.Value;
                 plugin.Dirty = true;
                 MarkDirty(t.Keys);
                 MarkDirty(o.Keys);
+                MarkDirty(c.Keys);
             }
-            undoRedo.Track(_ => Replay(tUndo, oUndo), _ => Replay(tRedo, oRedo), this);
+            undoRedo.Track(_ => Replay(tUndo, oUndo, cUndo), _ => Replay(tRedo, oRedo, cRedo), this);
             ResetStroke();
         }
 
@@ -300,6 +370,8 @@ namespace MobiusEditor.Shell
             templateRedo = new Dictionary<int, Template>();
             overlayUndo = new Dictionary<int, Overlay>();
             overlayRedo = new Dictionary<int, Overlay>();
+            cellTriggerUndo = new Dictionary<int, CellTrigger>();
+            cellTriggerRedo = new Dictionary<int, CellTrigger>();
         }
 
         private void RequireOpen()

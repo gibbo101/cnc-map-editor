@@ -40,9 +40,12 @@ namespace MobiusEditor.App
             RedoButton.Click += (s, e) => document?.Redo();
             TriggersButton.Click += (s, e) => OpenTriggersDialog();
             TeamsButton.Click += (s, e) => OpenTeamsDialog();
-            // One brush at a time: picking in one palette clears the other.
-            TemplatePalette.SelectionChanged += (s, e) => { if (TemplatePalette.SelectedItem != null) OverlayPalette.SelectedItem = null; };
-            OverlayPalette.SelectionChanged += (s, e) => { if (OverlayPalette.SelectedItem != null) TemplatePalette.SelectedItem = null; };
+            // One brush at a time: picking in one palette clears the others. The cell-trigger
+            // and waypoint brushes also switch their indicator layer on while active.
+            TemplatePalette.SelectionChanged += (s, e) => { if (TemplatePalette.SelectedItem != null) ClearOtherBrushes(TemplatePalette); };
+            OverlayPalette.SelectionChanged += (s, e) => { if (OverlayPalette.SelectedItem != null) ClearOtherBrushes(OverlayPalette); };
+            CellTriggerPalette.SelectionChanged += (s, e) => { if (CellTriggerPalette.SelectedItem != null) ClearOtherBrushes(CellTriggerPalette); UpdateIndicatorLayers(); };
+            WaypointPalette.SelectionChanged += (s, e) => { if (WaypointPalette.SelectedItem != null) ClearOtherBrushes(WaypointPalette); UpdateIndicatorLayers(); };
             MapImage.PointerPressed += OnPointerPressed;
             MapImage.PointerReleased += OnPointerReleased;
             MapImage.PointerMoved += OnPointerMoved;
@@ -134,6 +137,30 @@ namespace MobiusEditor.App
 
         private MobiusEditor.Model.TemplateType SelectedTemplate => TemplatePalette.SelectedItem as MobiusEditor.Model.TemplateType;
         private MobiusEditor.Model.OverlayType SelectedOverlay => OverlayPalette.SelectedItem as MobiusEditor.Model.OverlayType;
+        private string SelectedCellTrigger => CellTriggerPalette.SelectedItem as string;
+        private int SelectedWaypoint => WaypointPalette.SelectedIndex;
+
+        private void ClearOtherBrushes(ListBox active)
+        {
+            foreach (ListBox palette in new[] { TemplatePalette, OverlayPalette, CellTriggerPalette, WaypointPalette })
+            {
+                if (!ReferenceEquals(palette, active)) palette.SelectedItem = null;
+            }
+        }
+
+        /// <summary>The cell-trigger and waypoint brushes show their indicator layers while active.</summary>
+        private void UpdateIndicatorLayers()
+        {
+            if (document == null || !document.IsOpen) return;
+            MobiusEditor.Model.MapLayerFlag layers = MobiusEditor.Model.MapLayerFlag.MapLayers;
+            if (SelectedCellTrigger != null) layers |= MobiusEditor.Model.MapLayerFlag.CellTriggers;
+            if (SelectedWaypoint >= 0) layers |= MobiusEditor.Model.MapLayerFlag.WaypointsIndic;
+            if (document.Layers != layers)
+            {
+                document.Layers = layers;
+                Refresh();
+            }
+        }
 
         private System.Drawing.Point? CellUnder(PointerEventArgs e)
         {
@@ -147,7 +174,7 @@ namespace MobiusEditor.App
             System.Drawing.Point? cell = CellUnder(e);
             if (cell == null) return;
             PointerPointProperties props = e.GetCurrentPoint(MapImage).Properties;
-            if (props.IsLeftButtonPressed && SelectedTemplate == null && SelectedOverlay == null) return;
+            if (props.IsLeftButtonPressed && SelectedTemplate == null && SelectedOverlay == null && SelectedCellTrigger == null && SelectedWaypoint < 0) return;
             if (props.IsLeftButtonPressed)
             {
                 painting = true;
@@ -174,7 +201,7 @@ namespace MobiusEditor.App
         {
             if (document == null || !document.IsOpen) return;
             System.Drawing.Point? cell = CellUnder(e);
-            if (cell != null && cell != lastPaintCell)
+            if (cell != null && cell != lastPaintCell && SelectedWaypoint < 0)
             {
                 if (painting) Paint(cell.Value);
                 else if (erasing) EraseAt(cell.Value);
@@ -185,14 +212,18 @@ namespace MobiusEditor.App
         private void Paint(System.Drawing.Point cell)
         {
             if (SelectedOverlay != null) document.PlaceOverlay(cell, SelectedOverlay);
+            else if (SelectedCellTrigger != null) document.PlaceCellTrigger(cell, SelectedCellTrigger);
+            else if (SelectedWaypoint >= 0) document.PlaceWaypoint(SelectedWaypoint, cell);
             else document.PlaceTemplate(cell, SelectedTemplate);
             lastPaintCell = cell;
         }
 
-        /// <summary>Right-drag erases what the active brush would paint: the overlay's category, or the template's footprint.</summary>
+        /// <summary>Right-drag erases what the active brush would paint: the overlay's category, the template's footprint, the cell trigger, or the waypoint flag on the cell.</summary>
         private void EraseAt(System.Drawing.Point cell)
         {
             if (SelectedOverlay != null) document.EraseOverlay(cell, SelectedOverlay);
+            else if (SelectedCellTrigger != null) document.EraseCellTrigger(cell);
+            else if (SelectedWaypoint >= 0) document.EraseWaypointAt(cell);
             else document.EraseTemplate(cell, SelectedTemplate);
             lastPaintCell = cell;
         }
@@ -218,12 +249,21 @@ namespace MobiusEditor.App
             TriggersButton.IsEnabled = TeamsButton.IsEnabled = true;
             UndoButton.IsEnabled = document.CanUndo;
             RedoButton.IsEnabled = document.CanRedo;
-            // Rebuild the palette only when a different map is open, or per-op refreshes would drop the selection.
+            // Rebuild the palettes only when a different map is open, or per-op refreshes would drop the selection.
             if (paletteForPath != document.Path)
             {
                 TemplatePalette.ItemsSource = document.AvailableTemplates();
                 OverlayPalette.ItemsSource = document.AvailableOverlays();
+                WaypointPalette.ItemsSource = document.Map.Waypoints.Select((w, i) => i + ": " + w.Name).ToList();
                 paletteForPath = document.Path;
+            }
+            // The eligible cell triggers follow the trigger list; rebuild only when it actually changed.
+            List<string> cellTriggers = document.AvailableCellTriggers().ToList();
+            if (!(CellTriggerPalette.ItemsSource is List<string> current) || !current.SequenceEqual(cellTriggers))
+            {
+                string selected = SelectedCellTrigger;
+                CellTriggerPalette.ItemsSource = cellTriggers;
+                if (selected != null) CellTriggerPalette.SelectedItem = cellTriggers.FirstOrDefault(n => n.Equals(selected, StringComparison.OrdinalIgnoreCase));
             }
             using (System.Drawing.Bitmap rendered = document.Render())
             {

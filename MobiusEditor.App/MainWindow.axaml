@@ -21,24 +21,32 @@
       <TextBlock Name="TitleLabel" VerticalAlignment="Center" Text="No map" FontWeight="Bold" />
     </StackPanel>
     <TextBlock DockPanel.Dock="Bottom" Name="StatusLabel" Margin="6,3" Text="Open a map to begin." />
-    <Grid DockPanel.Dock="Left" Width="180" RowDefinitions="Auto,2*,Auto,*">
-      <TextBlock Grid.Row="0" Margin="6,3" Text="Terrain" FontWeight="Bold" />
-      <ListBox Grid.Row="1" Name="TemplatePalette">
-        <ListBox.ItemTemplate>
-          <DataTemplate x:DataType="model:TemplateType">
-            <TextBlock Text="{Binding Name}" />
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
-      <TextBlock Grid.Row="2" Margin="6,3" Text="Overlay" FontWeight="Bold" />
-      <ListBox Grid.Row="3" Name="OverlayPalette">
-        <ListBox.ItemTemplate>
-          <DataTemplate x:DataType="model:OverlayType">
-            <TextBlock Text="{Binding Name}" />
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
-    </Grid>
+    <TabControl DockPanel.Dock="Left" Width="200" Name="ToolTabs">
+      <TabItem Header="Terrain">
+        <ListBox Name="TemplatePalette">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="model:TemplateType">
+              <TextBlock Text="{Binding Name}" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </TabItem>
+      <TabItem Header="Overlay">
+        <ListBox Name="OverlayPalette">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="model:OverlayType">
+              <TextBlock Text="{Binding Name}" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </TabItem>
+      <TabItem Header="Cell trig.">
+        <ListBox Name="CellTriggerPalette" />
+      </TabItem>
+      <TabItem Header="Waypoints">
+        <ListBox Name="WaypointPalette" />
+      </TabItem>
+    </TabControl>
     <ScrollViewer Name="Scroller" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Background="#202020">
       <Image Name="MapImage" Stretch="None" HorizontalAlignment="Left" VerticalAlignment="Top" />
     </ScrollViewer>
