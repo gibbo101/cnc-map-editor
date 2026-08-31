@@ -76,6 +76,30 @@ namespace MobiusEditor.App.Tests
         }
 
         [AvaloniaFact]
+        public void SelectingAnOverlayPaintsItAndDeselectsTheTemplateBrush()
+        {
+            MainWindow window = OpenTemperate();
+            ListBox templates = window.FindControl<ListBox>("TemplatePalette");
+            ListBox overlays = window.FindControl<ListBox>("OverlayPalette");
+            templates.SelectedItem = templates.Items.Cast<TemplateType>().Single(t => t.Name == "tdsh1");
+            overlays.SelectedItem = overlays.Items.Cast<OverlayType>().Single(t => t.Name == "brik");
+            Assert.Null(templates.SelectedItem);
+
+            window.Document.Map.Overlay[15, 15] = null;
+            Point click = CellCenter(window, 15, 15);
+            window.MouseDown(click, MouseButton.Left);
+            window.MouseUp(click, MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("brik", window.Document.Map.Overlay[15, 15].Type.Name);
+
+            // Right-click with the wall brush erases the wall again.
+            window.MouseDown(click, MouseButton.Right);
+            window.MouseUp(click, MouseButton.Right);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Null(window.Document.Map.Overlay[15, 15]);
+        }
+
+        [AvaloniaFact]
         public void PaletteOffersOnlyTheaterAvailableTemplates()
         {
             MainWindow window = OpenTemperate();

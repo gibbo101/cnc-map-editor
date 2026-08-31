@@ -38,6 +38,9 @@ namespace MobiusEditor.App
             ZoomOutButton.Click += (s, e) => Zoom(0.5);
             UndoButton.Click += (s, e) => document?.Undo();
             RedoButton.Click += (s, e) => document?.Redo();
+            // One brush at a time: picking in one palette clears the other.
+            TemplatePalette.SelectionChanged += (s, e) => { if (TemplatePalette.SelectedItem != null) OverlayPalette.SelectedItem = null; };
+            OverlayPalette.SelectionChanged += (s, e) => { if (OverlayPalette.SelectedItem != null) TemplatePalette.SelectedItem = null; };
             MapImage.PointerPressed += OnPointerPressed;
             MapImage.PointerReleased += OnPointerReleased;
             MapImage.PointerMoved += OnPointerMoved;
@@ -110,6 +113,7 @@ namespace MobiusEditor.App
         }
 
         private MobiusEditor.Model.TemplateType SelectedTemplate => TemplatePalette.SelectedItem as MobiusEditor.Model.TemplateType;
+        private MobiusEditor.Model.OverlayType SelectedOverlay => OverlayPalette.SelectedItem as MobiusEditor.Model.OverlayType;
 
         private System.Drawing.Point? CellUnder(PointerEventArgs e)
         {
@@ -123,7 +127,8 @@ namespace MobiusEditor.App
             System.Drawing.Point? cell = CellUnder(e);
             if (cell == null) return;
             PointerPointProperties props = e.GetCurrentPoint(MapImage).Properties;
-            if (props.IsLeftButtonPressed && SelectedTemplate != null)
+            if (props.IsLeftButtonPressed && SelectedTemplate == null && SelectedOverlay == null) return;
+            if (props.IsLeftButtonPressed)
             {
                 painting = true;
                 document.BeginStroke();
@@ -159,14 +164,16 @@ namespace MobiusEditor.App
 
         private void Paint(System.Drawing.Point cell)
         {
-            document.PlaceTemplate(cell, SelectedTemplate);
+            if (SelectedOverlay != null) document.PlaceOverlay(cell, SelectedOverlay);
+            else document.PlaceTemplate(cell, SelectedTemplate);
             lastPaintCell = cell;
         }
 
-        /// <summary>Right-drag erases the selected template's footprint per cell, like the fork's tool.</summary>
+        /// <summary>Right-drag erases what the active brush would paint: the overlay's category, or the template's footprint.</summary>
         private void EraseAt(System.Drawing.Point cell)
         {
-            document.EraseTemplate(cell, SelectedTemplate);
+            if (SelectedOverlay != null) document.EraseOverlay(cell, SelectedOverlay);
+            else document.EraseTemplate(cell, SelectedTemplate);
             lastPaintCell = cell;
         }
 
@@ -194,6 +201,7 @@ namespace MobiusEditor.App
             if (paletteForPath != document.Path)
             {
                 TemplatePalette.ItemsSource = document.AvailableTemplates();
+                OverlayPalette.ItemsSource = document.AvailableOverlays();
                 paletteForPath = document.Path;
             }
             using (System.Drawing.Bitmap rendered = document.Render())

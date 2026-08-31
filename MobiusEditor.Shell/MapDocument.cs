@@ -90,6 +90,11 @@ namespace MobiusEditor.Shell
             Map == null ? (IReadOnlyList<TemplateType>)Array.Empty<TemplateType>()
                         : Map.TemplateTypes.Where(t => t.ExistsInTheater && !t.IsGrouped).ToList();
 
+        /// <summary>Overlay types a palette should offer: walls, resources and decorations; never the unplaceable ones.</summary>
+        public IReadOnlyList<OverlayType> AvailableOverlays() =>
+            Map == null ? (IReadOnlyList<OverlayType>)Array.Empty<OverlayType>()
+                        : Map.OverlayTypes.Where(t => !t.Flags.HasFlag(OverlayTypeFlag.Unplaceable)).ToList();
+
         /// <summary>Stamps a template at cell (or one picked icon of it); the Clear template erases, because null cells ARE clear terrain.</summary>
         public void PlaceTemplate(Point cell, TemplateType type, Point? icon = null)
         {

@@ -18,16 +18,24 @@
       <TextBlock Name="TitleLabel" VerticalAlignment="Center" Text="No map" FontWeight="Bold" />
     </StackPanel>
     <TextBlock DockPanel.Dock="Bottom" Name="StatusLabel" Margin="6,3" Text="Open a map to begin." />
-    <DockPanel DockPanel.Dock="Left" Width="180">
-      <TextBlock DockPanel.Dock="Top" Margin="6,3" Text="Terrain" FontWeight="Bold" />
-      <ListBox Name="TemplatePalette">
+    <Grid DockPanel.Dock="Left" Width="180" RowDefinitions="Auto,2*,Auto,*">
+      <TextBlock Grid.Row="0" Margin="6,3" Text="Terrain" FontWeight="Bold" />
+      <ListBox Grid.Row="1" Name="TemplatePalette">
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="model:TemplateType">
             <TextBlock Text="{Binding Name}" />
           </DataTemplate>
         </ListBox.ItemTemplate>
       </ListBox>
-    </DockPanel>
+      <TextBlock Grid.Row="2" Margin="6,3" Text="Overlay" FontWeight="Bold" />
+      <ListBox Grid.Row="3" Name="OverlayPalette">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="model:OverlayType">
+            <TextBlock Text="{Binding Name}" />
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Grid>
     <ScrollViewer Name="Scroller" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Background="#202020">
       <Image Name="MapImage" Stretch="None" HorizontalAlignment="Left" VerticalAlignment="Top" />
     </ScrollViewer>

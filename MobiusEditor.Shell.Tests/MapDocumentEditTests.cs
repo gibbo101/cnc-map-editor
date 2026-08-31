@@ -140,6 +140,19 @@ namespace MobiusEditor.Shell.Tests
         }
 
         [Fact]
+        public void AvailableOverlaysOfferWallsResourcesAndDecorationsButNothingUnplaceable()
+        {
+            using (MapDocument doc = Open())
+            {
+                var names = doc.AvailableOverlays().Select(t => t.Name).ToList();
+                Assert.Contains("brik", names);
+                Assert.Contains("gold01", names);
+                Assert.Contains("v12", names);
+                Assert.DoesNotContain(doc.AvailableOverlays(), t => t.Flags.HasFlag(OverlayTypeFlag.Unplaceable));
+            }
+        }
+
+        [Fact]
         public void EditsMarkThePluginDirty()
         {
             using (MapDocument doc = Open())
