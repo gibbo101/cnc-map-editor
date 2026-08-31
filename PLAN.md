@@ -372,9 +372,20 @@ TRAP: `pgrep -f "reaper SteamLaunch"` over ssh matches its own command line — 
 status lines; the window paints immediately (verified live: fully interactive UI 4s after
 Game Mode launch). Deck deploy current as of 03c9e95.
 
+**FIRST UI FEEDBACK ROUND (Luke, from the Deck, 2026-08-31 evening — commits accddb2…8d2cd83):**
+Luke: New→Snow froze a long time (→ New now creates on a background thread; first use of
+a theater loads its tileset, that was the cost); "the rest feels snappier already" (lag
+fix confirmed on-device); palettes were bare INI names with no preview and placement was
+blind (→ palettes now show each type's rendered thumbnail + display name via
+`Shell/PaletteItem` + `App/PaletteEntry`; templates label as `code (W×H)`; hovering with
+a brush shows a footprint-sized ghost of the selected type snapped to the hovered cell,
+plain highlight box for cell-trigger/waypoint brushes). Palette thumbnails verified by
+Deck screenshot. Deck deploy current as of 8d2cd83.
+
 Next candidates (no committed order):
-- **Luke's UI feedback pass** — he's deliberately holding feedback until the surface is
-  fuller; it now is, and it's on his Deck. Expect layout/UX rework requests.
+- More UI feedback from Luke as he uses it (this round: palettes+ghost; expect more).
+- Ghost polish: live semi-transparent RENDER preview (fork-style) instead of the
+  thumbnail stretch; erase-mode ghost styling.
 - TD mission patterns for `expand-mission` — agreed LOW priority (Luke, 2026-08-31:
   feature-completeness only; defer until a real TD authoring need appears).
 Full oracle tier re-verified green mid-session (363/363, 14m50s) after the IGamePlugin
