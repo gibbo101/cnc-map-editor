@@ -292,16 +292,31 @@ would only tempt the native editor to slip. Not part of the plan.
    (fork's MissionItemControl switch); the dialog's order row shows waypoint list /
    options dropdown / ranged spinner per `TeamMissionArgType`.
 
+**OBJECT TOOLS ALSO SHIPPED (same session, commits 6ccf114 → 3b81a70): every fork tool
+family now has a brush.** Terrain (trees/rocks through the occupier set; occupy masks
+needn't claim the origin cell — erase from an OCCUPIED cell), units (fork defaults:
+toolbar placement house, 256 strength, north, default mission), infantry (InfantryGroup
+of five stops, one man per placement, group appears with the first man and leaves with
+the last), buildings (map auto-manages bibs; eaten hand-placed smudge and wall-overlay
+restored on undo; BasePriority -1 — rebuild-base plumbing not started), and smudge
+(`MobiusCore/Model/SmudgeEdit.cs`, full fork port incl. multi-cell bibs + attached-bib
+protection + RestoreNearbySmudge). All placements undoable, all pinned to keep
+incremental rendering pixel-identical, and `PlacedObjectSaveTests` pins that
+editor-CREATED objects survive save/reload. Tool tabs: Tiles / Terrain / Overlay /
+Buildings / Units / Infantry / Smudge / Cell trig. / Waypoints + a toolbar House combo.
+
 Next candidates (no committed order — pick by appetite):
-- Object tools (buildings / units / infantry / terrain / smudge placement) — the remaining
-  fork tools; the tool-tab dock and dirty-cell rendering are ready for them.
+- Object PROPERTY editing on placed objects (house/strength/direction/mission/trigger of
+  an existing unit or building — everything places with defaults today); moving placed
+  objects (fork drag-move); the rebuild-base (BasePriority) editor.
+- Sub-cell infantry stop picking from the pointer position (placement fills the first
+  free stop today).
 - Trigger dialog polish: the fork's per-control tooltips, a CheckTriggers button, trigger
-  filter box.
+  filter box; editing existing teamtype order rows in place (add/remove only today).
 - TD mission patterns for `expand-mission` if TD scripting is ever wanted (RA-only today,
   clean error on TD maps).
-- Editing existing teamtype order rows in place (add/remove only today).
 Full oracle tier re-verified green mid-session (363/363, 14m50s) after the IGamePlugin
-additions and `ParseRawScriptRows`.
+additions and `ParseRawScriptRows`, and again at session end after SmudgeEdit landed.
 
 Cross-repo loose end: `scripts/editor_manifest.py` + `resources/.../mapeditor.json` sit
 UNTRACKED on the mod repo's `building-upgrades` checkout awaiting Luke's branch decision;
