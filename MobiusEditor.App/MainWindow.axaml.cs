@@ -26,6 +26,8 @@ namespace MobiusEditor.App
         private object selectedObject;
         private bool updatingProperties;
         private System.Drawing.Point? pointerSubPixel;
+        private object dragObject;
+        private System.Drawing.Point? dragStartCell;
 
         /// <summary>The open document; the window is a thin skin over it (tests reach through here).</summary>
         public MapDocument Document => document;
@@ -362,8 +364,11 @@ namespace MobiusEditor.App
             if (props.IsLeftButtonPressed && SelectedTemplate == null && SelectedOverlay == null && SelectedCellTrigger == null && SelectedWaypoint < 0
                 && SelectedTerrain == null && SelectedUnit == null && SelectedInfantry == null && SelectedBuilding == null && SelectedSmudge == null)
             {
-                // No brush: a left click selects the object under the cell for the properties panel.
+                // No brush: a left click selects the object under the cell for the properties
+                // panel, and holding it starts a drag-move released on the target cell.
                 selectedObject = document.ObjectAt(cell.Value, SubPixelUnder(e));
+                dragObject = selectedObject;
+                dragStartCell = cell;
                 RefreshProperties();
                 return;
             }
@@ -384,6 +389,21 @@ namespace MobiusEditor.App
 
         private void OnPointerReleased(object sender, PointerReleasedEventArgs e)
         {
+            if (dragObject != null)
+            {
+                System.Drawing.Point? cell = CellUnder(e);
+                if (cell != null && cell != dragStartCell)
+                {
+                    if (!document.MoveObject(dragObject, cell.Value, SubPixelUnder(e)))
+                    {
+                        StatusLabel.Text = "Can't move there.";
+                    }
+                    RefreshProperties();
+                }
+                dragObject = null;
+                dragStartCell = null;
+                return;
+            }
             if (!painting && !erasing) return;
             painting = erasing = false;
             lastPaintCell = null;

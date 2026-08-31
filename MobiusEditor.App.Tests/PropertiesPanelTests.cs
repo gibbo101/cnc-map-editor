@@ -77,6 +77,23 @@ namespace MobiusEditor.App.Tests
         }
 
         [AvaloniaFact]
+        public void DraggingASelectedObjectMovesIt()
+        {
+            MainWindow window = Open();
+            Unit unit = window.Document.PlaceUnit(new System.Drawing.Point(15, 15), window.Document.AvailableUnits().First(t => t.IsGroundUnit));
+            Dispatcher.UIThread.RunJobs();
+            window.MouseDown(CellCenter(window, 15, 15), MouseButton.Left);
+            window.MouseMove(CellCenter(window, 18, 15));
+            window.MouseUp(CellCenter(window, 18, 15), MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Null(window.Document.Map.Technos[new System.Drawing.Point(15, 15)]);
+            Assert.Same(unit, window.Document.Map.Technos[new System.Drawing.Point(18, 15)]);
+            Assert.Same(unit, window.SelectedObject);
+            window.Document.Undo();
+            Assert.Same(unit, window.Document.Map.Technos[new System.Drawing.Point(15, 15)]);
+        }
+
+        [AvaloniaFact]
         public void UndoingThePlacementDropsThePanel()
         {
             MainWindow window = Open();

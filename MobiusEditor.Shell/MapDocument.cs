@@ -360,6 +360,159 @@ namespace MobiusEditor.Shell
             }
         }
 
+        /// <summary>
+        /// Moves a placed object to a new cell as one undo step. The footprint validates at
+        /// the target — a blocked move changes nothing and returns false, as the fork rolls
+        /// back. Buildings carry their bib and give back any hand-placed smudge the new bib
+        /// ate; an infantryman moves into the target cell's stop closest to the pointer, and
+        /// a source group left empty retires.
+        /// </summary>
+        public bool MoveObject(object techno, Point newLocation, Point? subPixel = null)
+        {
+            RequireOpen();
+            switch (techno)
+            {
+                case Building building:
+                    return MoveBuilding(building, newLocation);
+                case Infantry infantry:
+                    return MoveInfantry(infantry, newLocation, subPixel);
+                case ICellOccupier occupier when Map.Technos[occupier] is Point oldLocation:
+                    if (newLocation == oldLocation) return false;
+                    Map.Technos.Remove(occupier);
+                    if (!Map.Technos.Add(newLocation, occupier))
+                    {
+                        Map.Technos.Add(oldLocation, occupier);
+                        return false;
+                    }
+                    TrackMove(
+                        () => { Map.Technos.Remove(occupier); Map.Technos.Add(oldLocation, occupier); MarkOverlapDirty(occupier, oldLocation); MarkOverlapDirty(occupier, newLocation); },
+                        () => { Map.Technos.Remove(occupier); Map.Technos.Add(newLocation, occupier); MarkOverlapDirty(occupier, oldLocation); MarkOverlapDirty(occupier, newLocation); });
+                    MarkOverlapDirty(occupier, oldLocation);
+                    MarkOverlapDirty(occupier, newLocation);
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private bool MoveBuilding(Building building, Point newLocation)
+        {
+            Map map = Map;
+            if (!(map.Buildings[building] is Point oldLocation) || newLocation == oldLocation) return false;
+            map.Buildings.Remove(building);
+            if (!map.Buildings.CanAdd(newLocation, building))
+            {
+                map.Buildings.Add(oldLocation, building);
+                return false;
+            }
+            // As with placement: capture hand-placed smudge the new bib covers, for undo.
+            Dictionary<Point, Smudge> eatenSmudge = new Dictionary<Point, Smudge>();
+            Dictionary<Point, Smudge> bib = building.GetBib(newLocation, map.SmudgeTypes);
+            if (bib != null)
+            {
+                foreach (Point p in bib.Keys)
+                {
+                    Smudge old = map.Smudge[p];
+                    if (old != null && !old.IsAutoBib) eatenSmudge[p] = old;
+                }
+            }
+            if (!map.Buildings.Add(newLocation, building))
+            {
+                map.Buildings.Add(oldLocation, building);
+                return false;
+            }
+            void Undo()
+            {
+                map.Buildings.Remove(building);
+                map.Buildings.Add(oldLocation, building);
+                foreach (KeyValuePair<Point, Smudge> kv in eatenSmudge)
+                {
+                    Smudge current = map.Smudge[kv.Key];
+                    if (current == null || !current.IsAutoBib) map.Smudge[kv.Key] = kv.Value;
+                }
+                MarkBuildingDirty(building, oldLocation);
+                MarkBuildingDirty(building, newLocation);
+            }
+            void Redo()
+            {
+                map.Buildings.Remove(building);
+                map.Buildings.Add(newLocation, building);
+                MarkBuildingDirty(building, oldLocation);
+                MarkBuildingDirty(building, newLocation);
+            }
+            TrackMove(Undo, Redo);
+            MarkBuildingDirty(building, oldLocation);
+            MarkBuildingDirty(building, newLocation);
+            return true;
+        }
+
+        private bool MoveInfantry(Infantry infantry, Point newLocation, Point? subPixel)
+        {
+            Map map = Map;
+            InfantryGroup sourceGroup = infantry.InfantryGroup;
+            if (sourceGroup == null || !(map.Technos[sourceGroup] is Point sourceLocation)) return false;
+            if (!map.Metrics.GetCell(newLocation, out int targetCell)) return false;
+            int sourceStop = Array.IndexOf(sourceGroup.Infantry, infantry);
+            if (sourceStop < 0) return false;
+            ICellOccupier target = map.Technos[targetCell];
+            InfantryGroup targetGroup;
+            bool newGroup = false;
+            if (ReferenceEquals(target, sourceGroup))
+            {
+                targetGroup = sourceGroup;
+            }
+            else if (target == null)
+            {
+                targetGroup = new InfantryGroup();
+                if (!map.Technos.Add(newLocation, targetGroup)) return false;
+                newGroup = true;
+            }
+            else if (target is InfantryGroup existing)
+            {
+                targetGroup = existing;
+            }
+            else
+            {
+                return false;
+            }
+            int targetStop = subPixel.HasValue
+                ? InfantryGroup.ClosestStoppingTypes(subPixel.Value).Cast<int>().Where(i => targetGroup.Infantry[i] == null || (targetGroup == sourceGroup && i == sourceStop)).DefaultIfEmpty(-1).First()
+                : Array.FindIndex(targetGroup.Infantry, i => i == null);
+            if (targetStop < 0 || (targetGroup == sourceGroup && targetStop == sourceStop))
+            {
+                if (newGroup) map.Technos.Remove(targetGroup);
+                return false;
+            }
+            void Apply(InfantryGroup from, int fromStop, Point fromLocation, InfantryGroup to, int toStop, Point toLocation)
+            {
+                from.Infantry[fromStop] = null;
+                if (from != to && from.Infantry.All(i => i == null)) map.Technos.Remove(from);
+                InfantryGroup landed = map.Technos[toLocation] as InfantryGroup;
+                if (landed == null)
+                {
+                    landed = to;
+                    map.Technos.Add(toLocation, landed);
+                }
+                landed.Infantry[toStop] = infantry;
+                infantry.InfantryGroup = landed;
+                dirtyCells.Add(fromLocation);
+                dirtyCells.Add(toLocation);
+            }
+            Apply(sourceGroup, sourceStop, sourceLocation, targetGroup, targetStop, newLocation);
+            TrackMove(
+                () => Apply(infantry.InfantryGroup, targetStop, newLocation, sourceGroup, sourceStop, sourceLocation),
+                () => Apply(infantry.InfantryGroup, sourceStop, sourceLocation, targetGroup, targetStop, newLocation));
+            return true;
+        }
+
+        private void TrackMove(Action undo, Action redo)
+        {
+            IGamePlugin plugin = Plugin;
+            plugin.Dirty = true;
+            undoRedo.Track(_ => { undo(); plugin.Dirty = true; }, _ => { redo(); plugin.Dirty = true; }, this);
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
         /// <summary>Whether a previously selected object still sits on the map (undo can retire it).</summary>
         public bool IsObjectOnMap(object techno)
         {
