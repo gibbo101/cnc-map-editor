@@ -99,6 +99,25 @@ namespace MobiusEditor.App.Tests
         }
 
         [AvaloniaFact]
+        public void BuildingBrushPlacesWithTheToolbarHouseAndErases()
+        {
+            MainWindow window = Open();
+            ComboBox house = window.FindControl<ComboBox>("HouseCombo");
+            house.SelectedItem = house.Items.Cast<string>().First(h => h == "Greece");
+            Dispatcher.UIThread.RunJobs();
+            ListBox palette = window.FindControl<ListBox>("BuildingPalette");
+            palette.SelectedItem = palette.Items.Cast<BuildingType>().First(b => b.HasBib);
+            Dispatcher.UIThread.RunJobs();
+
+            Click(window, CellCenter(window, 10, 10), MouseButton.Left);
+            Building placed = window.Document.Map.Buildings[new System.Drawing.Point(10, 10)] as Building;
+            Assert.NotNull(placed);
+            Assert.Equal("Greece", placed.House.Name);
+            Click(window, CellCenter(window, 10, 10), MouseButton.Right);
+            Assert.Null(window.Document.Map.Buildings[new System.Drawing.Point(10, 10)]);
+        }
+
+        [AvaloniaFact]
         public void UnitAndInfantryBrushesUseTheToolbarHouse()
         {
             MainWindow window = Open();

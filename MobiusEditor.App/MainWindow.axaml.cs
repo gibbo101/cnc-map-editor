@@ -45,6 +45,7 @@ namespace MobiusEditor.App
             TemplatePalette.SelectionChanged += (s, e) => { if (TemplatePalette.SelectedItem != null) ClearOtherBrushes(TemplatePalette); };
             TerrainPalette.SelectionChanged += (s, e) => { if (TerrainPalette.SelectedItem != null) ClearOtherBrushes(TerrainPalette); };
             OverlayPalette.SelectionChanged += (s, e) => { if (OverlayPalette.SelectedItem != null) ClearOtherBrushes(OverlayPalette); };
+            BuildingPalette.SelectionChanged += (s, e) => { if (BuildingPalette.SelectedItem != null) ClearOtherBrushes(BuildingPalette); };
             UnitPalette.SelectionChanged += (s, e) => { if (UnitPalette.SelectedItem != null) ClearOtherBrushes(UnitPalette); };
             InfantryPalette.SelectionChanged += (s, e) => { if (InfantryPalette.SelectedItem != null) ClearOtherBrushes(InfantryPalette); };
             HouseCombo.SelectionChanged += (s, e) =>
@@ -150,12 +151,13 @@ namespace MobiusEditor.App
         private string SelectedCellTrigger => CellTriggerPalette.SelectedItem as string;
         private int SelectedWaypoint => WaypointPalette.SelectedIndex;
         private MobiusEditor.Model.TerrainType SelectedTerrain => TerrainPalette.SelectedItem as MobiusEditor.Model.TerrainType;
+        private MobiusEditor.Model.BuildingType SelectedBuilding => BuildingPalette.SelectedItem as MobiusEditor.Model.BuildingType;
         private MobiusEditor.Model.UnitType SelectedUnit => UnitPalette.SelectedItem as MobiusEditor.Model.UnitType;
         private MobiusEditor.Model.InfantryType SelectedInfantry => InfantryPalette.SelectedItem as MobiusEditor.Model.InfantryType;
 
         private void ClearOtherBrushes(ListBox active)
         {
-            foreach (ListBox palette in new[] { TemplatePalette, TerrainPalette, OverlayPalette, UnitPalette, InfantryPalette, CellTriggerPalette, WaypointPalette })
+            foreach (ListBox palette in new[] { TemplatePalette, TerrainPalette, OverlayPalette, BuildingPalette, UnitPalette, InfantryPalette, CellTriggerPalette, WaypointPalette })
             {
                 if (!ReferenceEquals(palette, active)) palette.SelectedItem = null;
             }
@@ -188,7 +190,7 @@ namespace MobiusEditor.App
             if (cell == null) return;
             PointerPointProperties props = e.GetCurrentPoint(MapImage).Properties;
             if (props.IsLeftButtonPressed && SelectedTemplate == null && SelectedOverlay == null && SelectedCellTrigger == null && SelectedWaypoint < 0
-                && SelectedTerrain == null && SelectedUnit == null && SelectedInfantry == null) return;
+                && SelectedTerrain == null && SelectedUnit == null && SelectedInfantry == null && SelectedBuilding == null) return;
             if (props.IsLeftButtonPressed)
             {
                 painting = true;
@@ -227,6 +229,7 @@ namespace MobiusEditor.App
         {
             if (SelectedOverlay != null) document.PlaceOverlay(cell, SelectedOverlay);
             else if (SelectedTerrain != null) document.PlaceTerrain(cell, SelectedTerrain);
+            else if (SelectedBuilding != null) document.PlaceBuilding(cell, SelectedBuilding);
             else if (SelectedUnit != null) document.PlaceUnit(cell, SelectedUnit);
             else if (SelectedInfantry != null) document.PlaceInfantry(cell, SelectedInfantry);
             else if (SelectedCellTrigger != null) document.PlaceCellTrigger(cell, SelectedCellTrigger);
@@ -240,6 +243,7 @@ namespace MobiusEditor.App
         {
             if (SelectedOverlay != null) document.EraseOverlay(cell, SelectedOverlay);
             else if (SelectedTerrain != null) document.EraseTerrainAt(cell);
+            else if (SelectedBuilding != null) document.EraseBuildingAt(cell);
             else if (SelectedUnit != null) document.EraseUnitAt(cell);
             else if (SelectedInfantry != null) document.EraseInfantryAt(cell);
             else if (SelectedCellTrigger != null) document.EraseCellTrigger(cell);
@@ -275,6 +279,7 @@ namespace MobiusEditor.App
                 TemplatePalette.ItemsSource = document.AvailableTemplates();
                 TerrainPalette.ItemsSource = document.AvailableTerrain();
                 OverlayPalette.ItemsSource = document.AvailableOverlays();
+                BuildingPalette.ItemsSource = document.AvailableBuildings();
                 UnitPalette.ItemsSource = document.AvailableUnits();
                 InfantryPalette.ItemsSource = document.AvailableInfantry();
                 WaypointPalette.ItemsSource = document.Map.Waypoints.Select((w, i) => i + ": " + w.Name).ToList();

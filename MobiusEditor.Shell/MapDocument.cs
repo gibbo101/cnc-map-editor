@@ -271,6 +271,107 @@ namespace MobiusEditor.Shell
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
+        public IReadOnlyList<BuildingType> AvailableBuildings() =>
+            Map == null ? (IReadOnlyList<BuildingType>)Array.Empty<BuildingType>()
+                        : Map.BuildingTypes.Where(t => t.ExistsInTheater).ToList();
+
+        /// <summary>
+        /// Places a building with the fork's defaults (placement house, full strength,
+        /// prebuilt, outside the rebuild base). The map auto-places the bib; a hand-placed
+        /// smudge the bib covers is captured so undo can put it back, and a wall-type
+        /// building eats the overlay on its cell the same way. One undo step; null when refused.
+        /// </summary>
+        public Building PlaceBuilding(Point location, BuildingType type)
+        {
+            RequireOpen();
+            if (type == null) return null;
+            Map map = Map;
+            Building building = new Building
+            {
+                Type = type,
+                House = PlacementHouse,
+                Strength = 256,
+                Direction = map.BuildingDirectionTypes.First(d => d.Facing == FacingType.North),
+            };
+            if (!map.Buildings.CanAdd(location, building)) return null;
+            Dictionary<Point, Smudge> eatenSmudge = null;
+            Dictionary<Point, Smudge> bib = building.GetBib(location, map.SmudgeTypes);
+            if (bib != null)
+            {
+                eatenSmudge = new Dictionary<Point, Smudge>();
+                foreach (Point p in bib.Keys)
+                {
+                    Smudge old = map.Smudge[p];
+                    if (old != null && !old.IsAutoBib) eatenSmudge[p] = old;
+                }
+            }
+            Overlay eatenOverlay = type.IsWall ? map.Overlay[location] : null;
+            if (!map.Buildings.Add(location, building)) return null;
+            if (eatenOverlay != null) map.Overlay[location] = null;
+            IGamePlugin plugin = Plugin;
+            plugin.Dirty = true;
+            MarkBuildingDirty(building, location);
+            void UndoPlace()
+            {
+                map.Buildings.Remove(building);
+                if (eatenOverlay != null) map.Overlay[location] = eatenOverlay;
+                if (eatenSmudge != null)
+                {
+                    foreach (KeyValuePair<Point, Smudge> kv in eatenSmudge)
+                    {
+                        Smudge current = map.Smudge[kv.Key];
+                        if (current == null || !current.IsAutoBib) map.Smudge[kv.Key] = kv.Value;
+                    }
+                }
+                plugin.Dirty = true;
+                MarkBuildingDirty(building, location);
+            }
+            void RedoPlace()
+            {
+                map.Buildings.Add(location, building);
+                if (eatenOverlay != null) map.Overlay[location] = null;
+                plugin.Dirty = true;
+                MarkBuildingDirty(building, location);
+            }
+            undoRedo.Track(_ => UndoPlace(), _ => RedoPlace(), this);
+            Changed?.Invoke(this, EventArgs.Empty);
+            return building;
+        }
+
+        /// <summary>Removes the building occupying the cell. One undo step; undo re-adds it, bib and all.</summary>
+        public void EraseBuildingAt(Point location)
+        {
+            RequireOpen();
+            if (!(Map.Buildings[location] is Building building)) return;
+            Map map = Map;
+            Point actual = map.Buildings[building].Value;
+            map.Buildings.Remove(building);
+            IGamePlugin plugin = Plugin;
+            plugin.Dirty = true;
+            MarkBuildingDirty(building, actual);
+            void Apply(bool add)
+            {
+                if (add) map.Buildings.Add(actual, building);
+                else map.Buildings.Remove(building);
+                plugin.Dirty = true;
+                MarkBuildingDirty(building, actual);
+            }
+            undoRedo.Track(_ => Apply(true), _ => Apply(false), this);
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>The building's overlap rectangle plus its bib cells.</summary>
+        private void MarkBuildingDirty(Building building, Point location)
+        {
+            MarkOverlapDirty(building, location);
+            Dictionary<Point, Smudge> bib = building.GetBib(location, Map.SmudgeTypes);
+            if (bib == null) return;
+            foreach (Point p in bib.Keys)
+            {
+                if (p.X >= 0 && p.Y >= 0 && p.X < Map.Metrics.Width && p.Y < Map.Metrics.Height) dirtyCells.Add(p);
+            }
+        }
+
         /// <summary>Terrain objects (trees, rocks) with art in the map's theater.</summary>
         public IReadOnlyList<TerrainType> AvailableTerrain() =>
             Map == null ? (IReadOnlyList<TerrainType>)Array.Empty<TerrainType>()

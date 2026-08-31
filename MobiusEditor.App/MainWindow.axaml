@@ -52,6 +52,15 @@
           </ListBox.ItemTemplate>
         </ListBox>
       </TabItem>
+      <TabItem Header="Buildings">
+        <ListBox Name="BuildingPalette">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="model:BuildingType">
+              <TextBlock Text="{Binding Name}" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </TabItem>
       <TabItem Header="Units">
         <ListBox Name="UnitPalette">
           <ListBox.ItemTemplate>
