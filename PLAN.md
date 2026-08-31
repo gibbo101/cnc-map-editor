@@ -318,13 +318,27 @@ Buildings / Units / Infantry / Smudge / Cell trig. / Waypoints + a toolbar House
   results in-dialog), filter box (name/house/event/action match), teamtype order rows
   update in place.
 
+**DRAG-MOVE + BASE PRIORITIES + DECK DEPLOY SHIPPED (2026-08-31 while Luke away,
+commits bc9bbd3 → 1309629):**
+- ~~Drag-moving placed objects~~ DONE: hold the brushless selection click, release on the
+  target cell — one undo step, blocked moves change nothing, buildings carry bibs and give
+  back eaten smudge, infantry land in the pointer-closest stop.
+- ~~Rebuild-base priority editor~~ DONE: fork's AdjustBuildPriorities ported — base
+  priorities stay consecutive 0..n-1 through edits, base-leaves and erases; undo restores
+  every affected building's priority via a before/after priority map on the undo step.
+- ~~Per-control tooltips~~ RESOLVED N/A: the fork's OWN RA plugin returns null from
+  TriggerEventInfo/TriggerActionInfo (only TD has the description tables) — our null stubs
+  are fork-faithful; RA's useful hover content is TriggerSummary, already shown inline.
+- **STEAM DECK DEPLOYED (2026-08-31): `deploy-deck.sh`** publishes self-contained linux-x64
+  editor+CLI and rsyncs to Luke's Deck (`~/cnc-map-editor/`, desktop-mode
+  `run-editor.sh` auto-loads the deployed TF mod, `--no-mod` opts out). Verified ON the
+  Deck: deployed CLI loaded a TF CustomMaps .mpr with the deployed mod's manifest. Deployed
+  at commit a2a0680 vintage — REDEPLOY (`DECK_HOST=deck@<deck-ip> ./deploy-deck.sh`)
+  after further changes; the Deck comes online intermittently.
+
 Next candidates (no committed order):
 - **Luke's UI feedback pass** — he's deliberately holding feedback until the surface is
-  fuller; it now is. Expect layout/UX rework requests before more features.
-- Drag-moving placed objects (fork's select-and-drag); the rebuild-base priority editor
-  (port AdjustBuildPriorities — priorities of other base buildings shift when one joins).
-- Per-control tooltips in the dialogs (needs `TriggerEventInfo`/`TriggerActionInfo`, which
-  are null stubs in our GamePluginRA — port the fork's texts first).
+  fuller; it now is, and it's on his Deck. Expect layout/UX rework requests.
 - TD mission patterns for `expand-mission` — agreed LOW priority (Luke, 2026-08-31:
   feature-completeness only; defer until a real TD authoring need appears).
 Full oracle tier re-verified green mid-session (363/363, 14m50s) after the IGamePlugin
