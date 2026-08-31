@@ -135,6 +135,63 @@ namespace MobiusEditor.Shell
             AfterOperation();
         }
 
+        /// <summary>Terrain objects (trees, rocks) with art in the map's theater.</summary>
+        public IReadOnlyList<TerrainType> AvailableTerrain() =>
+            Map == null ? (IReadOnlyList<TerrainType>)Array.Empty<TerrainType>()
+                        : Map.TerrainTypes.Where(t => t.ExistsInTheater).ToList();
+
+        /// <summary>Places a terrain object; the occupier set validates the footprint. One undo step. Null when refused.</summary>
+        public Terrain PlaceTerrain(Point location, TerrainType type)
+        {
+            RequireOpen();
+            if (type == null) return null;
+            Terrain terrain = new Terrain { Type = type };
+            if (!Map.Technos.Add(location, terrain)) return null;
+            TrackOccupier(terrain, location, added: true);
+            return terrain;
+        }
+
+        /// <summary>Removes the terrain object occupying the cell (any cell of its footprint). One undo step.</summary>
+        public void EraseTerrainAt(Point location)
+        {
+            RequireOpen();
+            if (!(Map.Technos[location] is Terrain terrain)) return;
+            Point actual = Map.Technos[terrain].Value;
+            Map.Technos.Remove(terrain);
+            TrackOccupier(terrain, actual, added: false);
+        }
+
+        private void TrackOccupier(ICellOccupier occupier, Point location, bool added)
+        {
+            Map map = Map;
+            IGamePlugin plugin = Plugin;
+            plugin.Dirty = true;
+            MarkOverlapDirty(occupier, location);
+            void Apply(bool add)
+            {
+                if (add) map.Technos.Add(location, occupier);
+                else map.Technos.Remove(occupier);
+                plugin.Dirty = true;
+                MarkOverlapDirty(occupier, location);
+            }
+            undoRedo.Track(_ => Apply(!added), _ => Apply(added), this);
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>Marks the object's whole overlap rectangle dirty; sprites reach beyond their occupied cells.</summary>
+        private void MarkOverlapDirty(ICellOccupier occupier, Point location)
+        {
+            Rectangle bounds = occupier is ICellOverlapper overlapper ? overlapper.OverlapBounds : new Rectangle(0, 0, 1, 1);
+            for (int y = 0; y < bounds.Height; y++)
+            {
+                for (int x = 0; x < bounds.Width; x++)
+                {
+                    Point p = new Point(location.X + bounds.X + x, location.Y + bounds.Y + y);
+                    if (p.X >= 0 && p.Y >= 0 && p.X < Map.Metrics.Width && p.Y < Map.Metrics.Height) dirtyCells.Add(p);
+                }
+            }
+        }
+
         /// <summary>Triggers a cell trigger may reference: only those whose event can fire from a cell.</summary>
         public IReadOnlyList<string> AvailableCellTriggers() =>
             Map == null ? (IReadOnlyList<string>)Array.Empty<string>()

@@ -22,10 +22,19 @@
     </StackPanel>
     <TextBlock DockPanel.Dock="Bottom" Name="StatusLabel" Margin="6,3" Text="Open a map to begin." />
     <TabControl DockPanel.Dock="Left" Width="200" Name="ToolTabs">
-      <TabItem Header="Terrain">
+      <TabItem Header="Tiles">
         <ListBox Name="TemplatePalette">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="model:TemplateType">
+              <TextBlock Text="{Binding Name}" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </TabItem>
+      <TabItem Header="Terrain">
+        <ListBox Name="TerrainPalette">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="model:TerrainType">
               <TextBlock Text="{Binding Name}" />
             </DataTemplate>
           </ListBox.ItemTemplate>

@@ -75,6 +75,30 @@ namespace MobiusEditor.App.Tests
         }
 
         [AvaloniaFact]
+        public void TerrainBrushPlacesAndErasesObjects()
+        {
+            MainWindow window = Open();
+            ListBox palette = window.FindControl<ListBox>("TerrainPalette");
+            TerrainType type = palette.Items.Cast<TerrainType>().First();
+            palette.SelectedItem = type;
+            Dispatcher.UIThread.RunJobs();
+
+            Click(window, CellCenter(window, 20, 20), MouseButton.Left);
+            // The occupy mask needn't claim the origin cell; find the first cell it does.
+            bool[,] mask = type.OccupyMask;
+            System.Drawing.Point occupied = new System.Drawing.Point(20, 20);
+            for (int y = 0; y < mask.GetLength(0); y++)
+                for (int x = 0; x < mask.GetLength(1); x++)
+                    if (mask[y, x]) { occupied = new System.Drawing.Point(20 + x, 20 + y); y = mask.GetLength(0); break; }
+            Terrain placed = window.Document.Map.Technos[occupied] as Terrain;
+            Assert.NotNull(placed);
+            Assert.Same(type, placed.Type);
+
+            Click(window, CellCenter(window, occupied.X, occupied.Y), MouseButton.Right);
+            Assert.Null(window.Document.Map.Technos[occupied]);
+        }
+
+        [AvaloniaFact]
         public void WaypointBrushPlacesAndErasesTheFlag()
         {
             MainWindow window = Open();

@@ -43,6 +43,7 @@ namespace MobiusEditor.App
             // One brush at a time: picking in one palette clears the others. The cell-trigger
             // and waypoint brushes also switch their indicator layer on while active.
             TemplatePalette.SelectionChanged += (s, e) => { if (TemplatePalette.SelectedItem != null) ClearOtherBrushes(TemplatePalette); };
+            TerrainPalette.SelectionChanged += (s, e) => { if (TerrainPalette.SelectedItem != null) ClearOtherBrushes(TerrainPalette); };
             OverlayPalette.SelectionChanged += (s, e) => { if (OverlayPalette.SelectedItem != null) ClearOtherBrushes(OverlayPalette); };
             CellTriggerPalette.SelectionChanged += (s, e) => { if (CellTriggerPalette.SelectedItem != null) ClearOtherBrushes(CellTriggerPalette); UpdateIndicatorLayers(); };
             WaypointPalette.SelectionChanged += (s, e) => { if (WaypointPalette.SelectedItem != null) ClearOtherBrushes(WaypointPalette); UpdateIndicatorLayers(); };
@@ -139,10 +140,11 @@ namespace MobiusEditor.App
         private MobiusEditor.Model.OverlayType SelectedOverlay => OverlayPalette.SelectedItem as MobiusEditor.Model.OverlayType;
         private string SelectedCellTrigger => CellTriggerPalette.SelectedItem as string;
         private int SelectedWaypoint => WaypointPalette.SelectedIndex;
+        private MobiusEditor.Model.TerrainType SelectedTerrain => TerrainPalette.SelectedItem as MobiusEditor.Model.TerrainType;
 
         private void ClearOtherBrushes(ListBox active)
         {
-            foreach (ListBox palette in new[] { TemplatePalette, OverlayPalette, CellTriggerPalette, WaypointPalette })
+            foreach (ListBox palette in new[] { TemplatePalette, TerrainPalette, OverlayPalette, CellTriggerPalette, WaypointPalette })
             {
                 if (!ReferenceEquals(palette, active)) palette.SelectedItem = null;
             }
@@ -174,7 +176,7 @@ namespace MobiusEditor.App
             System.Drawing.Point? cell = CellUnder(e);
             if (cell == null) return;
             PointerPointProperties props = e.GetCurrentPoint(MapImage).Properties;
-            if (props.IsLeftButtonPressed && SelectedTemplate == null && SelectedOverlay == null && SelectedCellTrigger == null && SelectedWaypoint < 0) return;
+            if (props.IsLeftButtonPressed && SelectedTemplate == null && SelectedOverlay == null && SelectedCellTrigger == null && SelectedWaypoint < 0 && SelectedTerrain == null) return;
             if (props.IsLeftButtonPressed)
             {
                 painting = true;
@@ -212,16 +214,18 @@ namespace MobiusEditor.App
         private void Paint(System.Drawing.Point cell)
         {
             if (SelectedOverlay != null) document.PlaceOverlay(cell, SelectedOverlay);
+            else if (SelectedTerrain != null) document.PlaceTerrain(cell, SelectedTerrain);
             else if (SelectedCellTrigger != null) document.PlaceCellTrigger(cell, SelectedCellTrigger);
             else if (SelectedWaypoint >= 0) document.PlaceWaypoint(SelectedWaypoint, cell);
             else document.PlaceTemplate(cell, SelectedTemplate);
             lastPaintCell = cell;
         }
 
-        /// <summary>Right-drag erases what the active brush would paint: the overlay's category, the template's footprint, the cell trigger, or the waypoint flag on the cell.</summary>
+        /// <summary>Right-drag erases what the active brush would paint: the overlay's category, the terrain object, the template's footprint, the cell trigger, or the waypoint flag on the cell.</summary>
         private void EraseAt(System.Drawing.Point cell)
         {
             if (SelectedOverlay != null) document.EraseOverlay(cell, SelectedOverlay);
+            else if (SelectedTerrain != null) document.EraseTerrainAt(cell);
             else if (SelectedCellTrigger != null) document.EraseCellTrigger(cell);
             else if (SelectedWaypoint >= 0) document.EraseWaypointAt(cell);
             else document.EraseTemplate(cell, SelectedTemplate);
@@ -253,6 +257,7 @@ namespace MobiusEditor.App
             if (paletteForPath != document.Path)
             {
                 TemplatePalette.ItemsSource = document.AvailableTemplates();
+                TerrainPalette.ItemsSource = document.AvailableTerrain();
                 OverlayPalette.ItemsSource = document.AvailableOverlays();
                 WaypointPalette.ItemsSource = document.Map.Waypoints.Select((w, i) => i + ": " + w.Name).ToList();
                 paletteForPath = document.Path;
