@@ -346,6 +346,14 @@ new <out> [--theater X]` (scaffolds 2 player-start waypoints — the game REFUSE
 skirmish map without them, and plugin.Save writes NOTHING on validation failure, which
 `MapDocument.Save` now surfaces as an error instead).
 
+**MAP SETTINGS SHIPPED (ee183f4):** Settings… dialog edits [Basic] + briefing as one undo
+step (`MapDocument.EditMapSettings`); the SoloMission flag flips the save rules (Home
+waypoint instead of 2 player starts — pinned). THEATER FACTS: the core defines 8 RA
+theaters but only Temperate/Snow/Interior are real — Winter/Desert/Jungle/Barren/Cave are
+`IsModTheater` CnCNet extras with no Remastered art (TD: Desert/Temperate/Winter real;
+Jungle/Snow/Caribbean extras). The New dialog filters to `!IsModTheater`. Deck deploy
+current as of ee183f4.
+
 Next candidates (no committed order):
 - **Luke's UI feedback pass** — he's deliberately holding feedback until the surface is
   fuller; it now is, and it's on his Deck. Expect layout/UX rework requests.
