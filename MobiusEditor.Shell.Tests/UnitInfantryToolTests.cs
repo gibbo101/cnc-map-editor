@@ -93,6 +93,30 @@ namespace MobiusEditor.Shell.Tests
         }
 
         [Fact]
+        public void SubPixelPicksTheClosestStopForPlaceEraseAndSelection()
+        {
+            using (MapDocument doc = Open())
+            {
+                InfantryType type = doc.AvailableInfantry().First();
+                Point at = new Point(28, 28);
+                // The game's in-cell space is 24x24; corners map to the four corner stops.
+                Point upperLeft = new Point(3, 3);
+                Point lowerRight = new Point(21, 21);
+                Infantry first = doc.PlaceInfantry(at, type, upperLeft);
+                Infantry second = doc.PlaceInfantry(at, type, lowerRight);
+                InfantryGroup group = (InfantryGroup)doc.Map.Technos[at];
+                Assert.Same(first, group.Infantry[(int)InfantryStoppingType.UpperLeft]);
+                Assert.Same(second, group.Infantry[(int)InfantryStoppingType.LowerRight]);
+                Assert.Same(first, doc.ObjectAt(at, upperLeft));
+                Assert.Same(second, doc.ObjectAt(at, lowerRight));
+                // Erase near the lower-right takes that man, not the first-occupied stop.
+                doc.EraseInfantryAt(at, lowerRight);
+                Assert.Null(group.Infantry[(int)InfantryStoppingType.LowerRight]);
+                Assert.Same(first, group.Infantry[(int)InfantryStoppingType.UpperLeft]);
+            }
+        }
+
+        [Fact]
         public void SmudgeStrokeIsUndoableAndKeepsIncrementalRenderIdentical()
         {
             using (MapDocument doc = Open())

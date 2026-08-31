@@ -25,6 +25,7 @@ namespace MobiusEditor.App
         private bool painting, erasing;
         private object selectedObject;
         private bool updatingProperties;
+        private System.Drawing.Point? pointerSubPixel;
 
         /// <summary>The open document; the window is a thin skin over it (tests reach through here).</summary>
         public MapDocument Document => document;
@@ -346,6 +347,12 @@ namespace MobiusEditor.App
             return document.CellAt((int)p.X, (int)p.Y);
         }
 
+        private System.Drawing.Point? SubPixelUnder(PointerEventArgs e)
+        {
+            Point p = e.GetPosition(MapImage);
+            return document.SubPixelAt((int)p.X, (int)p.Y);
+        }
+
         private void OnPointerPressed(object sender, PointerPressedEventArgs e)
         {
             if (document == null || !document.IsOpen) return;
@@ -356,10 +363,11 @@ namespace MobiusEditor.App
                 && SelectedTerrain == null && SelectedUnit == null && SelectedInfantry == null && SelectedBuilding == null && SelectedSmudge == null)
             {
                 // No brush: a left click selects the object under the cell for the properties panel.
-                selectedObject = document.ObjectAt(cell.Value);
+                selectedObject = document.ObjectAt(cell.Value, SubPixelUnder(e));
                 RefreshProperties();
                 return;
             }
+            pointerSubPixel = SubPixelUnder(e);
             if (props.IsLeftButtonPressed)
             {
                 painting = true;
@@ -388,6 +396,7 @@ namespace MobiusEditor.App
             System.Drawing.Point? cell = CellUnder(e);
             if (cell != null && cell != lastPaintCell && SelectedWaypoint < 0)
             {
+                pointerSubPixel = SubPixelUnder(e);
                 if (painting) Paint(cell.Value);
                 else if (erasing) EraseAt(cell.Value);
             }
@@ -400,7 +409,7 @@ namespace MobiusEditor.App
             else if (SelectedTerrain != null) document.PlaceTerrain(cell, SelectedTerrain);
             else if (SelectedBuilding != null) document.PlaceBuilding(cell, SelectedBuilding);
             else if (SelectedUnit != null) document.PlaceUnit(cell, SelectedUnit);
-            else if (SelectedInfantry != null) document.PlaceInfantry(cell, SelectedInfantry);
+            else if (SelectedInfantry != null) document.PlaceInfantry(cell, SelectedInfantry, pointerSubPixel);
             else if (SelectedSmudge != null) document.PlaceSmudge(cell, SelectedSmudge);
             else if (SelectedCellTrigger != null) document.PlaceCellTrigger(cell, SelectedCellTrigger);
             else if (SelectedWaypoint >= 0) document.PlaceWaypoint(SelectedWaypoint, cell);
@@ -415,7 +424,7 @@ namespace MobiusEditor.App
             else if (SelectedTerrain != null) document.EraseTerrainAt(cell);
             else if (SelectedBuilding != null) document.EraseBuildingAt(cell);
             else if (SelectedUnit != null) document.EraseUnitAt(cell);
-            else if (SelectedInfantry != null) document.EraseInfantryAt(cell);
+            else if (SelectedInfantry != null) document.EraseInfantryAt(cell, pointerSubPixel);
             else if (SelectedSmudge != null) document.EraseSmudge(cell, SelectedSmudge);
             else if (SelectedCellTrigger != null) document.EraseCellTrigger(cell);
             else if (SelectedWaypoint >= 0) document.EraseWaypointAt(cell);

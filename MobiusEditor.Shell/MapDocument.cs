@@ -179,11 +179,12 @@ namespace MobiusEditor.Shell
         }
 
         /// <summary>
-        /// Places one infantryman into the cell's first free stop; the shared InfantryGroup
-        /// appears with the first man. One undo step per man; null when the cell is full or
-        /// held by something else.
+        /// Places one infantryman; the shared InfantryGroup appears with the first man. The
+        /// stop comes from the pointer's sub-cell position when given (closest free stop, as
+        /// the fork picks it), otherwise the first free one. One undo step per man; null when
+        /// the cell is full or held by something else.
         /// </summary>
-        public Infantry PlaceInfantry(Point location, InfantryType type)
+        public Infantry PlaceInfantry(Point location, InfantryType type, Point? subPixel = null)
         {
             RequireOpen();
             if (type == null || !Map.Metrics.GetCell(location, out int cell)) return null;
@@ -202,7 +203,9 @@ namespace MobiusEditor.Shell
             {
                 return null;
             }
-            int stop = Array.FindIndex(group.Infantry, i => i == null);
+            int stop = subPixel.HasValue
+                ? InfantryGroup.ClosestStoppingTypes(subPixel.Value).Cast<int>().Where(i => group.Infantry[i] == null).DefaultIfEmpty(-1).First()
+                : Array.FindIndex(group.Infantry, i => i == null);
             if (stop < 0)
             {
                 return null;
@@ -220,13 +223,15 @@ namespace MobiusEditor.Shell
             return infantry;
         }
 
-        /// <summary>Removes one infantryman (the first occupied stop); the group leaves with the last man. One undo step.</summary>
-        public void EraseInfantryAt(Point location)
+        /// <summary>Removes one infantryman — the closest occupied stop to the pointer's sub-cell position, or the first occupied one. The group leaves with the last man. One undo step.</summary>
+        public void EraseInfantryAt(Point location, Point? subPixel = null)
         {
             RequireOpen();
             if (!Map.Metrics.GetCell(location, out int cell)) return;
             if (!(Map.Technos[cell] is InfantryGroup group)) return;
-            int stop = Array.FindIndex(group.Infantry, i => i != null);
+            int stop = subPixel.HasValue
+                ? InfantryGroup.ClosestStoppingTypes(subPixel.Value).Cast<int>().Where(i => group.Infantry[i] != null).DefaultIfEmpty(-1).First()
+                : Array.FindIndex(group.Infantry, i => i != null);
             if (stop < 0) return;
             Infantry infantry = group.Infantry[stop];
             group.Infantry[stop] = null;
@@ -273,22 +278,36 @@ namespace MobiusEditor.Shell
         }
 
         /// <summary>
-        /// The placed object under a cell, for selection: a Building, Unit, Terrain, or the
-        /// first infantryman of the cell's group. Null on an empty cell.
+        /// The placed object under a cell, for selection: a Building, Unit, Terrain, or an
+        /// infantryman of the cell's group — the closest occupied stop to the pointer's
+        /// sub-cell position when given, else the first. Null on an empty cell.
         /// </summary>
-        public object ObjectAt(Point location)
+        public object ObjectAt(Point location, Point? subPixel = null)
         {
             RequireOpen();
             if (Map.Buildings[location] is Building building) return building;
             switch (Map.Technos[location])
             {
                 case InfantryGroup group:
-                    return group.Infantry.FirstOrDefault(i => i != null);
+                    return subPixel.HasValue
+                        ? InfantryGroup.ClosestStoppingTypes(subPixel.Value).Cast<int>().Select(i => group.Infantry[i]).FirstOrDefault(i => i != null)
+                        : group.Infantry.FirstOrDefault(i => i != null);
                 case ICellOccupier occupier:
                     return occupier;
                 default:
                     return null;
             }
+        }
+
+        /// <summary>The sub-cell position (the game's 24x24 in-cell pixels) under a pixel of the current render.</summary>
+        public Point? SubPixelAt(int pixelX, int pixelY)
+        {
+            if (Plugin == null) return null;
+            Size tile = TileSize;
+            if (pixelX < 0 || pixelY < 0) return null;
+            return new Point(
+                (pixelX % tile.Width) * Globals.PixelWidth / tile.Width,
+                (pixelY % tile.Height) * Globals.PixelHeight / tile.Height);
         }
 
         /// <summary>
