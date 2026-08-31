@@ -1,0 +1,69 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="MobiusEditor.App.TriggersWindow"
+        Title="Triggers" Width="860" Height="560">
+  <DockPanel Margin="6">
+    <DockPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
+      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+        <Button Name="OkButton" Content="OK" MinWidth="80" />
+        <Button Name="CancelButton" Content="Cancel" MinWidth="80" />
+      </StackPanel>
+      <TextBlock Name="ErrorLabel" VerticalAlignment="Center" Foreground="OrangeRed" />
+    </DockPanel>
+    <Grid ColumnDefinitions="240,12,*">
+      <DockPanel Grid.Column="0">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
+          <Button Name="AddButton" Content="Add" />
+          <Button Name="CloneButton" Content="Clone" />
+          <Button Name="RemoveButton" Content="Remove" />
+        </StackPanel>
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+          <Button Name="RenameButton" DockPanel.Dock="Right" Content="Rename" />
+          <TextBox Name="RenameBox" Margin="0,0,6,0" />
+        </DockPanel>
+        <ListBox Name="TriggerList" />
+      </DockPanel>
+      <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+        <StackPanel Name="DetailPanel" Spacing="6" IsEnabled="False">
+          <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto" >
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="House" VerticalAlignment="Center" />
+            <ComboBox Grid.Row="0" Grid.Column="1" Name="HouseCombo" HorizontalAlignment="Stretch" Margin="0,2" />
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="Persistence" VerticalAlignment="Center" />
+            <ComboBox Grid.Row="1" Grid.Column="1" Name="PersistenceCombo" HorizontalAlignment="Stretch" Margin="0,2" />
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="Event control" VerticalAlignment="Center" />
+            <ComboBox Grid.Row="2" Grid.Column="1" Name="EventControlCombo" HorizontalAlignment="Stretch" Margin="0,2" />
+          </Grid>
+          <TextBlock Text="Event 1" FontWeight="Bold" />
+          <Grid ColumnDefinitions="*,140" Name="Event1Row">
+            <ComboBox Grid.Column="0" Name="Event1Type" HorizontalAlignment="Stretch" />
+            <NumericUpDown Grid.Column="1" Name="Event1Nud" Margin="6,0,0,0" FormatString="0" />
+            <ComboBox Grid.Column="1" Name="Event1Value" Margin="6,0,0,0" HorizontalAlignment="Stretch" />
+          </Grid>
+          <StackPanel Name="Event2Panel" Spacing="6">
+            <TextBlock Text="Event 2" FontWeight="Bold" />
+            <Grid ColumnDefinitions="*,140">
+              <ComboBox Grid.Column="0" Name="Event2Type" HorizontalAlignment="Stretch" />
+              <NumericUpDown Grid.Column="1" Name="Event2Nud" Margin="6,0,0,0" FormatString="0" />
+              <ComboBox Grid.Column="1" Name="Event2Value" Margin="6,0,0,0" HorizontalAlignment="Stretch" />
+            </Grid>
+          </StackPanel>
+          <TextBlock Text="Action 1" FontWeight="Bold" />
+          <Grid ColumnDefinitions="*,140">
+            <ComboBox Grid.Column="0" Name="Action1Type" HorizontalAlignment="Stretch" />
+            <NumericUpDown Grid.Column="1" Name="Action1Nud" Margin="6,0,0,0" FormatString="0" />
+            <ComboBox Grid.Column="1" Name="Action1Value" Margin="6,0,0,0" HorizontalAlignment="Stretch" />
+          </Grid>
+          <StackPanel Name="Action2Panel" Spacing="6">
+            <TextBlock Text="Action 2" FontWeight="Bold" />
+            <Grid ColumnDefinitions="*,140">
+              <ComboBox Grid.Column="0" Name="Action2Type" HorizontalAlignment="Stretch" />
+              <NumericUpDown Grid.Column="1" Name="Action2Nud" Margin="6,0,0,0" FormatString="0" />
+              <ComboBox Grid.Column="1" Name="Action2Value" Margin="6,0,0,0" HorizontalAlignment="Stretch" />
+            </Grid>
+          </StackPanel>
+          <TextBlock Name="SummaryLabel" TextWrapping="Wrap" Opacity="0.8" />
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </DockPanel>
+</Window>

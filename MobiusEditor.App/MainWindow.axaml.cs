@@ -38,6 +38,8 @@ namespace MobiusEditor.App
             ZoomOutButton.Click += (s, e) => Zoom(0.5);
             UndoButton.Click += (s, e) => document?.Undo();
             RedoButton.Click += (s, e) => document?.Redo();
+            TriggersButton.Click += (s, e) => OpenTriggersDialog();
+            TeamsButton.Click += (s, e) => OpenTeamsDialog();
             // One brush at a time: picking in one palette clears the other.
             TemplatePalette.SelectionChanged += (s, e) => { if (TemplatePalette.SelectedItem != null) OverlayPalette.SelectedItem = null; };
             OverlayPalette.SelectionChanged += (s, e) => { if (OverlayPalette.SelectedItem != null) TemplatePalette.SelectedItem = null; };
@@ -96,6 +98,24 @@ namespace MobiusEditor.App
             if (string.Equals(Path.GetFullPath(path), Path.GetFullPath(document.Path), StringComparison.Ordinal)) { StatusLabel.Text = "Refusing to overwrite the open map; choose a new name."; return; }
             try { document.Save(path); StatusLabel.Text = "Saved " + path; }
             catch (Exception ex) { StatusLabel.Text = "Save failed: " + ex.Message; }
+        }
+
+        /// <summary>Opens the trigger dialog over the document's edit session; returned for the headless tests.</summary>
+        public TriggersWindow OpenTriggersDialog()
+        {
+            if (document == null || !document.IsOpen) return null;
+            TriggersWindow dialog = new TriggersWindow(document);
+            dialog.Show(this);
+            return dialog;
+        }
+
+        /// <summary>Opens the teamtype dialog over the document's edit session; returned for the headless tests.</summary>
+        public TeamTypesWindow OpenTeamsDialog()
+        {
+            if (document == null || !document.IsOpen) return null;
+            TeamTypesWindow dialog = new TeamTypesWindow(document);
+            dialog.Show(this);
+            return dialog;
         }
 
         private void Zoom(double factor)
@@ -195,6 +215,7 @@ namespace MobiusEditor.App
             Title = document.Title + " — C&C Map Editor";
             ZoomLabel.Text = (document.Scale * 100).ToString("0.#") + "%";
             SaveAsButton.IsEnabled = ZoomInButton.IsEnabled = ZoomOutButton.IsEnabled = true;
+            TriggersButton.IsEnabled = TeamsButton.IsEnabled = true;
             UndoButton.IsEnabled = document.CanUndo;
             RedoButton.IsEnabled = document.CanRedo;
             // Rebuild the palette only when a different map is open, or per-op refreshes would drop the selection.

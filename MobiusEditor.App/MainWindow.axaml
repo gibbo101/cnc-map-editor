@@ -15,6 +15,9 @@
       <Button Name="UndoButton" Content="Undo" IsEnabled="False" />
       <Button Name="RedoButton" Content="Redo" IsEnabled="False" />
       <Separator Width="12" />
+      <Button Name="TriggersButton" Content="Triggers…" IsEnabled="False" />
+      <Button Name="TeamsButton" Content="Teams…" IsEnabled="False" />
+      <Separator Width="12" />
       <TextBlock Name="TitleLabel" VerticalAlignment="Center" Text="No map" FontWeight="Bold" />
     </StackPanel>
     <TextBlock DockPanel.Dock="Bottom" Name="StatusLabel" Margin="6,3" Text="Open a map to begin." />

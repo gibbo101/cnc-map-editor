@@ -1,0 +1,73 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="MobiusEditor.App.TeamTypesWindow"
+        Title="Team types" Width="900" Height="620">
+  <DockPanel Margin="6">
+    <DockPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
+      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+        <Button Name="OkButton" Content="OK" MinWidth="80" />
+        <Button Name="CancelButton" Content="Cancel" MinWidth="80" />
+      </StackPanel>
+      <TextBlock Name="ErrorLabel" VerticalAlignment="Center" Foreground="OrangeRed" />
+    </DockPanel>
+    <Grid ColumnDefinitions="240,12,*">
+      <DockPanel Grid.Column="0">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
+          <Button Name="AddButton" Content="Add" />
+          <Button Name="RemoveButton" Content="Remove" />
+        </StackPanel>
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+          <Button Name="RenameButton" DockPanel.Dock="Right" Content="Rename" />
+          <TextBox Name="RenameBox" Margin="0,0,6,0" />
+        </DockPanel>
+        <ListBox Name="TeamList" />
+      </DockPanel>
+      <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+        <StackPanel Name="DetailPanel" Spacing="6" IsEnabled="False">
+          <Grid ColumnDefinitions="110,*,110,*" RowDefinitions="Auto,Auto,Auto,Auto">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="House" VerticalAlignment="Center" />
+            <ComboBox Grid.Row="0" Grid.Column="1" Name="HouseCombo" HorizontalAlignment="Stretch" Margin="0,2" />
+            <TextBlock Grid.Row="0" Grid.Column="2" Text="Trigger" VerticalAlignment="Center" Margin="6,0,0,0" />
+            <ComboBox Grid.Row="0" Grid.Column="3" Name="TriggerCombo" HorizontalAlignment="Stretch" Margin="0,2" />
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="Priority" VerticalAlignment="Center" />
+            <NumericUpDown Grid.Row="1" Grid.Column="1" Name="PriorityNud" Margin="0,2" FormatString="0" Minimum="0" Maximum="15" />
+            <TextBlock Grid.Row="1" Grid.Column="2" Text="Init num" VerticalAlignment="Center" Margin="6,0,0,0" />
+            <NumericUpDown Grid.Row="1" Grid.Column="3" Name="InitNumNud" Margin="0,2" FormatString="0" Minimum="0" Maximum="255" />
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="Max allowed" VerticalAlignment="Center" />
+            <NumericUpDown Grid.Row="2" Grid.Column="1" Name="MaxAllowedNud" Margin="0,2" FormatString="0" Minimum="0" Maximum="255" />
+            <TextBlock Grid.Row="2" Grid.Column="2" Text="Fear" VerticalAlignment="Center" Margin="6,0,0,0" />
+            <NumericUpDown Grid.Row="2" Grid.Column="3" Name="FearNud" Margin="0,2" FormatString="0" Minimum="0" Maximum="255" />
+            <TextBlock Grid.Row="3" Grid.Column="0" Text="Origin (waypoint)" VerticalAlignment="Center" />
+            <NumericUpDown Grid.Row="3" Grid.Column="1" Name="OriginNud" Margin="0,2" FormatString="0" Minimum="-1" Maximum="100" />
+          </Grid>
+          <WrapPanel>
+            <CheckBox Name="RoundAboutCheck" Content="Avoid threats" Margin="0,0,12,0" />
+            <CheckBox Name="LearningCheck" Content="Learning" Margin="0,0,12,0" />
+            <CheckBox Name="SuicideCheck" Content="Suicide" Margin="0,0,12,0" />
+            <CheckBox Name="AutocreateCheck" Content="Autocreate" Margin="0,0,12,0" />
+            <CheckBox Name="MercenaryCheck" Content="Mercenary" Margin="0,0,12,0" />
+            <CheckBox Name="ReinforcableCheck" Content="Reinforcable" Margin="0,0,12,0" />
+            <CheckBox Name="PrebuiltCheck" Content="Prebuilt" Margin="0,0,12,0" />
+          </WrapPanel>
+          <TextBlock Text="Units" FontWeight="Bold" />
+          <Grid ColumnDefinitions="*,90,Auto,Auto">
+            <ComboBox Grid.Column="0" Name="ClassTypeCombo" HorizontalAlignment="Stretch" />
+            <NumericUpDown Grid.Column="1" Name="ClassCountNud" Margin="6,0,0,0" FormatString="0" Minimum="1" Maximum="255" Value="1" />
+            <Button Grid.Column="2" Name="ClassAddButton" Content="Add" Margin="6,0,0,0" />
+            <Button Grid.Column="3" Name="ClassRemoveButton" Content="Remove" Margin="6,0,0,0" />
+          </Grid>
+          <ListBox Name="ClassList" MinHeight="90" MaxHeight="140" />
+          <TextBlock Text="Orders" FontWeight="Bold" />
+          <Grid ColumnDefinitions="*,90,Auto,Auto">
+            <ComboBox Grid.Column="0" Name="MissionCombo" HorizontalAlignment="Stretch" />
+            <NumericUpDown Grid.Column="1" Name="MissionArgNud" Margin="6,0,0,0" FormatString="0" Minimum="-1" Maximum="2147483647" Value="0" />
+            <Button Grid.Column="2" Name="MissionAddButton" Content="Add" Margin="6,0,0,0" />
+            <Button Grid.Column="3" Name="MissionRemoveButton" Content="Remove" Margin="6,0,0,0" />
+          </Grid>
+          <TextBlock Name="MissionHint" Opacity="0.8" />
+          <ListBox Name="MissionList" MinHeight="90" MaxHeight="140" />
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </DockPanel>
+</Window>

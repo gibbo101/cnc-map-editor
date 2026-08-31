@@ -136,59 +136,124 @@ namespace MobiusEditor.Shell
         /// <summary>Runs one trigger editing session and commits it as a single undo step; undo restores the previous list and every rewired referrer.</summary>
         public void EditTriggers(Action<TriggerEditor> edit)
         {
-            RequireOpen();
-            Map map = Map;
-            IGamePlugin plugin = Plugin;
-            List<Trigger> before = map.Triggers.Select(t => t.Clone()).ToList();
-            TriggerEditor editor = TriggerEditor.Begin(plugin);
-            edit(editor);
-            editor.Commit(out Dictionary<object, string> undoRefs, out Dictionary<object, string> redoRefs, out Dictionary<CellTrigger, int> cellCells);
-            List<Trigger> after = map.Triggers.Select(t => t.Clone()).ToList();
-            void Restore(List<Trigger> triggers, Dictionary<object, string> refs)
-            {
-                foreach (KeyValuePair<object, string> kv in refs)
-                {
-                    switch (kv.Key)
-                    {
-                        case CellTrigger cellTrigger: cellTrigger.Trigger = kv.Value; break;
-                        case TeamType team: team.Trigger = kv.Value; break;
-                        case ITechno techno: techno.Trigger = kv.Value; break;
-                    }
-                }
-                // Cell triggers cleaned off the grid come back with their trigger; emptied ones leave it.
-                foreach (KeyValuePair<CellTrigger, int> kv in cellCells)
-                {
-                    map.CellTriggers[kv.Value] = Trigger.IsEmpty(kv.Key.Trigger) ? null : kv.Key;
-                }
-                map.Triggers = triggers.Select(t => t.Clone()).ToList();
-                plugin.Dirty = true;
-            }
-            undoRedo.Track(_ => Restore(before, undoRefs), _ => Restore(after, redoRefs), this);
-            Changed?.Invoke(this, EventArgs.Empty);
+            TriggerEditSession session = BeginTriggerEdit();
+            edit(session.Editor);
+            session.Commit();
         }
 
         /// <summary>Runs one teamtype editing session as a single undo step; undo also restores the triggers' team references the renames rewrote.</summary>
         public void EditTeamTypes(Action<TeamTypeEditor> edit)
         {
+            TeamTypeEditSession session = BeginTeamTypeEdit();
+            edit(session.Editor);
+            session.Commit();
+        }
+
+        /// <summary>
+        /// Starts an interactive trigger edit (a dialog): the working copy lives in Editor and
+        /// the map is untouched until Commit, which lands everything as a single undo step.
+        /// Cancel simply drops the working copy.
+        /// </summary>
+        public TriggerEditSession BeginTriggerEdit()
+        {
             RequireOpen();
-            Map map = Map;
-            IGamePlugin plugin = Plugin;
-            List<TeamType> beforeTeams = CloneTeams(map.TeamTypes);
-            List<Trigger> beforeTriggers = map.Triggers.Select(t => t.Clone()).ToList();
-            TeamTypeEditor editor = TeamTypeEditor.Begin(plugin);
-            edit(editor);
-            editor.Commit();
-            List<TeamType> afterTeams = CloneTeams(map.TeamTypes);
-            List<Trigger> afterTriggers = map.Triggers.Select(t => t.Clone()).ToList();
-            void Restore(List<TeamType> teams, List<Trigger> triggers)
+            return new TriggerEditSession(this);
+        }
+
+        /// <summary>The teamtype counterpart of BeginTriggerEdit.</summary>
+        public TeamTypeEditSession BeginTeamTypeEdit()
+        {
+            RequireOpen();
+            return new TeamTypeEditSession(this);
+        }
+
+        public sealed class TriggerEditSession
+        {
+            private readonly MapDocument doc;
+            private readonly List<Trigger> before;
+            public TriggerEditor Editor { get; }
+
+            internal TriggerEditSession(MapDocument doc)
             {
-                map.TeamTypes.Clear();
-                map.TeamTypes.AddRange(CloneTeams(teams));
-                map.Triggers = triggers.Select(t => t.Clone()).ToList();
-                plugin.Dirty = true;
+                this.doc = doc;
+                before = doc.Map.Triggers.Select(t => t.Clone()).ToList();
+                Editor = TriggerEditor.Begin(doc.Plugin);
             }
-            undoRedo.Track(_ => Restore(beforeTeams, beforeTriggers), _ => Restore(afterTeams, afterTriggers), this);
-            Changed?.Invoke(this, EventArgs.Empty);
+
+            public void Commit()
+            {
+                Map map = doc.Map;
+                IGamePlugin plugin = doc.Plugin;
+                Editor.Commit(out Dictionary<object, string> undoRefs, out Dictionary<object, string> redoRefs, out Dictionary<CellTrigger, int> cellCells);
+                List<Trigger> after = map.Triggers.Select(t => t.Clone()).ToList();
+                void Restore(List<Trigger> triggers, Dictionary<object, string> refs)
+                {
+                    foreach (KeyValuePair<object, string> kv in refs)
+                    {
+                        switch (kv.Key)
+                        {
+                            case CellTrigger cellTrigger: cellTrigger.Trigger = kv.Value; break;
+                            case TeamType team: team.Trigger = kv.Value; break;
+                            case ITechno techno: techno.Trigger = kv.Value; break;
+                        }
+                    }
+                    // Cell triggers cleaned off the grid come back with their trigger; emptied ones leave it.
+                    foreach (KeyValuePair<CellTrigger, int> kv in cellCells)
+                    {
+                        map.CellTriggers[kv.Value] = Trigger.IsEmpty(kv.Key.Trigger) ? null : kv.Key;
+                    }
+                    map.Triggers = triggers.Select(t => t.Clone()).ToList();
+                    plugin.Dirty = true;
+                }
+                List<Trigger> beforeSnapshot = before;
+                doc.undoRedo.Track(_ => Restore(beforeSnapshot, undoRefs), _ => Restore(after, redoRefs), doc);
+                doc.Changed?.Invoke(doc, EventArgs.Empty);
+            }
+
+            /// <summary>Nothing to roll back: the working copy never touched the map.</summary>
+            public void Cancel()
+            {
+            }
+        }
+
+        public sealed class TeamTypeEditSession
+        {
+            private readonly MapDocument doc;
+            private readonly List<TeamType> beforeTeams;
+            private readonly List<Trigger> beforeTriggers;
+            public TeamTypeEditor Editor { get; }
+
+            internal TeamTypeEditSession(MapDocument doc)
+            {
+                this.doc = doc;
+                beforeTeams = CloneTeams(doc.Map.TeamTypes);
+                beforeTriggers = doc.Map.Triggers.Select(t => t.Clone()).ToList();
+                Editor = TeamTypeEditor.Begin(doc.Plugin);
+            }
+
+            public void Commit()
+            {
+                Map map = doc.Map;
+                IGamePlugin plugin = doc.Plugin;
+                Editor.Commit();
+                List<TeamType> afterTeams = CloneTeams(map.TeamTypes);
+                List<Trigger> afterTriggers = map.Triggers.Select(t => t.Clone()).ToList();
+                void Restore(List<TeamType> teams, List<Trigger> triggers)
+                {
+                    map.TeamTypes.Clear();
+                    map.TeamTypes.AddRange(CloneTeams(teams));
+                    map.Triggers = triggers.Select(t => t.Clone()).ToList();
+                    plugin.Dirty = true;
+                }
+                List<TeamType> teamsSnapshot = beforeTeams;
+                List<Trigger> triggersSnapshot = beforeTriggers;
+                doc.undoRedo.Track(_ => Restore(teamsSnapshot, triggersSnapshot), _ => Restore(afterTeams, afterTriggers), doc);
+                doc.Changed?.Invoke(doc, EventArgs.Empty);
+            }
+
+            public void Cancel()
+            {
+            }
         }
 
         private static List<TeamType> CloneTeams(IEnumerable<TeamType> teams) => teams.Select(TeamTypeEditor.CloneTeam).ToList();
