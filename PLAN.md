@@ -279,13 +279,29 @@ would only tempt the native editor to slip. Not part of the plan.
    rows; the ORDER ARGUMENT is a raw number with an ArgType hint line — a per-ArgType
    value control (waypoint list, options dropdown) is the known polish gap.
 
-Next, in order:
-4. Docked tool panels; dirty-cell rendering when brush perf starts to matter
-   (`MapDocument.Render` passes `null` cells to `MapRenderer.Render` — the fork's cell-set
-   parameter is the hook).
-5. Teamtype order-argument value controls per `TeamMissionArgType` (see step 3 gap).
-6. TD mission patterns for `expand-mission` if TD scripting is ever wanted (RA-only today,
-   clean error on TD maps).
+4. ~~Docked tool panels + dirty-cell rendering~~ BOTH DONE (same session): `Render()` keeps
+   a cached bitmap and repaints only touched cells via the renderer's location-set (dirty
+   set expanded 1 cell — Overlay self-heals neighbors unjournaled); invariant pinned:
+   incremental render == full render pixel-exact (`DirtyCellRenderTests`). Left dock is now
+   tool TABS (Terrain / Overlay / Cell trig. / Waypoints); routing stays selection-based,
+   one brush across all four palettes. Cell-trigger brush (fork guards: empty cell only,
+   cell-eligible triggers only, stroke-batched) + waypoint brush (one undo step per move,
+   click-only placement) ship with their indicator layers auto-toggled. NOTE:
+   `CellGrid[a,b]` is **[y,x]** — use the Point indexer in tests.
+5. ~~Teamtype order-argument value controls~~ DONE: `TriggerArgPresenter.ForTeamMission`
+   (fork's MissionItemControl switch); the dialog's order row shows waypoint list /
+   options dropdown / ranged spinner per `TeamMissionArgType`.
+
+Next candidates (no committed order — pick by appetite):
+- Object tools (buildings / units / infantry / terrain / smudge placement) — the remaining
+  fork tools; the tool-tab dock and dirty-cell rendering are ready for them.
+- Trigger dialog polish: the fork's per-control tooltips, a CheckTriggers button, trigger
+  filter box.
+- TD mission patterns for `expand-mission` if TD scripting is ever wanted (RA-only today,
+  clean error on TD maps).
+- Editing existing teamtype order rows in place (add/remove only today).
+Full oracle tier re-verified green mid-session (363/363, 14m50s) after the IGamePlugin
+additions and `ParseRawScriptRows`.
 
 Cross-repo loose end: `scripts/editor_manifest.py` + `resources/.../mapeditor.json` sit
 UNTRACKED on the mod repo's `building-upgrades` checkout awaiting Luke's branch decision;
