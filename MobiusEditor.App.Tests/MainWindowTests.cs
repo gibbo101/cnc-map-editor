@@ -28,7 +28,7 @@ namespace MobiusEditor.App.Tests
             string map = Path.Combine(TestPaths.MapEdits, "scm111ea.ini");
             MainWindow window = new MainWindow(new[] { map, "--game", TestPaths.GameDir });
             window.Show();
-            Dispatcher.UIThread.RunJobs();
+            Pump.UntilMapReady(window);
             Assert.Contains("Docklands", window.Title);
             Image image = window.FindControl<Image>("MapImage");
             Assert.NotNull(image.Source);
@@ -43,7 +43,7 @@ namespace MobiusEditor.App.Tests
         {
             MainWindow window = new MainWindow(new[] { "--game", TestPaths.GameDir });
             window.Show();
-            Dispatcher.UIThread.RunJobs();
+            Pump.UntilSessionReady(window);
             Assert.Equal("No map", window.FindControl<TextBlock>("TitleLabel").Text);
             Assert.False(window.FindControl<Button>("ZoomInButton").IsEnabled);
             Assert.Contains("Game: ", window.FindControl<TextBlock>("StatusLabel").Text);

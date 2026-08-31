@@ -25,7 +25,7 @@ namespace MobiusEditor.App.Tests
             string map = Path.Combine(TestPaths.MapEdits, "scm05ea.ini");
             MainWindow window = new MainWindow(new[] { map, "--game", TestPaths.GameDir, "--mod", TestPaths.ModDir });
             window.Show();
-            Dispatcher.UIThread.RunJobs();
+            Pump.UntilMapReady(window);
             return window;
         }
 

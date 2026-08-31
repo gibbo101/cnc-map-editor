@@ -75,8 +75,12 @@ namespace MobiusEditor.App
             Opened += (s, e) => StartSession(args);
         }
 
-        /// <summary>Game install autodetected from Steam; mods from --mod arguments, in order.</summary>
-        private void StartSession(string[] args)
+        /// <summary>
+        /// Game install autodetected from Steam; mods from --mod arguments, in order. The
+        /// session load (many seconds of archive parsing) runs off the UI thread so the
+        /// window paints immediately with a status line instead of sitting frozen and blank.
+        /// </summary>
+        private async void StartSession(string[] args)
         {
             try
             {
@@ -89,15 +93,32 @@ namespace MobiusEditor.App
                 }
                 game = game ?? SteamAssist.TryGetSteamGameFolder(MobiusEditor.Program.RemasterSteamId, "TiberianDawn.dll", "RedAlert.dll");
                 if (game == null) { StatusLabel.Text = "Game install not found; start with --game <dir>."; return; }
-                session = new EditorSession(game, mods);
+                StatusLabel.Text = "Loading game data…";
+                session = await System.Threading.Tasks.Task.Run(() => new EditorSession(game, mods));
                 document = new MapDocument(session);
-                document.Changed += (s, e) => Refresh();
+                // Edits fire Changed on the UI thread; background map opens fire it from the loader thread.
+                document.Changed += (s, e) =>
+                {
+                    if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) Refresh();
+                    else Avalonia.Threading.Dispatcher.UIThread.Post(Refresh);
+                };
                 NewButton.IsEnabled = true;
                 StatusLabel.Text = "Game: " + game + (mods.Count == 0 ? "" : "; mods: " + string.Join(", ", mods.Select(Path.GetFileName)));
                 string map = args.FirstOrDefault(a => !a.StartsWith("--") && File.Exists(a));
-                if (map != null) document.Open(map);
+                if (map != null) await OpenInBackground(map);
             }
             catch (Exception ex) { StatusLabel.Text = "Failed to start: " + ex.Message; }
+        }
+
+        /// <summary>Loads a map off the UI thread; the theater switch alone takes seconds on first use.</summary>
+        private async System.Threading.Tasks.Task OpenInBackground(string path)
+        {
+            StatusLabel.Text = "Opening " + Path.GetFileName(path) + "…";
+            try
+            {
+                await System.Threading.Tasks.Task.Run(() => document.Open(path));
+            }
+            catch (Exception ex) { StatusLabel.Text = "Open failed: " + ex.Message; }
         }
 
         private async System.Threading.Tasks.Task OpenAsync()
@@ -111,8 +132,7 @@ namespace MobiusEditor.App
             });
             string path = files.FirstOrDefault()?.TryGetLocalPath();
             if (path == null) return;
-            try { document.Open(path); }
-            catch (Exception ex) { StatusLabel.Text = "Open failed: " + ex.Message; }
+            await OpenInBackground(path);
         }
 
         private async System.Threading.Tasks.Task SaveAsAsync()
