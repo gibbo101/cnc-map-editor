@@ -63,6 +63,9 @@ namespace MobiusEditor.Shell.Tests
                 // Tiberian Factions types split by the mod's faction slots.
                 BuildingType obelisk = doc.AvailableBuildings().FirstOrDefault(b => b.Name == "tdobli");
                 if (obelisk != null) Assert.Equal("Nod (mod)", PaletteGrouping.GroupOf(obelisk));
+                // The TD blossom tree ships as a building but is a harvestable.
+                BuildingType blossom = doc.AvailableBuildings().FirstOrDefault(b => b.Name == "tdblossom");
+                if (blossom != null) Assert.Equal("Resources", PaletteGrouping.GroupOf(blossom));
                 UnitType tsHover = doc.AvailableUnits().FirstOrDefault(u => u.Name.StartsWith("tshvr"));
                 if (tsHover != null) Assert.Equal("TS GDI (mod)", PaletteGrouping.GroupOf(tsHover));
                 // EA gives ant1/ant2/ant3 to USSR/Ukraine/Germany; they belong in Misc, not the factions.

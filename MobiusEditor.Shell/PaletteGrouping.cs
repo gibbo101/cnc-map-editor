@@ -34,6 +34,10 @@ namespace MobiusEditor.Shell
                     return t.Name.Contains("mine", StringComparison.OrdinalIgnoreCase)
                         || t.Name.Contains("split", StringComparison.OrdinalIgnoreCase) ? "Resources" : "Terrain";
                 case BuildingType b:
+                    // Tiberian Factions ships the TD blossom tree as a building; it belongs
+                    // with the harvestables, beside the ore mine.
+                    if (b.Name.Contains("blossom", StringComparison.OrdinalIgnoreCase)
+                        || b.Name.Contains("split", StringComparison.OrdinalIgnoreCase)) return "Resources";
                     return Faction(b.OwnerHouse, b.ModSource, b.Name);
                 case UnitType u:
                     return Faction(u.OwnerHouse, u.ModSource, u.Name);
