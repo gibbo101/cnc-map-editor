@@ -248,6 +248,29 @@ Wine.** It would not inform the native build at all, nothing is blocked today th
 would unblock (campaign authoring is deferred behind the AI milestone), and a working stopgap
 would only tempt the native editor to slip. Not part of the plan.
 
+## RESUME HERE (2026-08-31, end of the manifest-seam + editing-core session)
+
+Everything below in steps 1–4 is current. The next session picks up the trigger arc, in order:
+1. **The structured event/action parameter-type table** — a `TriggerArgType`-style enum + per
+   event/action tables for RA, lifted from `GamePluginRA.GetEventString`/`GetActionString`
+   (`:5755`/`:5724`) plus the fork's `TriggersDialog.UpdateTriggerEventControls`/
+   `UpdateTriggerActionControls` coercion switches (the de-facto spec; details in the trigger
+   exploration — key facts: `TeamMissionArgType` is the only structured metadata today,
+   Check* validators at GamePluginRA:5140-5601 are the semantic layer, `IGamePlugin.
+   CheckTriggers` already has an autofix flag).
+2. **The mission-pattern generators** (format DECIDED, see step 4): `MissionSpec` JSON parse →
+   pure functions emitting raw triggers/teamtypes via TriggerEditor/TeamTypeEditor → a
+   `cncmap expand-mission <map> <spec.json> --out <path>` command. v1 patterns: attack-wave,
+   reinforce, win, lose + the `raw` passthrough. Validate expansions with
+   `plugin.CheckTriggers` (no fatals) and ground trigger encodings against a real campaign
+   mission INI if in doubt.
+3. Trigger GUI panel over EditTriggers/EditTeamTypes (the document API is done and undoable).
+4. Docked tool panels; dirty-cell rendering when brush perf starts to matter.
+
+Cross-repo loose end: `scripts/editor_manifest.py` + `resources/.../mapeditor.json` sit
+UNTRACKED on the mod repo's `building-upgrades` checkout awaiting Luke's branch decision;
+the drift data pass (TDGFACT/TSPOWR/TS-tree/TDNMCV + the building-upgrades types) follows it.
+
 ## Order of work for the next session
 
 1. ~~The renderer spike.~~ PASSED 2026-08-30.
