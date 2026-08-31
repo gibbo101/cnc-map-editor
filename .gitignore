@@ -5,6 +5,7 @@ obj/
 .vs/
 TestResults/
 /artifacts/
+/publish/
 oracle/*.png
 oracle/saves/
 oracle/saves-official/
