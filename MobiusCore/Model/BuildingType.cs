@@ -56,6 +56,9 @@ namespace MobiusEditor.Model
         public bool Ownable => true;
         public string DisplayName { get; private set; }
         public string NameOverride { get; set; }
+
+        /// <summary>Baseline name override (from a mod manifest); what rules resets restore instead of null.</summary>
+        public string DefaultNameOverride { get; set; }
         public string DisplayNameWithTheaterInfo
         {
             get
@@ -253,6 +256,8 @@ namespace MobiusEditor.Model
             string occupyMask = GeneralUtils.GetStringFromMask(BaseOccupyMask, '1', '0', ' ');
             BuildingType newBld = new BuildingType(ID, Name, nameId, PowerProduction, PowerUsage, Storage, Capturable, baseMaskX, baseMaskY, occupyMask, OwnerHouse, FactoryOverlay, FrameOffset, GraphicsSource, Flags, ZOrder);
             newBld.ModSource = ModSource;
+            newBld.NameOverride = NameOverride;
+            newBld.DefaultNameOverride = DefaultNameOverride;
             return newBld;
         }
 

@@ -173,6 +173,9 @@ namespace MobiusEditor.Model
         public bool Ownable => true;
         public string DisplayName { get; private set; }
         public string NameOverride { get; set; }
+
+        /// <summary>Baseline name override (from a mod manifest); what rules resets restore instead of null.</summary>
+        public string DefaultNameOverride { get; set; }
         public string Turret { get; private set; }
         public string SecondTurret { get; private set; }
         public int TurretOffset { get; private set; }

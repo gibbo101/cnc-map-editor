@@ -32,7 +32,7 @@ namespace MobiusCore.Tests
         {
             ModManifest m = LoadManifest();
             Assert.Equal("RA", m.GameType);
-            Assert.Equal(25, m.Buildings.Count);
+            Assert.Equal(50, m.Buildings.Count);
             Assert.Equal(7, m.Infantry.Count);
             Assert.True(m.Units.Count >= 28, $"only {m.Units.Count} units");
             Assert.True(m.Templates.Count >= 325, $"only {m.Templates.Count} templates");
@@ -43,6 +43,14 @@ namespace MobiusCore.Tests
             ManifestBuilding obelisk = m.Buildings.Single(b => b.Name == "tdobli");
             Assert.Equal(87, obelisk.Id);
             Assert.Equal("0 1", obelisk.OccupyMask);
+            // The TS tree and the faction-split RA yards carry literal display names.
+            ManifestBuilding tsWeap = m.Buildings.Single(b => b.Name == "tsweap");
+            Assert.Equal(127, tsWeap.Id);
+            Assert.Null(tsWeap.TextId);
+            Assert.Equal("TS War Factory", tsWeap.DisplayName);
+            Assert.Equal("tsweap2", tsWeap.FactoryOverlay);
+            Assert.Equal("11110 11110 00000", tsWeap.OccupyMask);
+            Assert.Equal(136, m.Buildings.Max(b => b.Id));
             ManifestTemplate sh1 = m.Templates.Single(t => t.Name == "tdsh1");
             Assert.Equal(401, sh1.Id);
             Assert.All(m.Templates, t => Assert.True(t.Id >= (int)TemplateType.TFTDTileIdFirst,

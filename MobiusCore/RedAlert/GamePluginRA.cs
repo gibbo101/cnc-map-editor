@@ -3433,7 +3433,7 @@ namespace MobiusEditor.RedAlert
                 string oldImage = uTechnoType.ImageOverride ?? unitName;
                 if (!cumulative)
                 {
-                    uTechnoType.NameOverride = null;
+                    uTechnoType.NameOverride = uTechnoType.DefaultNameOverride;
                     uTechnoType.InitDisplayName();
                     if (allowImage)
                     {
@@ -3441,7 +3441,7 @@ namespace MobiusEditor.RedAlert
                     }
                     if (uType != null && !ReferenceEquals(uType, uTechnoType))
                     {
-                        uType.NameOverride = null;
+                        uType.NameOverride = uType.DefaultNameOverride;
                         uType.InitDisplayName();
                         if (allowImage)
                         {
@@ -3507,7 +3507,7 @@ namespace MobiusEditor.RedAlert
                 string oldImage = iTechnoType.ImageOverride ?? iTechnoType.Name;
                 if (!cumulative)
                 {
-                    iTechnoType.NameOverride = null;
+                    iTechnoType.NameOverride = iTechnoType.DefaultNameOverride;
                     iTechnoType.InitDisplayName();
                     if (allowImageLoad)
                     {
@@ -3515,7 +3515,7 @@ namespace MobiusEditor.RedAlert
                     }
                     if (iType != null && !ReferenceEquals(iType, iTechnoType))
                     {
-                        iType.NameOverride = null;
+                        iType.NameOverride = iType.DefaultNameOverride;
                         iType.InitDisplayName();
                         if (allowImageLoad)
                         {
@@ -3605,7 +3605,7 @@ namespace MobiusEditor.RedAlert
                     bType.PowerProduction = orig.PowerProduction;
                     if (!cumulative)
                     {
-                        bType.NameOverride = null;
+                        bType.NameOverride = bType.DefaultNameOverride;
                         bType.InitDisplayName();
                     }
                     bType.Storage = orig.Storage;

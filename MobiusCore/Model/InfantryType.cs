@@ -30,6 +30,9 @@ namespace MobiusEditor.Model
         public string GraphicsSource { get; set; }
         public string DisplayName { get; private set; }
         public string NameOverride { get; set; }
+
+        /// <summary>Baseline name override (from a mod manifest); what rules resets restore instead of null.</summary>
+        public string DefaultNameOverride { get; set; }
         public string OwnerHouse { get; private set; }
         public UnitTypeFlag Flags { get; private set; }
         public bool IsArmed => Flags.HasFlag(UnitTypeFlag.Armed);

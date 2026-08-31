@@ -68,6 +68,18 @@ namespace MobiusEditor.Shell.Tests
                 if (blossom != null) Assert.Equal("Resources", PaletteGrouping.GroupOf(blossom));
                 UnitType tsHover = doc.AvailableUnits().FirstOrDefault(u => u.Name.StartsWith("tshvr"));
                 if (tsHover != null) Assert.Equal("TS GDI (mod)", PaletteGrouping.GroupOf(tsHover));
+                // The TS building tree groups with TS GDI and shows its manifest display name.
+                BuildingType tsPower = doc.AvailableBuildings().FirstOrDefault(b => b.Name == "tspowr");
+                if (tsPower != null)
+                {
+                    Assert.Equal("TS GDI (mod)", PaletteGrouping.GroupOf(tsPower));
+                    Assert.StartsWith("Tiberian Power Plant", PaletteItem.From(tsPower).Label);
+                }
+                // Mod-split RA yards keep their vanilla side, not a mod bucket.
+                BuildingType alliedYard = doc.AvailableBuildings().FirstOrDefault(b => b.Name == "afact");
+                if (alliedYard != null) Assert.Equal("Allies", PaletteGrouping.GroupOf(alliedYard));
+                BuildingType sovietYard = doc.AvailableBuildings().FirstOrDefault(b => b.Name == "sweap");
+                if (sovietYard != null) Assert.Equal("Soviets", PaletteGrouping.GroupOf(sovietYard));
                 // EA gives ant1/ant2/ant3 to USSR/Ukraine/Germany; they belong in Misc, not the factions.
                 foreach (UnitType ant in doc.AvailableUnits().Where(u => u.Name.StartsWith("ant")))
                 {

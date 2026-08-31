@@ -64,10 +64,12 @@ namespace MobiusEditor.Shell
                 bool ts = name != null && name.StartsWith("ts", StringComparison.OrdinalIgnoreCase);
                 if ("GoodGuy".Equals(owner, StringComparison.OrdinalIgnoreCase)) return ts ? "TS GDI (mod)" : "GDI (mod)";
                 if ("BadGuy".Equals(owner, StringComparison.OrdinalIgnoreCase)) return ts ? "TS Nod (mod)" : "Nod (mod)";
-                return modSource;
+                // Mod types owned by a vanilla side (the faction-split RA yards) group
+                // with that side; only slotless owners fall back to the mod's name.
             }
             if (owner != null && AlliedHouses.Contains(owner)) return "Allies";
             if (owner != null && SovietHouses.Contains(owner)) return "Soviets";
+            if (!string.IsNullOrEmpty(modSource)) return modSource;
             if ("Neutral".Equals(owner, StringComparison.OrdinalIgnoreCase)) return "Civilian";
             return "Misc";
         }
