@@ -134,9 +134,10 @@ namespace MobiusEditor.App.Tests
             Assert.False(window.FindControl<StackPanel>("PropMissionRow").IsVisible);
             CheckBox prebuilt = window.FindControl<CheckBox>("PropPrebuilt");
             Assert.False(prebuilt.IsEnabled);
+            // The base renumbers to consecutive priorities: a lone base building clamps to 0.
             window.FindControl<NumericUpDown>("PropBasePriority").Value = 1;
             Dispatcher.UIThread.RunJobs();
-            Assert.Equal(1, building.BasePriority);
+            Assert.Equal(0, building.BasePriority);
             Assert.True(prebuilt.IsEnabled);
         }
     }
