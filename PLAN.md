@@ -333,9 +333,18 @@ commits bc9bbd3 → 1309629):**
   editor+CLI and rsyncs to Luke's Deck (`~/cnc-map-editor/`, desktop-mode
   `run-editor.sh` auto-loads the deployed TF mod, `--no-mod` opts out). Verified ON the
   Deck: deployed CLI loaded a TF CustomMaps .mpr with the deployed mod's manifest. Deploy
-  is CURRENT as of 4e4360c (drag-move + base priorities included) — REDEPLOY
+  is CURRENT as of accddb2 (drag-move, base priorities, New maps) — REDEPLOY
   (`DECK_HOST=deck@<deck-ip> ./deploy-deck.sh`) after further changes; the Deck comes
-  online intermittently.
+  online intermittently. **GAME MODE (Luke's request, 2026-08-31): "C&C Map Editor" is a
+  Non-Steam Game on Luke's Deck user (<steam-id>)** — added via `steamos-add-to-steam` on a
+  `.desktop` entry (`~/.local/share/applications/cnc-map-editor.desktop`) because that
+  registers through the LIVE client: editing shortcuts.vdf directly requires a Steam
+  restart and is clobbered if Steam is running (a game was in progress at the time).
+
+**NEW MAPS SHIPPED (accddb2):** `EditorSession.New` + GUI New… theater picker + `cncmap
+new <out> [--theater X]` (scaffolds 2 player-start waypoints — the game REFUSES to save a
+skirmish map without them, and plugin.Save writes NOTHING on validation failure, which
+`MapDocument.Save` now surfaces as an error instead).
 
 Next candidates (no committed order):
 - **Luke's UI feedback pass** — he's deliberately holding feedback until the surface is
