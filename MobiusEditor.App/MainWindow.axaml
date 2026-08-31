@@ -95,6 +95,32 @@
         <ListBox Name="WaypointPalette" />
       </TabItem>
     </TabControl>
+    <ScrollViewer DockPanel.Dock="Right" Width="230" VerticalScrollBarVisibility="Auto">
+      <StackPanel Name="PropertiesPanel" IsVisible="False" Spacing="6" Margin="6">
+        <TextBlock Name="PropTitle" FontWeight="Bold" />
+        <TextBlock Text="House" />
+        <ComboBox Name="PropHouse" HorizontalAlignment="Stretch" />
+        <TextBlock Text="Strength" />
+        <NumericUpDown Name="PropStrength" Minimum="1" Maximum="256" FormatString="0" />
+        <StackPanel Name="PropDirectionRow" Spacing="6">
+          <TextBlock Text="Direction" />
+          <ComboBox Name="PropDirection" HorizontalAlignment="Stretch" />
+        </StackPanel>
+        <StackPanel Name="PropMissionRow" Spacing="6">
+          <TextBlock Text="Order" />
+          <ComboBox Name="PropMission" HorizontalAlignment="Stretch" />
+        </StackPanel>
+        <TextBlock Text="Trigger" />
+        <ComboBox Name="PropTrigger" HorizontalAlignment="Stretch" />
+        <StackPanel Name="PropBuildingRow" Spacing="6">
+          <TextBlock Text="Base priority" />
+          <NumericUpDown Name="PropBasePriority" Minimum="-1" Maximum="2147483647" FormatString="0" />
+          <CheckBox Name="PropPrebuilt" Content="Prebuilt" />
+          <CheckBox Name="PropSellable" Content="Sellable" />
+          <CheckBox Name="PropRebuild" Content="Rebuild" />
+        </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
     <ScrollViewer Name="Scroller" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Background="#202020">
       <Image Name="MapImage" Stretch="None" HorizontalAlignment="Left" VerticalAlignment="Top" />
     </ScrollViewer>

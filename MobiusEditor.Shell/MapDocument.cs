@@ -272,6 +272,110 @@ namespace MobiusEditor.Shell
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
+        /// <summary>
+        /// The placed object under a cell, for selection: a Building, Unit, Terrain, or the
+        /// first infantryman of the cell's group. Null on an empty cell.
+        /// </summary>
+        public object ObjectAt(Point location)
+        {
+            RequireOpen();
+            if (Map.Buildings[location] is Building building) return building;
+            switch (Map.Technos[location])
+            {
+                case InfantryGroup group:
+                    return group.Infantry.FirstOrDefault(i => i != null);
+                case ICellOccupier occupier:
+                    return occupier;
+                default:
+                    return null;
+            }
+        }
+
+        /// <summary>
+        /// Applies an edit to a placed object's properties as one undo step. Buildings are
+        /// normalized to the fork's prebuilt invariants after the edit.
+        /// </summary>
+        public void EditObjectProperties(object techno, Action edit)
+        {
+            RequireOpen();
+            object before = SnapshotOf(techno);
+            edit();
+            if (techno is Building building)
+            {
+                ObjectPropertiesPresenter.NormalizeBuilding(Plugin, building);
+            }
+            object after = SnapshotOf(techno);
+            IGamePlugin plugin = Plugin;
+            plugin.Dirty = true;
+            MarkObjectDirty(techno);
+            void Apply(object snapshot)
+            {
+                RestoreInto(techno, snapshot);
+                plugin.Dirty = true;
+                MarkObjectDirty(techno);
+            }
+            undoRedo.Track(_ => Apply(before), _ => Apply(after), this);
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        private static object SnapshotOf(object techno)
+        {
+            switch (techno)
+            {
+                case Building b: return b.Clone();
+                case Unit u: return u.Clone();
+                case Infantry i: return i.Clone();
+                case Terrain t: return t.Clone();
+                default: throw new ArgumentException("Not an editable object: " + techno);
+            }
+        }
+
+        private static void RestoreInto(object techno, object snapshot)
+        {
+            switch (techno)
+            {
+                case Building b: b.CloneDataFrom((Building)snapshot); break;
+                case Unit u: u.CloneDataFrom((Unit)snapshot); break;
+                case Infantry i: i.CloneDataFrom((Infantry)snapshot); break;
+                case Terrain t: t.CloneDataFrom((Terrain)snapshot); break;
+            }
+        }
+
+        /// <summary>Whether a previously selected object still sits on the map (undo can retire it).</summary>
+        public bool IsObjectOnMap(object techno)
+        {
+            if (Map == null) return false;
+            switch (techno)
+            {
+                case Building building:
+                    return Map.Buildings[building].HasValue;
+                case Infantry infantry:
+                    return infantry.InfantryGroup != null
+                        && Map.Technos[infantry.InfantryGroup].HasValue
+                        && infantry.InfantryGroup.Infantry.Contains(infantry);
+                case ICellOccupier occupier:
+                    return Map.Technos[occupier].HasValue;
+                default:
+                    return false;
+            }
+        }
+
+        private void MarkObjectDirty(object techno)
+        {
+            switch (techno)
+            {
+                case Building building when Map.Buildings[building] is Point at:
+                    MarkBuildingDirty(building, at);
+                    break;
+                case Infantry infantry when infantry.InfantryGroup != null && Map.Technos[infantry.InfantryGroup] is Point at:
+                    MarkOverlapDirty(infantry.InfantryGroup, at);
+                    break;
+                case ICellOccupier occupier when Map.Technos[occupier] is Point at:
+                    MarkOverlapDirty(occupier, at);
+                    break;
+            }
+        }
+
         public IReadOnlyList<SmudgeType> AvailableSmudge() =>
             Map == null ? (IReadOnlyList<SmudgeType>)Array.Empty<SmudgeType>()
                         : Map.SmudgeTypes.Where(t => t.ExistsInTheater).ToList();

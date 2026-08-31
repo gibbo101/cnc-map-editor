@@ -23,6 +23,8 @@ namespace MobiusEditor.App
         private string paletteForPath;
         private System.Drawing.Point? lastPaintCell;
         private bool painting, erasing;
+        private object selectedObject;
+        private bool updatingProperties;
 
         /// <summary>The open document; the window is a thin skin over it (tests reach through here).</summary>
         public MapDocument Document => document;
@@ -58,6 +60,7 @@ namespace MobiusEditor.App
             };
             CellTriggerPalette.SelectionChanged += (s, e) => { if (CellTriggerPalette.SelectedItem != null) ClearOtherBrushes(CellTriggerPalette); UpdateIndicatorLayers(); };
             WaypointPalette.SelectionChanged += (s, e) => { if (WaypointPalette.SelectedItem != null) ClearOtherBrushes(WaypointPalette); UpdateIndicatorLayers(); };
+            WireProperties();
             MapImage.PointerPressed += OnPointerPressed;
             MapImage.PointerReleased += OnPointerReleased;
             MapImage.PointerMoved += OnPointerMoved;
@@ -113,6 +116,164 @@ namespace MobiusEditor.App
             if (string.Equals(Path.GetFullPath(path), Path.GetFullPath(document.Path), StringComparison.Ordinal)) { StatusLabel.Text = "Refusing to overwrite the open map; choose a new name."; return; }
             try { document.Save(path); StatusLabel.Text = "Saved " + path; }
             catch (Exception ex) { StatusLabel.Text = "Save failed: " + ex.Message; }
+        }
+
+        /// <summary>The object the properties panel is editing; set by a brushless click on the canvas.</summary>
+        public object SelectedObject => selectedObject;
+
+        /// <summary>Repopulates the properties panel from the selected object, or hides it.</summary>
+        private void RefreshProperties()
+        {
+            if (selectedObject == null || document == null || !document.IsOpen || !document.IsObjectOnMap(selectedObject))
+            {
+                selectedObject = null;
+                PropertiesPanel.IsVisible = false;
+                return;
+            }
+            MobiusEditor.Shell.ObjectPropertiesPresentation p = MobiusEditor.Shell.ObjectPropertiesPresenter.For(document.Plugin, selectedObject);
+            updatingProperties = true;
+            try
+            {
+                PropertiesPanel.IsVisible = true;
+                PropTitle.Text = p.Title;
+                PropHouse.ItemsSource = p.Houses.ToList();
+                PropHouse.SelectedItem = p.House;
+                PropHouse.IsEnabled = p.HouseEnabled;
+                PropStrength.Value = p.Strength;
+                PropStrength.IsEnabled = p.StrengthEnabled;
+                PropDirectionRow.IsVisible = p.DirectionVisible;
+                PropDirection.ItemsSource = p.Directions.ToList();
+                PropDirection.SelectedItem = p.Direction;
+                PropDirection.IsEnabled = p.DirectionEnabled;
+                PropMissionRow.IsVisible = p.MissionVisible;
+                PropMission.ItemsSource = p.Missions.ToList();
+                PropMission.SelectedItem = p.Mission;
+                PropTrigger.ItemsSource = p.Triggers.ToList();
+                PropTrigger.SelectedItem = p.Triggers.FirstOrDefault(t => t.Equals(p.Trigger ?? "None", StringComparison.OrdinalIgnoreCase)) ?? "None";
+                PropTrigger.IsEnabled = p.TriggerEnabled;
+                PropBuildingRow.IsVisible = p.BuildingExtrasVisible;
+                PropBasePriority.Value = p.BasePriority;
+                PropPrebuilt.IsChecked = p.IsPrebuilt;
+                PropPrebuilt.IsEnabled = p.PrebuiltEnabled;
+                PropSellable.IsVisible = PropRebuild.IsVisible = p.SellableRebuildVisible;
+                PropSellable.IsChecked = p.Sellable;
+                PropSellable.IsEnabled = p.IsPrebuilt;
+                PropRebuild.IsChecked = p.Rebuild;
+            }
+            finally
+            {
+                updatingProperties = false;
+            }
+        }
+
+        /// <summary>Applies one property change as one undo step, then re-presents (enabled states shift).</summary>
+        private void ApplyProperty(Action<object> apply)
+        {
+            if (updatingProperties || selectedObject == null) return;
+            object target = selectedObject;
+            document.EditObjectProperties(target, () => apply(target));
+            RefreshProperties();
+        }
+
+        private void WireProperties()
+        {
+            PropHouse.SelectionChanged += (s, e) =>
+            {
+                if (updatingProperties || !(PropHouse.SelectedItem is string houseName)) return;
+                MobiusEditor.Model.HouseType house = document.Map.HouseTypes.FirstOrDefault(h => h.Name == houseName);
+                if (house == null) return;
+                ApplyProperty(o =>
+                {
+                    switch (o)
+                    {
+                        case MobiusEditor.Model.Building b: b.House = house; break;
+                        case MobiusEditor.Model.Unit u: u.House = house; break;
+                        case MobiusEditor.Model.Infantry i: i.House = house; break;
+                    }
+                });
+            };
+            PropStrength.ValueChanged += (s, e) =>
+            {
+                if (updatingProperties) return;
+                int strength = (int)(PropStrength.Value ?? 256);
+                ApplyProperty(o =>
+                {
+                    switch (o)
+                    {
+                        case MobiusEditor.Model.Building b: b.Strength = strength; break;
+                        case MobiusEditor.Model.Unit u: u.Strength = strength; break;
+                        case MobiusEditor.Model.Infantry i: i.Strength = strength; break;
+                    }
+                });
+            };
+            PropDirection.SelectionChanged += (s, e) =>
+            {
+                if (updatingProperties || !(PropDirection.SelectedItem is string directionName)) return;
+                ApplyProperty(o =>
+                {
+                    switch (o)
+                    {
+                        case MobiusEditor.Model.Building b:
+                            b.Direction = document.Map.BuildingDirectionTypes.FirstOrDefault(d => d.Name == directionName) ?? b.Direction;
+                            break;
+                        case MobiusEditor.Model.Unit u:
+                            u.Direction = document.Map.UnitDirectionTypes.FirstOrDefault(d => d.Name == directionName) ?? u.Direction;
+                            break;
+                        case MobiusEditor.Model.Infantry i:
+                            i.Direction = document.Map.UnitDirectionTypes.FirstOrDefault(d => d.Name == directionName) ?? i.Direction;
+                            break;
+                    }
+                });
+            };
+            PropMission.SelectionChanged += (s, e) =>
+            {
+                if (updatingProperties || !(PropMission.SelectedItem is string mission)) return;
+                ApplyProperty(o =>
+                {
+                    switch (o)
+                    {
+                        case MobiusEditor.Model.Unit u: u.Mission = mission; break;
+                        case MobiusEditor.Model.Infantry i: i.Mission = mission; break;
+                    }
+                });
+            };
+            PropTrigger.SelectionChanged += (s, e) =>
+            {
+                if (updatingProperties || !(PropTrigger.SelectedItem is string trigger)) return;
+                ApplyProperty(o =>
+                {
+                    switch (o)
+                    {
+                        case MobiusEditor.Model.Building b: b.Trigger = trigger; break;
+                        case MobiusEditor.Model.Unit u: u.Trigger = trigger; break;
+                        case MobiusEditor.Model.Infantry i: i.Trigger = trigger; break;
+                    }
+                });
+            };
+            PropBasePriority.ValueChanged += (s, e) =>
+            {
+                if (updatingProperties) return;
+                int priority = (int)(PropBasePriority.Value ?? -1);
+                ApplyProperty(o => { if (o is MobiusEditor.Model.Building b) b.BasePriority = priority; });
+            };
+            PropPrebuilt.IsCheckedChanged += (s, e) =>
+            {
+                if (updatingProperties) return;
+                bool prebuilt = PropPrebuilt.IsChecked == true;
+                ApplyProperty(o => { if (o is MobiusEditor.Model.Building b) b.IsPrebuilt = prebuilt; });
+            };
+            PropSellable.IsCheckedChanged += (s, e) =>
+            {
+                if (updatingProperties) return;
+                bool sellable = PropSellable.IsChecked == true;
+                ApplyProperty(o => { if (o is MobiusEditor.Model.Building b) b.Sellable = sellable; });
+            };
+            PropRebuild.IsCheckedChanged += (s, e) =>
+            {
+                if (updatingProperties) return;
+                bool rebuild = PropRebuild.IsChecked == true;
+                ApplyProperty(o => { if (o is MobiusEditor.Model.Building b) b.Rebuild = rebuild; });
+            };
         }
 
         /// <summary>Opens the trigger dialog over the document's edit session; returned for the headless tests.</summary>
@@ -192,7 +353,13 @@ namespace MobiusEditor.App
             if (cell == null) return;
             PointerPointProperties props = e.GetCurrentPoint(MapImage).Properties;
             if (props.IsLeftButtonPressed && SelectedTemplate == null && SelectedOverlay == null && SelectedCellTrigger == null && SelectedWaypoint < 0
-                && SelectedTerrain == null && SelectedUnit == null && SelectedInfantry == null && SelectedBuilding == null && SelectedSmudge == null) return;
+                && SelectedTerrain == null && SelectedUnit == null && SelectedInfantry == null && SelectedBuilding == null && SelectedSmudge == null)
+            {
+                // No brush: a left click selects the object under the cell for the properties panel.
+                selectedObject = document.ObjectAt(cell.Value);
+                RefreshProperties();
+                return;
+            }
             if (props.IsLeftButtonPressed)
             {
                 painting = true;
@@ -305,6 +472,8 @@ namespace MobiusEditor.App
             {
                 MapImage.Source = ToAvalonia(rendered);
             }
+            // Undo can retire the selected object; drop the panel when it does.
+            if (selectedObject != null && !document.IsObjectOnMap(selectedObject)) RefreshProperties();
             if (document.LoadNotes.Length > 0) StatusLabel.Text = document.LoadNotes.Length + " load note(s): " + document.LoadNotes[0];
         }
 
