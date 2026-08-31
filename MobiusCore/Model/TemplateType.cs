@@ -109,6 +109,9 @@ namespace MobiusEditor.Model
         /// <summary>First template ID of the Tiberian Factions TD-ported terrain range.</summary>
         public const ushort TFTDTileIdFirst = 401;
 
+        /// <summary>Name of the mod whose manifest supplied this type; null for vanilla types.</summary>
+        public string ModSource { get; set; }
+
         private int tdShapeMultiplier = 1;
 
         /// <summary>

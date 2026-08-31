@@ -53,6 +53,26 @@ namespace MobiusCli.Tests
         }
 
         [Fact]
+        public void ReportsWhichModsAMapNeeds()
+        {
+            string tfMap = System.Linq.Enumerable.First(System.Linq.Enumerable.OrderBy(
+                Directory.EnumerateFiles(Path.Combine(TestPaths.ModDir, "CustomMaps"), "*.MPR"), f => f));
+            (int code, string stdout, string stderr) = Run("info", tfMap, "--game", TestPaths.GameDir, "--mod", TestPaths.ModDir);
+            Assert.True(code == 0, stderr);
+            Assert.Contains("requires mods: ", stdout);
+            Assert.Contains("Tiberian Factions", stdout);
+        }
+
+        [Fact]
+        public void ReportsAnAllVanillaMapAsVanillaSafe()
+        {
+            // The mod is active, but the map places none of its types.
+            (int code, string stdout, string stderr) = Run("info", Path.Combine(TestPaths.MapEdits, "scm05ea.ini"), "--game", TestPaths.GameDir, "--mod", TestPaths.ModDir);
+            Assert.True(code == 0, stderr);
+            Assert.Contains("requires mods: none (vanilla-safe)", stdout);
+        }
+
+        [Fact]
         public void ReportsMissingMapAsAnError()
         {
             (int code, string _, string stderr) = Run("info", "/nonexistent/map.ini", "--game", TestPaths.GameDir);

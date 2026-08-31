@@ -17,24 +17,25 @@ namespace MobiusEditor.Headless
     {
         public static List<BuildingType> Buildings(ModManifest manifest) =>
             manifest.Buildings.Select(b => new BuildingType(b.Id, b.Name, b.TextId, b.PowerProduction, b.PowerUsage, b.Storage,
-                b.Capturable, b.Width, b.Height, b.OccupyMask, b.Owner, b.FactoryOverlay, b.FrameOffset, b.GraphicsSource, b.Flags, b.ZOrder)).ToList();
+                b.Capturable, b.Width, b.Height, b.OccupyMask, b.Owner, b.FactoryOverlay, b.FrameOffset, b.GraphicsSource, b.Flags, b.ZOrder)
+                { ModSource = manifest.ModName }).ToList();
 
         public static List<UnitType> Units(ModManifest manifest) =>
             manifest.Units.Select(u => (UnitType)(u.Kind switch
             {
-                ManifestUnitKind.Vehicle => new VehicleType(u.Id, u.Name, u.TextId, u.Owner, u.BodyFrames, u.TurretFrames, u.Turret, u.Turret2, u.TurretOffset, u.TurretY, u.Flags),
-                ManifestUnitKind.Aircraft => new AircraftType(u.Id, u.Name, u.TextId, u.Owner, u.BodyFrames, u.TurretFrames, u.Turret, u.Turret2, u.TurretOffset, u.TurretY, u.Flags),
-                ManifestUnitKind.Vessel => new VesselType(u.Id, u.Name, u.TextId, u.Owner, u.BodyFrames, u.TurretFrames, u.Turret, u.Turret2, u.TurretOffset, u.TurretY, u.Flags),
+                ManifestUnitKind.Vehicle => new VehicleType(u.Id, u.Name, u.TextId, u.Owner, u.BodyFrames, u.TurretFrames, u.Turret, u.Turret2, u.TurretOffset, u.TurretY, u.Flags) { ModSource = manifest.ModName },
+                ManifestUnitKind.Aircraft => new AircraftType(u.Id, u.Name, u.TextId, u.Owner, u.BodyFrames, u.TurretFrames, u.Turret, u.Turret2, u.TurretOffset, u.TurretY, u.Flags) { ModSource = manifest.ModName },
+                ManifestUnitKind.Vessel => new VesselType(u.Id, u.Name, u.TextId, u.Owner, u.BodyFrames, u.TurretFrames, u.Turret, u.Turret2, u.TurretOffset, u.TurretY, u.Flags) { ModSource = manifest.ModName },
                 _ => throw new InvalidOperationException("unreachable"),
             })).ToList();
 
         public static List<InfantryType> Infantry(ModManifest manifest) =>
-            manifest.Infantry.Select(i => new InfantryType(i.Id, i.Name, i.TextId, i.Owner, i.Flags)).ToList();
+            manifest.Infantry.Select(i => new InfantryType(i.Id, i.Name, i.TextId, i.Owner, i.Flags) { ModSource = manifest.ModName }).ToList();
 
         public static List<TemplateType> Templates(ModManifest manifest) =>
             manifest.Templates.Select(t => t.Mask == null
-                ? new TemplateType((ushort)t.Id, t.Name, t.Width, t.Height, t.Lands)
-                : new TemplateType((ushort)t.Id, t.Name, t.Width, t.Height, t.Lands, t.Mask)).ToList();
+                ? new TemplateType((ushort)t.Id, t.Name, t.Width, t.Height, t.Lands) { ModSource = manifest.ModName }
+                : new TemplateType((ushort)t.Id, t.Name, t.Width, t.Height, t.Lands, t.Mask) { ModSource = manifest.ModName }).ToList();
 
         /// <summary>Manifests must already be in mod load order. allowWalls mirrors the vanilla table's Globals.AllowWallBuildings filter.</summary>
         public static List<BuildingType> MergeBuildings(IEnumerable<BuildingType> vanilla, IEnumerable<ModManifest> manifests, bool allowWalls, List<string> warnings) =>

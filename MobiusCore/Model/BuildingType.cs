@@ -142,6 +142,8 @@ namespace MobiusEditor.Model
         /// Value for Z-sorting; can be used to make buildings specifically show as "flatter" than others so pieces sticking out at the top don't overlap objects on these cells.
         /// </summary>
         public int ZOrder { get; private set; }
+        /// <summary>Name of the mod whose manifest supplied this type; null for vanilla types.</summary>
+        public string ModSource { get; set; }
         private string nameId;
 
         public BuildingType(int id, string name, string textId, int powerProd, int powerUse, int storage, bool capturable, int width, int height, string occupyMask, string ownerHouse, string factoryOverlay, int frameOffset, string graphicsSource, BuildingTypeFlag flags, int zOrder)
@@ -250,6 +252,7 @@ namespace MobiusEditor.Model
             int baseMaskX = BaseOccupyMask.GetLength(1);
             string occupyMask = GeneralUtils.GetStringFromMask(BaseOccupyMask, '1', '0', ' ');
             BuildingType newBld = new BuildingType(ID, Name, nameId, PowerProduction, PowerUsage, Storage, Capturable, baseMaskX, baseMaskY, occupyMask, OwnerHouse, FactoryOverlay, FrameOffset, GraphicsSource, Flags, ZOrder);
+            newBld.ModSource = ModSource;
             return newBld;
         }
 

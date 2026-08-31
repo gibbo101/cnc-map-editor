@@ -214,6 +214,8 @@ namespace MobiusEditor.Model
         public bool HasNoRules => Flags.HasFlag(UnitTypeFlag.NoRules);
 
         public bool GraphicsFound { get; private set; }
+        /// <summary>Name of the mod whose manifest supplied this type; null for vanilla types.</summary>
+        public string ModSource { get; set; }
         private string nameId;
 
         public Bitmap Thumbnail { get; set; }

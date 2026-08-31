@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -40,6 +41,8 @@ namespace MobiusCli
             o.WriteLine("triggers: " + map.Triggers.Count);
             o.WriteLine("teamtypes: " + map.TeamTypes.Count);
             o.WriteLine("waypoints: " + map.Waypoints.Count(w => w.Cell.HasValue));
+            List<string> requiredMods = RequiredMods(map);
+            o.WriteLine(requiredMods.Count == 0 ? "requires mods: none (vanilla-safe)" : "requires mods: " + string.Join(", ", requiredMods));
             o.WriteLine("unknown entries: " + map.UnknownEntries.Count);
             foreach (UnknownEntry u in map.UnknownEntries) o.WriteLine("  " + u);
             o.WriteLine("load errors: " + errors.Length);
@@ -57,6 +60,10 @@ namespace MobiusCli
             IGamePlugin plugin = session.Load(mapPath, out string[] notes);
             int problems = 0;
             foreach (string n in notes) o.WriteLine("note: " + n);
+            List<string> requiredMods = RequiredMods(plugin.Map);
+            // Needing a mod is not a problem while the mod is active; without it the map's
+            // content would already fail as unknown entries below.
+            if (requiredMods.Count > 0) o.WriteLine("note: requires mods: " + string.Join(", ", requiredMods));
             foreach (UnknownEntry u in plugin.Map.UnknownEntries) { o.WriteLine("unknown: " + u); problems++; }
             string blocking = plugin.Validate(FileType.INI, false, true);
             if (!string.IsNullOrWhiteSpace(blocking)) { o.WriteLine("blocking: " + blocking.Trim()); problems++; }
@@ -64,6 +71,18 @@ namespace MobiusCli
             o.WriteLine(problems == 0 ? "ok" + suffix : problems + " problem(s)" + suffix);
             return problems == 0 ? 0 : 1;
         }
+
+        /// <summary>Distinct mods that supplied the types the map actually places; empty = vanilla-safe.</summary>
+        private static List<string> RequiredMods(Map map) =>
+            map.Templates.Select(t => t.Value?.Type?.ModSource)
+                .Concat(map.Buildings.Select(b => b.Occupier).OfType<Building>().Select(b => b.Type?.ModSource))
+                .Concat(map.Technos.Select(t => t.Occupier).OfType<Unit>().Select(u => u.Type?.ModSource))
+                .Concat(map.Technos.Select(t => t.Occupier).OfType<InfantryGroup>()
+                    .SelectMany(g => g.Infantry).Where(i => i != null).Select(i => i.Type?.ModSource))
+                .Where(s => !string.IsNullOrEmpty(s))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
         public static int Mods(Invocation inv, TextWriter o)
         {
