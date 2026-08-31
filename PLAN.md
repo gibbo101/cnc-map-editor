@@ -354,9 +354,25 @@ theaters but only Temperate/Snow/Interior are real — Winter/Desert/Jungle/Barr
 Jungle/Snow/Caribbean extras). The New dialog filters to `!IsModTheater`. Deck deploy
 current as of ee183f4.
 
+**DECK LAG FIX (b6d569e, after Luke reported "really slow and laggy"):** every op was
+raw-copying the whole map bitmap twice + allocating a fresh GPU frame (2×64MB + 4096px
+texture upload per painted cell at the old fixed 25% zoom). Now: `MapDocument.
+UpdateRenderCache(out dirtyPixels)` exposes the cache + changed region; the window keeps
+ONE reused WriteableBitmap, copies only that region, InvalidateVisual; fresh maps open
+FITTED to the viewport (Deck = 1/16 scale, 16× smaller surface), first render deferred
+until layout. **VERIFIED LIVE ON THE DECK IN GAME MODE** (Luke authorized remote runs):
+launched via `steam steam://rungameid/13165712167015546880` (shortcut appid 3065381238),
+screenshot via `gamescopectl screenshot <path>` — TF map rendered fitted at 6.3%, palettes
++ status live. REMAINING KNOWN SLOWNESS: session startup ≈15-20s (MEG/archive load, same
+cost as CLI) — a splash/async load is the follow-up if it bothers.
+TRAP: `pgrep -f "reaper SteamLaunch"` over ssh matches its own command line — use
+`pgrep -af` and eyeball, or exact names.
+
 Next candidates (no committed order):
 - **Luke's UI feedback pass** — he's deliberately holding feedback until the surface is
   fuller; it now is, and it's on his Deck. Expect layout/UX rework requests.
+- Async session startup with a loading indicator (the ~15-20s archive load currently
+  blocks the window).
 - TD mission patterns for `expand-mission` — agreed LOW priority (Luke, 2026-08-31:
   feature-completeness only; defer until a real TD authoring need appears).
 Full oracle tier re-verified green mid-session (363/363, 14m50s) after the IGamePlugin
