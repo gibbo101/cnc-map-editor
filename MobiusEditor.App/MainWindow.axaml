@@ -43,7 +43,34 @@
     </StackPanel>
     <TextBlock DockPanel.Dock="Bottom" Name="StatusLabel" Margin="6,3" Text="Open a map to begin." />
     <Grid ColumnDefinitions="220,4,*,4,230">
-    <TabControl Grid.Column="0" Name="ToolTabs">
+    <DockPanel Grid.Column="0">
+    <TextBox DockPanel.Dock="Top" Name="PaletteSearch" Watermark="Search palettes…" Margin="2,2,2,0" />
+    <TabControl Name="ToolTabs">
+      <TabControl.Styles>
+        <Style Selector="TabItem">
+          <Setter Property="FontSize" Value="13" />
+          <Setter Property="MinHeight" Value="30" />
+          <Setter Property="Padding" Value="8,4" />
+        </Style>
+      </TabControl.Styles>
+      <TabControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <StackPanel Orientation="Horizontal" />
+        </ItemsPanelTemplate>
+      </TabControl.ItemsPanel>
+      <TabControl.Template>
+        <ControlTemplate TargetType="TabControl">
+          <DockPanel>
+            <ScrollViewer DockPanel.Dock="Top"
+                          HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+              <ItemsPresenter Name="PART_ItemsPresenter" />
+            </ScrollViewer>
+            <ContentPresenter Name="PART_SelectedContentHost"
+                              Content="{TemplateBinding SelectedContent}"
+                              ContentTemplate="{TemplateBinding SelectedContentTemplate}" />
+          </DockPanel>
+        </ControlTemplate>
+      </TabControl.Template>
       <TabItem Header="Tiles">
         <ListBox Name="TemplatePalette" />
       </TabItem>
@@ -72,6 +99,7 @@
         <ListBox Name="WaypointPalette" />
       </TabItem>
     </TabControl>
+    </DockPanel>
     <GridSplitter Grid.Column="1" Background="#30808080" />
     <GridSplitter Grid.Column="3" Background="#30808080" />
     <ScrollViewer Grid.Column="4" VerticalScrollBarVisibility="Auto">

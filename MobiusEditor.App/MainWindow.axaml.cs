@@ -68,6 +68,7 @@ namespace MobiusEditor.App
                     document.PlacementHouse = document.Map.HouseTypes.First(h => h.Name == houseName);
                 }
             };
+            PaletteSearch.TextChanged += (s, e) => ApplyPaletteFilters();
             CellTriggerPalette.SelectionChanged += (s, e) => { if (CellTriggerPalette.SelectedItem != null) ClearOtherBrushes(CellTriggerPalette); UpdateIndicatorLayers(); };
             WaypointPalette.SelectionChanged += (s, e) => { if (WaypointPalette.SelectedItem != null) ClearOtherBrushes(WaypointPalette); UpdateIndicatorLayers(); };
             WireProperties();
@@ -389,7 +390,9 @@ namespace MobiusEditor.App
         private MobiusEditor.Model.TemplateType SelectedTemplate => (TemplatePalette.SelectedItem as PaletteEntry)?.Type as MobiusEditor.Model.TemplateType;
         private MobiusEditor.Model.OverlayType SelectedOverlay => (OverlayPalette.SelectedItem as PaletteEntry)?.Type as MobiusEditor.Model.OverlayType;
         private string SelectedCellTrigger => CellTriggerPalette.SelectedItem as string;
-        private int SelectedWaypoint => WaypointPalette.SelectedIndex;
+        // The row's leading number, not the list index — the search filter can hide rows.
+        private int SelectedWaypoint =>
+            WaypointPalette.SelectedItem is string row && int.TryParse(row.Split(':')[0], out int index) ? index : -1;
         private MobiusEditor.Model.TerrainType SelectedTerrain => (TerrainPalette.SelectedItem as PaletteEntry)?.Type as MobiusEditor.Model.TerrainType;
         private MobiusEditor.Model.BuildingType SelectedBuilding => (BuildingPalette.SelectedItem as PaletteEntry)?.Type as MobiusEditor.Model.BuildingType;
         private MobiusEditor.Model.UnitType SelectedUnit => (UnitPalette.SelectedItem as PaletteEntry)?.Type as MobiusEditor.Model.UnitType;
@@ -448,6 +451,39 @@ namespace MobiusEditor.App
                 list.AddRange(group);
             }
             return list;
+        }
+
+        /// <summary>Every palette's unfiltered rows; the search box narrows what the ListBox shows.</summary>
+        private readonly Dictionary<ListBox, List<object>> paletteAllRows = new Dictionary<ListBox, List<object>>();
+
+        private void SetPaletteRows(ListBox palette, IEnumerable<object> rows)
+        {
+            paletteAllRows[palette] = rows.ToList();
+            ApplyPaletteFilter(palette);
+        }
+
+        /// <summary>
+        /// Shows the rows matching the search box, keeping the selected brush when it
+        /// survives the filter; group headers stay only while they still have entries.
+        /// </summary>
+        private void ApplyPaletteFilter(ListBox palette)
+        {
+            if (!paletteAllRows.TryGetValue(palette, out List<object> rows)) return;
+            string query = PaletteSearch.Text;
+            object selected = palette.SelectedItem;
+            List<object> filtered = MobiusEditor.Shell.PaletteFilter.Apply(
+                rows,
+                r => r is PaletteHeader,
+                r => r is PaletteEntry entry
+                    ? MobiusEditor.Shell.PaletteFilter.Matches(entry.Item, query)
+                    : MobiusEditor.Shell.PaletteFilter.Matches(r as string, query));
+            palette.ItemsSource = filtered;
+            if (selected != null && filtered.Contains(selected)) palette.SelectedItem = selected;
+        }
+
+        private void ApplyPaletteFilters()
+        {
+            foreach (ListBox palette in paletteAllRows.Keys.ToList()) ApplyPaletteFilter(palette);
         }
 
         /// <summary>Group headers are not brushes; selecting one bounces the selection off.</summary>
@@ -705,14 +741,14 @@ namespace MobiusEditor.App
             // Rebuild the palettes only when a different map is open, or per-op refreshes would drop the selection.
             if (!ReferenceEquals(paletteForPlugin, document.Plugin))
             {
-                TemplatePalette.ItemsSource = document.AvailableTemplates().Select(t => new PaletteEntry(MobiusEditor.Shell.PaletteItem.From(t))).ToList();
-                TerrainPalette.ItemsSource = GroupedEntries(document.AvailableTerrain());
-                OverlayPalette.ItemsSource = GroupedEntries(document.AvailableOverlays());
-                BuildingPalette.ItemsSource = GroupedEntries(document.AvailableBuildings());
-                UnitPalette.ItemsSource = GroupedEntries(document.AvailableUnits());
-                InfantryPalette.ItemsSource = GroupedEntries(document.AvailableInfantry());
-                SmudgePalette.ItemsSource = document.AvailableSmudge().Select(t => new PaletteEntry(MobiusEditor.Shell.PaletteItem.From(t))).ToList();
-                WaypointPalette.ItemsSource = document.Map.Waypoints.Select((w, i) => i + ": " + w.Name).ToList();
+                SetPaletteRows(TemplatePalette, document.AvailableTemplates().Select(t => new PaletteEntry(MobiusEditor.Shell.PaletteItem.From(t))));
+                SetPaletteRows(TerrainPalette, GroupedEntries(document.AvailableTerrain()));
+                SetPaletteRows(OverlayPalette, GroupedEntries(document.AvailableOverlays()));
+                SetPaletteRows(BuildingPalette, GroupedEntries(document.AvailableBuildings()));
+                SetPaletteRows(UnitPalette, GroupedEntries(document.AvailableUnits()));
+                SetPaletteRows(InfantryPalette, GroupedEntries(document.AvailableInfantry()));
+                SetPaletteRows(SmudgePalette, document.AvailableSmudge().Select(t => new PaletteEntry(MobiusEditor.Shell.PaletteItem.From(t))));
+                SetPaletteRows(WaypointPalette, document.Map.Waypoints.Select((w, i) => (object)(i + ": " + w.Name)));
                 HouseCombo.ItemsSource = document.Map.HouseTypes.Select(h => h.Name).ToList();
                 HouseCombo.SelectedIndex = 0;
                 HouseCombo.IsEnabled = true;
@@ -720,10 +756,12 @@ namespace MobiusEditor.App
             }
             // The eligible cell triggers follow the trigger list; rebuild only when it actually changed.
             List<string> cellTriggers = document.AvailableCellTriggers().ToList();
-            if (!(CellTriggerPalette.ItemsSource is List<string> current) || !current.SequenceEqual(cellTriggers))
+            bool triggersUnchanged = paletteAllRows.TryGetValue(CellTriggerPalette, out List<object> knownTriggers)
+                && knownTriggers.OfType<string>().SequenceEqual(cellTriggers);
+            if (!triggersUnchanged)
             {
                 string selected = SelectedCellTrigger;
-                CellTriggerPalette.ItemsSource = cellTriggers;
+                SetPaletteRows(CellTriggerPalette, cellTriggers);
                 if (selected != null) CellTriggerPalette.SelectedItem = cellTriggers.FirstOrDefault(n => n.Equals(selected, StringComparison.OrdinalIgnoreCase));
             }
             PresentFrame();
