@@ -87,10 +87,16 @@ namespace MobiusEditor.Model
         }
 
         /// <summary>Applies the working list and rename ledger to the map, rewiring and cleaning every referrer.</summary>
-        public void Commit()
+        public void Commit() => Commit(out _, out _, out _);
+
+        /// <summary>
+        /// Commit that also journals every rewired referrer (object → its old/new trigger name,
+        /// and the cell of every touched cell trigger), for callers building an undo step.
+        /// </summary>
+        public void Commit(out Dictionary<object, string> undoReferences, out Dictionary<object, string> redoReferences, out Dictionary<CellTrigger, int> cellTriggerCells)
         {
             List<Trigger> sorted = working.OrderBy(t => t.Name, new ExplorerComparer()).ToList();
-            plugin.Map.ApplyTriggerNameChanges(renameActions, out _, out _, out _, sorted);
+            plugin.Map.ApplyTriggerNameChanges(renameActions, out undoReferences, out redoReferences, out cellTriggerCells, sorted);
             plugin.Map.Triggers = sorted;
             plugin.Dirty = true;
             renameActions.Clear();
@@ -185,7 +191,8 @@ namespace MobiusEditor.Model
             addedThisSession.Clear();
         }
 
-        private static TeamType CloneTeam(TeamType source)
+        /// <summary>Deep copy; TeamType itself has no Clone.</summary>
+        public static TeamType CloneTeam(TeamType source)
         {
             TeamType clone = new TeamType
             {

@@ -133,6 +133,66 @@ namespace MobiusEditor.Shell
             AfterOperation();
         }
 
+        /// <summary>Runs one trigger editing session and commits it as a single undo step; undo restores the previous list and every rewired referrer.</summary>
+        public void EditTriggers(Action<TriggerEditor> edit)
+        {
+            RequireOpen();
+            Map map = Map;
+            IGamePlugin plugin = Plugin;
+            List<Trigger> before = map.Triggers.Select(t => t.Clone()).ToList();
+            TriggerEditor editor = TriggerEditor.Begin(plugin);
+            edit(editor);
+            editor.Commit(out Dictionary<object, string> undoRefs, out Dictionary<object, string> redoRefs, out Dictionary<CellTrigger, int> cellCells);
+            List<Trigger> after = map.Triggers.Select(t => t.Clone()).ToList();
+            void Restore(List<Trigger> triggers, Dictionary<object, string> refs)
+            {
+                foreach (KeyValuePair<object, string> kv in refs)
+                {
+                    switch (kv.Key)
+                    {
+                        case CellTrigger cellTrigger: cellTrigger.Trigger = kv.Value; break;
+                        case TeamType team: team.Trigger = kv.Value; break;
+                        case ITechno techno: techno.Trigger = kv.Value; break;
+                    }
+                }
+                // Cell triggers cleaned off the grid come back with their trigger; emptied ones leave it.
+                foreach (KeyValuePair<CellTrigger, int> kv in cellCells)
+                {
+                    map.CellTriggers[kv.Value] = Trigger.IsEmpty(kv.Key.Trigger) ? null : kv.Key;
+                }
+                map.Triggers = triggers.Select(t => t.Clone()).ToList();
+                plugin.Dirty = true;
+            }
+            undoRedo.Track(_ => Restore(before, undoRefs), _ => Restore(after, redoRefs), this);
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>Runs one teamtype editing session as a single undo step; undo also restores the triggers' team references the renames rewrote.</summary>
+        public void EditTeamTypes(Action<TeamTypeEditor> edit)
+        {
+            RequireOpen();
+            Map map = Map;
+            IGamePlugin plugin = Plugin;
+            List<TeamType> beforeTeams = CloneTeams(map.TeamTypes);
+            List<Trigger> beforeTriggers = map.Triggers.Select(t => t.Clone()).ToList();
+            TeamTypeEditor editor = TeamTypeEditor.Begin(plugin);
+            edit(editor);
+            editor.Commit();
+            List<TeamType> afterTeams = CloneTeams(map.TeamTypes);
+            List<Trigger> afterTriggers = map.Triggers.Select(t => t.Clone()).ToList();
+            void Restore(List<TeamType> teams, List<Trigger> triggers)
+            {
+                map.TeamTypes.Clear();
+                map.TeamTypes.AddRange(CloneTeams(teams));
+                map.Triggers = triggers.Select(t => t.Clone()).ToList();
+                plugin.Dirty = true;
+            }
+            undoRedo.Track(_ => Restore(beforeTeams, beforeTriggers), _ => Restore(afterTeams, afterTriggers), this);
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        private static List<TeamType> CloneTeams(IEnumerable<TeamType> teams) => teams.Select(TeamTypeEditor.CloneTeam).ToList();
+
         private void AfterOperation()
         {
             if (!inStroke) CommitStroke();

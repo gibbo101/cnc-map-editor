@@ -328,8 +328,13 @@ would only tempt the native editor to slip. Not part of the plan.
    file format). Not yet: undo integration into MapDocument, a trigger GUI, the structured
    event/action parameter-type table (lift from `GetEventString`/`GetActionString` + the
    fork's `Update*Controls` coercion switches), and the mission-pattern GENERATORS (pure
-   functions, spec in → raw trigger/teamtype rows out) — the spec format wants Luke's input
-   since it is the campaign-authoring UX. Next: those, plus docked tool panels.
+   functions, spec in → raw trigger/teamtype rows out). **SPEC FORMAT DECIDED (Luke,
+   2026-08-31): JSON** — the toolchain already speaks Newtonsoft everywhere, `//` comments
+   are tolerated for inline design notes, and flexibility comes from the spec's shape, not
+   the format: a flat pattern list (new patterns = new generator functions, never format
+   changes) plus a `raw` escape hatch of literal trigger/teamtype rows, so the spec's floor
+   is the raw format itself. Expansion is ONE-TIME scaffolding via a cncmap command (tweak
+   in the editor afterwards; no two-way sync). Next: those, plus docked tool panels.
 
 Open shim gaps to close as they are hit: `RotateFlip` rotations, sub-byte indexed writes,
 text metrics are approximate (annotation layers only), `Region.Exclude` on infinite regions.
