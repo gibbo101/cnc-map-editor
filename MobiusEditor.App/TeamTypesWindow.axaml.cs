@@ -69,7 +69,31 @@ namespace MobiusEditor.App
             ClassAddButton.Click += (s, e) => AddClass();
             ClassRemoveButton.Click += (s, e) => RemoveClass();
             MissionAddButton.Click += (s, e) => AddMission();
+            MissionUpdateButton.Click += (s, e) => UpdateMission();
             MissionRemoveButton.Click += (s, e) => RemoveMission();
+            // Selecting an order row loads it into the edit controls for in-place update.
+            MissionList.SelectionChanged += (s, e) =>
+            {
+                MissionUpdateButton.IsEnabled = MissionList.SelectedIndex >= 0;
+                if (Selected == null || MissionList.SelectedIndex < 0 || MissionList.SelectedIndex >= Selected.Missions.Count) return;
+                TeamTypeMission row = Selected.Missions[MissionList.SelectedIndex];
+                MissionCombo.SelectedIndex = missionTypes.IndexOf(row.Mission);
+                if (missionArgPresentation != null)
+                {
+                    switch (missionArgPresentation.Control)
+                    {
+                        case TriggerArgControl.Number:
+                            MissionArgNud.Value = row.Argument;
+                            break;
+                        case TriggerArgControl.DataList:
+                            for (int i = 0; i < missionArgPresentation.Options.Count; i++)
+                            {
+                                if (missionArgPresentation.Options[i].Value == row.Argument) { MissionArgCombo.SelectedIndex = i; break; }
+                            }
+                            break;
+                    }
+                }
+            };
             OkButton.Click += (s, e) => { session.Commit(); committed = true; Close(); };
             CancelButton.Click += (s, e) => Close();
             Closed += (s, e) => { if (!committed) session.Cancel(); };
@@ -122,7 +146,17 @@ namespace MobiusEditor.App
 
         private void AddMission()
         {
-            if (Selected == null || MissionCombo.SelectedIndex < 0) return;
+            if (Selected == null) return;
+            TeamTypeMission row = BuildMissionRow();
+            if (row == null) return;
+            Selected.Missions.Add(row);
+            RefreshRows();
+        }
+
+        /// <summary>An order row from the edit controls: the selected order plus its argument in the control its arg type uses.</summary>
+        private TeamTypeMission BuildMissionRow()
+        {
+            if (MissionCombo.SelectedIndex < 0) return null;
             TeamMission mission = missionTypes[MissionCombo.SelectedIndex];
             int argument = 0;
             if (missionArgPresentation != null)
@@ -138,8 +172,7 @@ namespace MobiusEditor.App
                         break;
                 }
             }
-            Selected.Missions.Add(new TeamTypeMission { Mission = mission, Argument = argument });
-            RefreshRows();
+            return new TeamTypeMission { Mission = mission, Argument = argument };
         }
 
         private void RemoveMission()
@@ -147,6 +180,18 @@ namespace MobiusEditor.App
             if (Selected == null || MissionList.SelectedIndex < 0 || MissionList.SelectedIndex >= Selected.Missions.Count) return;
             Selected.Missions.RemoveAt(MissionList.SelectedIndex);
             RefreshRows();
+        }
+
+        /// <summary>Rewrites the selected order row from the edit controls, in place.</summary>
+        private void UpdateMission()
+        {
+            int index = MissionList.SelectedIndex;
+            if (Selected == null || index < 0 || index >= Selected.Missions.Count || MissionCombo.SelectedIndex < 0) return;
+            TeamTypeMission row = BuildMissionRow();
+            if (row == null) return;
+            Selected.Missions[index] = row;
+            RefreshRows();
+            MissionList.SelectedIndex = index;
         }
 
         /// <summary>Shows the value control the selected order's argument calls for, as the fork's mission row does.</summary>

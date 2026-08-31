@@ -23,9 +23,11 @@ namespace MobiusEditor.App
         private bool updating;
         private ArgSlot event1Slot, event2Slot, action1Slot, action2Slot;
 
+        private List<Trigger> visibleTriggers = new List<Trigger>();
+
         public TriggerEditor Editor => session.Editor;
-        public Trigger Selected => TriggerList.SelectedIndex >= 0 && TriggerList.SelectedIndex < Editor.Triggers.Count
-            ? Editor.Triggers[TriggerList.SelectedIndex] : null;
+        public Trigger Selected => TriggerList.SelectedIndex >= 0 && TriggerList.SelectedIndex < visibleTriggers.Count
+            ? visibleTriggers[TriggerList.SelectedIndex] : null;
 
         public TriggersWindow()
         {
@@ -48,6 +50,8 @@ namespace MobiusEditor.App
             CloneButton.Click += (s, e) => CloneTrigger();
             RemoveButton.Click += (s, e) => RemoveTrigger();
             RenameButton.Click += (s, e) => RenameTrigger();
+            CheckButton.Click += (s, e) => CheckTriggers();
+            FilterBox.TextChanged += (s, e) => RefreshList(Selected);
             TriggerList.SelectionChanged += (s, e) => { if (!updating) RefreshDetail(); };
             HouseCombo.SelectionChanged += (s, e) => { if (!updating && Selected != null && HouseCombo.SelectedItem is string h) { Selected.House = h; UpdateSummary(); } };
             PersistenceCombo.SelectionChanged += (s, e) => { if (!updating && Selected != null && PersistenceCombo.SelectedIndex >= 0) { Selected.PersistentType = (TriggerPersistentType)PersistenceCombo.SelectedIndex; UpdateSummary(); } };
@@ -91,13 +95,37 @@ namespace MobiusEditor.App
             if (error == null) RefreshList(Selected);
         }
 
+        /// <summary>The filter matches name, house, and the trigger's event/action type names.</summary>
+        private bool MatchesFilter(Trigger t)
+        {
+            string filter = FilterBox.Text?.Trim();
+            if (string.IsNullOrEmpty(filter)) return true;
+            return (t.Name?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false)
+                || (t.House?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false)
+                || (t.Event1.EventType?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false)
+                || (t.Event2.EventType?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false)
+                || (t.Action1.ActionType?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false)
+                || (t.Action2.ActionType?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false);
+        }
+
         private void RefreshList(Trigger select)
         {
             updating = true;
-            TriggerList.ItemsSource = Editor.Triggers.Select(t => t.Name).ToList();
+            visibleTriggers = Editor.Triggers.Where(MatchesFilter).ToList();
+            TriggerList.ItemsSource = visibleTriggers.Select(t => t.Name).ToList();
             updating = false;
-            TriggerList.SelectedIndex = select == null ? -1 : Editor.Triggers.ToList().IndexOf(select);
+            TriggerList.SelectedIndex = select == null ? -1 : visibleTriggers.IndexOf(select);
             RefreshDetail();
+        }
+
+        /// <summary>Runs the game's trigger check over the working list, results shown in the dialog.</summary>
+        private void CheckTriggers()
+        {
+            string[] problems = document.Plugin.CheckTriggers(Editor.Triggers, true, true, false, out bool fatal, false, out _)?.ToArray() ?? Array.Empty<string>();
+            CheckResults.IsVisible = true;
+            CheckResults.Text = problems.Length == 0
+                ? "No issues found."
+                : (fatal ? "FATAL issues found:\n" : "") + string.Join("\n", problems);
         }
 
         private void RefreshDetail()

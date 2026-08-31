@@ -16,7 +16,9 @@
           <Button Name="AddButton" Content="Add" />
           <Button Name="CloneButton" Content="Clone" />
           <Button Name="RemoveButton" Content="Remove" />
+          <Button Name="CheckButton" Content="Check" />
         </StackPanel>
+        <TextBox Name="FilterBox" DockPanel.Dock="Top" Watermark="Filter…" Margin="0,0,0,6" />
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
           <Button Name="RenameButton" DockPanel.Dock="Right" Content="Rename" />
           <TextBox Name="RenameBox" Margin="0,0,6,0" />
@@ -62,6 +64,7 @@
             </Grid>
           </StackPanel>
           <TextBlock Name="SummaryLabel" TextWrapping="Wrap" Opacity="0.8" />
+          <TextBlock Name="CheckResults" TextWrapping="Wrap" IsVisible="False" />
         </StackPanel>
       </ScrollViewer>
     </Grid>

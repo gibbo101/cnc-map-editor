@@ -87,6 +87,68 @@ namespace MobiusEditor.App.Tests
         }
 
         [AvaloniaFact]
+        public void FilterNarrowsTheListAndCheckReportsIntoTheDialog()
+        {
+            MainWindow window = Open();
+            TriggersWindow dialog = window.OpenTriggersDialog();
+            Dispatcher.UIThread.RunJobs();
+            Avalonia.Interactivity.RoutedEventArgs click = new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent);
+            dialog.FindControl<Button>("AddButton").RaiseEvent(click);
+            Dispatcher.UIThread.RunJobs();
+            dialog.FindControl<TextBox>("RenameBox").Text = "atk1";
+            dialog.FindControl<Button>("RenameButton").RaiseEvent(click);
+            dialog.FindControl<Button>("AddButton").RaiseEvent(click);
+            Dispatcher.UIThread.RunJobs();
+            dialog.FindControl<TextBox>("RenameBox").Text = "lose";
+            dialog.FindControl<Button>("RenameButton").RaiseEvent(click);
+            Dispatcher.UIThread.RunJobs();
+            ListBox list = dialog.FindControl<ListBox>("TriggerList");
+            Assert.Equal(2, list.Items.Count);
+            dialog.FindControl<TextBox>("FilterBox").Text = "atk";
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(new[] { "atk1" }, list.Items.Cast<string>());
+            dialog.FindControl<TextBox>("FilterBox").Text = "";
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(2, list.Items.Count);
+
+            dialog.FindControl<Button>("CheckButton").RaiseEvent(click);
+            Dispatcher.UIThread.RunJobs();
+            TextBlock results = dialog.FindControl<TextBlock>("CheckResults");
+            Assert.True(results.IsVisible);
+            Assert.False(string.IsNullOrWhiteSpace(results.Text));
+            dialog.FindControl<Button>("CancelButton").RaiseEvent(click);
+        }
+
+        [AvaloniaFact]
+        public void OrderRowsUpdateInPlace()
+        {
+            MainWindow window = Open();
+            TeamTypesWindow dialog = window.OpenTeamsDialog();
+            Dispatcher.UIThread.RunJobs();
+            Avalonia.Interactivity.RoutedEventArgs click = new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent);
+            dialog.FindControl<Button>("AddButton").RaiseEvent(click);
+            Dispatcher.UIThread.RunJobs();
+            ComboBox missionCombo = dialog.FindControl<ComboBox>("MissionCombo");
+            missionCombo.SelectedItem = RA.TeamMissionTypes.Guard.Mission;
+            Dispatcher.UIThread.RunJobs();
+            dialog.FindControl<NumericUpDown>("MissionArgNud").Value = 10;
+            dialog.FindControl<Button>("MissionAddButton").RaiseEvent(click);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(10, dialog.Selected.Missions.Single().Argument);
+
+            ListBox missionList = dialog.FindControl<ListBox>("MissionList");
+            missionList.SelectedIndex = 0;
+            Dispatcher.UIThread.RunJobs();
+            dialog.FindControl<NumericUpDown>("MissionArgNud").Value = 25;
+            dialog.FindControl<Button>("MissionUpdateButton").RaiseEvent(click);
+            Dispatcher.UIThread.RunJobs();
+            TeamTypeMission row = dialog.Selected.Missions.Single();
+            Assert.Equal(RA.TeamMissionTypes.Guard.ID, row.Mission.ID);
+            Assert.Equal(25, row.Argument);
+            dialog.FindControl<Button>("CancelButton").RaiseEvent(click);
+        }
+
+        [AvaloniaFact]
         public void CancelLeavesTheMapUntouched()
         {
             MainWindow window = Open();
