@@ -58,9 +58,10 @@
           </Grid>
           <ListBox Name="ClassList" MinHeight="90" MaxHeight="140" />
           <TextBlock Text="Orders" FontWeight="Bold" />
-          <Grid ColumnDefinitions="*,90,Auto,Auto">
+          <Grid ColumnDefinitions="*,160,Auto,Auto">
             <ComboBox Grid.Column="0" Name="MissionCombo" HorizontalAlignment="Stretch" />
-            <NumericUpDown Grid.Column="1" Name="MissionArgNud" Margin="6,0,0,0" FormatString="0" Minimum="-1" Maximum="2147483647" Value="0" />
+            <NumericUpDown Grid.Column="1" Name="MissionArgNud" Margin="6,0,0,0" FormatString="0" Minimum="0" Maximum="2147483647" Value="0" />
+            <ComboBox Grid.Column="1" Name="MissionArgCombo" Margin="6,0,0,0" HorizontalAlignment="Stretch" />
             <Button Grid.Column="2" Name="MissionAddButton" Content="Add" Margin="6,0,0,0" />
             <Button Grid.Column="3" Name="MissionRemoveButton" Content="Remove" Margin="6,0,0,0" />
           </Grid>

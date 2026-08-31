@@ -165,6 +165,34 @@ namespace MobiusEditor.Shell.Tests
         }
 
         [Fact]
+        public void TeamMissionArgumentsPresentPerArgTypeControls()
+        {
+            using (MapDocument doc = Open())
+            {
+                // Waypoint order: the same option list trigger waypoint args use.
+                TriggerArgPresentation p = TriggerArgPresenter.ForTeamMission(doc.Plugin, RA.TeamMissionTypes.Move, 9999);
+                Assert.Equal(TriggerArgControl.DataList, p.Control);
+                Assert.Equal((-1L, Waypoint.None), p.Options[0]);
+                Assert.Equal(-1, p.Value);
+                // Options-list order: the mission's own dropdown, invalid values snap to the first.
+                p = TriggerArgPresenter.ForTeamMission(doc.Plugin, RA.TeamMissionTypes.Attack, 2);
+                Assert.Equal(TriggerArgControl.DataList, p.Control);
+                Assert.Equal(RA.TeamMissionTypes.Attack.DropdownOptions.Length, p.Options.Count);
+                Assert.Equal(2, p.Value);
+                // Time order: a spinner; global order: the capped spinner; no-arg: nothing.
+                p = TriggerArgPresenter.ForTeamMission(doc.Plugin, RA.TeamMissionTypes.Guard, -5);
+                Assert.Equal(TriggerArgControl.Number, p.Control);
+                Assert.Equal(0, p.Value);
+                p = TriggerArgPresenter.ForTeamMission(doc.Plugin, RA.TeamMissionTypes.SetGlobal, 99);
+                Assert.Equal(TriggerArgControl.Number, p.Control);
+                Assert.Equal(RA.Constants.HighestGlobal, p.Max);
+                Assert.Equal(RA.Constants.HighestGlobal, p.Value);
+                p = TriggerArgPresenter.ForTeamMission(doc.Plugin, RA.TeamMissionTypes.Unload, 7);
+                Assert.Equal(TriggerArgControl.None, p.Control);
+            }
+        }
+
+        [Fact]
         public void NoArgActionPresentsNothingAndLeavesDataAlone()
         {
             using (MapDocument doc = Open())

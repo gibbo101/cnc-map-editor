@@ -52,6 +52,55 @@ namespace MobiusEditor.Shell
             return Present(plugin, plugin.GetActionArgType(act.ActionType), act.Data, act.Team, act.Trigger, working);
         }
 
+        /// <summary>
+        /// The value control for a teamtype order's argument, per its TeamMissionArgType —
+        /// the fork's MissionItemControl switch. Waypoint orders share the trigger waypoint
+        /// option list; options-list orders use the mission's own dropdown; numeric kinds get
+        /// a spinner with the fork's ranges. The returned Value is the argument coerced into
+        /// validity (clamped, or snapped to the first option).
+        /// </summary>
+        public static TriggerArgPresentation ForTeamMission(IGamePlugin plugin, TeamMission mission, int argument)
+        {
+            TriggerArgPresentation p = new TriggerArgPresentation();
+            switch (mission.ArgType)
+            {
+                case TeamMissionArgType.None:
+                    p.Control = TriggerArgControl.None;
+                    break;
+                case TeamMissionArgType.Waypoint:
+                    p.Control = TriggerArgControl.DataList;
+                    p.Options = plugin.GetArgOptions(TriggerArgType.Waypoint);
+                    p.Value = TriggerArg.CheckInList(argument, p.Options.ToList());
+                    break;
+                case TeamMissionArgType.OptionsList:
+                    p.Control = TriggerArgControl.DataList;
+                    p.Options = mission.DropdownOptions.Select(o => ((long)o.Value, o.Label)).ToList();
+                    p.Value = TriggerArg.CheckInList(argument, p.Options.ToList());
+                    break;
+                case TeamMissionArgType.GlobalNumber:
+                    (long gMin, long gMax) = plugin.GetArgRange(TriggerArgType.GlobalNumber) ?? (0L, int.MaxValue);
+                    p.Control = TriggerArgControl.Number;
+                    p.Min = gMin;
+                    p.Max = gMax;
+                    p.Value = ((long)argument).Restrict(gMin, gMax);
+                    break;
+                case TeamMissionArgType.MapCell:
+                    p.Control = TriggerArgControl.Number;
+                    p.Min = 0;
+                    p.Max = plugin.Map.Metrics.Length - 1;
+                    p.Value = ((long)argument).Restrict(p.Min, p.Max);
+                    break;
+                default:
+                    // Number, Time, MissionNumber, Tarcom: a plain non-negative spinner.
+                    p.Control = TriggerArgControl.Number;
+                    p.Min = 0;
+                    p.Max = int.MaxValue;
+                    p.Value = ((long)argument).Restrict(p.Min, p.Max);
+                    break;
+            }
+            return p;
+        }
+
         private static TriggerArgPresentation Present(IGamePlugin plugin, TriggerArgType argType, long data, string team, string trigger, List<Trigger> working)
         {
             TriggerArgPresentation p = new TriggerArgPresentation { ArgType = argType };

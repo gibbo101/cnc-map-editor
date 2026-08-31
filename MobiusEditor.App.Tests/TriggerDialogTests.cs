@@ -101,6 +101,35 @@ namespace MobiusEditor.App.Tests
         }
 
         [AvaloniaFact]
+        public void OrderArgumentControlFollowsTheMissionArgType()
+        {
+            MainWindow window = Open();
+            TeamTypesWindow dialog = window.OpenTeamsDialog();
+            Dispatcher.UIThread.RunJobs();
+            dialog.FindControl<Button>("AddButton").RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            ComboBox missionCombo = dialog.FindControl<ComboBox>("MissionCombo");
+            NumericUpDown argNud = dialog.FindControl<NumericUpDown>("MissionArgNud");
+            ComboBox argCombo = dialog.FindControl<ComboBox>("MissionArgCombo");
+            // A waypoint order shows the waypoint list; picking one lands its value as the argument.
+            missionCombo.SelectedItem = RA.TeamMissionTypes.Move.Mission;
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(argCombo.IsVisible);
+            Assert.False(argNud.IsVisible);
+            var waypointOptions = window.Document.Plugin.GetArgOptions(MobiusEditor.Model.TriggerArgType.Waypoint);
+            Assert.Equal(waypointOptions.Count, argCombo.Items.Count);
+            argCombo.SelectedIndex = 2;
+            dialog.FindControl<Button>("MissionAddButton").RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal((int)waypointOptions[2].Value, dialog.Selected.Missions.Single().Argument);
+            // A time order swaps back to the spinner.
+            missionCombo.SelectedItem = RA.TeamMissionTypes.Guard.Mission;
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(argNud.IsVisible);
+            Assert.False(argCombo.IsVisible);
+        }
+
+        [AvaloniaFact]
         public void TeamDialogBuildsATeamAndCommitsAsOneUndoStep()
         {
             MainWindow window = Open();

@@ -24,6 +24,7 @@ namespace MobiusEditor.App
         private bool updating;
         private List<ITechnoType> classTypes = new List<ITechnoType>();
         private List<TeamMission> missionTypes = new List<TeamMission>();
+        private TriggerArgPresentation missionArgPresentation;
 
         public TeamTypeEditor Editor => session.Editor;
         public TeamType Selected => TeamList.SelectedIndex >= 0 && TeamList.SelectedIndex < Editor.TeamTypes.Count
@@ -45,7 +46,8 @@ namespace MobiusEditor.App
             ClassTypeCombo.ItemsSource = classTypes.Select(t => t.Name).ToList();
             missionTypes = map.TeamMissionTypes.ToList();
             MissionCombo.ItemsSource = missionTypes.Select(m => m.Mission).ToList();
-            MissionCombo.SelectionChanged += (s, e) => UpdateMissionHint();
+            MissionCombo.SelectionChanged += (s, e) => UpdateMissionArgControl();
+            MissionArgNud.IsVisible = MissionArgCombo.IsVisible = false;
             AddButton.Click += (s, e) => AddTeam();
             RemoveButton.Click += (s, e) => RemoveTeam();
             RenameButton.Click += (s, e) => RenameTeam();
@@ -122,7 +124,21 @@ namespace MobiusEditor.App
         {
             if (Selected == null || MissionCombo.SelectedIndex < 0) return;
             TeamMission mission = missionTypes[MissionCombo.SelectedIndex];
-            Selected.Missions.Add(new TeamTypeMission { Mission = mission, Argument = (int)(MissionArgNud.Value ?? 0) });
+            int argument = 0;
+            if (missionArgPresentation != null)
+            {
+                switch (missionArgPresentation.Control)
+                {
+                    case TriggerArgControl.Number:
+                        argument = (int)(MissionArgNud.Value ?? 0);
+                        break;
+                    case TriggerArgControl.DataList:
+                        int idx = MissionArgCombo.SelectedIndex;
+                        argument = idx >= 0 && idx < missionArgPresentation.Options.Count ? (int)missionArgPresentation.Options[idx].Value : 0;
+                        break;
+                }
+            }
+            Selected.Missions.Add(new TeamTypeMission { Mission = mission, Argument = argument });
             RefreshRows();
         }
 
@@ -133,16 +149,38 @@ namespace MobiusEditor.App
             RefreshRows();
         }
 
-        private void UpdateMissionHint()
+        /// <summary>Shows the value control the selected order's argument calls for, as the fork's mission row does.</summary>
+        private void UpdateMissionArgControl()
         {
             TeamMission mission = MissionCombo.SelectedIndex >= 0 ? missionTypes[MissionCombo.SelectedIndex] : null;
-            if (mission == null) { MissionHint.Text = ""; return; }
-            string hint = "argument: " + mission.ArgType;
-            if (mission.ArgType == TeamMissionArgType.OptionsList && mission.DropdownOptions.Length > 0)
+            if (mission == null)
             {
-                hint += " — " + string.Join(", ", mission.DropdownOptions.Select(o => o.Value + "=" + o.Label));
+                missionArgPresentation = null;
+                MissionArgNud.IsVisible = MissionArgCombo.IsVisible = false;
+                MissionHint.Text = "";
+                return;
             }
-            MissionHint.Text = hint;
+            missionArgPresentation = TriggerArgPresenter.ForTeamMission(document.Plugin, mission, (int)(MissionArgNud.Value ?? 0));
+            MissionArgNud.IsVisible = missionArgPresentation.Control == TriggerArgControl.Number;
+            MissionArgCombo.IsVisible = missionArgPresentation.Control == TriggerArgControl.DataList;
+            switch (missionArgPresentation.Control)
+            {
+                case TriggerArgControl.Number:
+                    MissionArgNud.Minimum = missionArgPresentation.Min;
+                    MissionArgNud.Maximum = missionArgPresentation.Max;
+                    MissionArgNud.Value = missionArgPresentation.Value;
+                    break;
+                case TriggerArgControl.DataList:
+                    MissionArgCombo.ItemsSource = missionArgPresentation.Options.Select(o => o.Label).ToList();
+                    int idx = 0;
+                    for (int i = 0; i < missionArgPresentation.Options.Count; i++)
+                    {
+                        if (missionArgPresentation.Options[i].Value == missionArgPresentation.Value) { idx = i; break; }
+                    }
+                    MissionArgCombo.SelectedIndex = idx;
+                    break;
+            }
+            MissionHint.Text = "argument: " + mission.ArgType;
         }
 
         private void RefreshList(TeamType select)
