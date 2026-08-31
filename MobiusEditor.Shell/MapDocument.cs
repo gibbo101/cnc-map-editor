@@ -50,10 +50,22 @@ namespace MobiusEditor.Shell
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
-        /// <summary>Creates a fresh empty map (the game's first theater when none given); it has no file until Save.</summary>
-        public void NewMap(string theater = null)
+        /// <summary>
+        /// Creates a fresh empty map (the game's first theater when none given); it has no
+        /// file until Save. The playable bounds default to the full playable area and can be
+        /// given smaller — they are centered on the fixed cell grid the format dictates.
+        /// </summary>
+        public void NewMap(string theater = null, Size? playableSize = null)
         {
             Plugin = Session.New(theater, out string[] notes);
+            if (playableSize.HasValue)
+            {
+                Size cells = new Size(Plugin.Map.Metrics.Width, Plugin.Map.Metrics.Height);
+                int w = Math.Clamp(playableSize.Value.Width, 16, cells.Width - 2);
+                int h = Math.Clamp(playableSize.Value.Height, 16, cells.Height - 2);
+                Plugin.Map.TopLeft = new Point(Math.Max(1, (cells.Width - w) / 2), Math.Max(1, (cells.Height - h) / 2));
+                Plugin.Map.Size = new Size(w, h);
+            }
             Path = null;
             LoadNotes = notes;
             undoRedo.Clear();

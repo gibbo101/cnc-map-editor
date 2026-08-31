@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="MobiusEditor.App.NewMapWindow"
+        WindowStartupLocation="CenterOwner"
         Title="New map" Width="320" Height="280">
   <DockPanel Margin="6">
     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6" Margin="0,6,0,0">
@@ -10,7 +11,16 @@
     <StackPanel Spacing="6">
       <TextBlock Text="Theater" FontWeight="Bold" />
       <ListBox Name="TheaterList" Height="150" />
+      <TextBlock Text="Playable size (cells)" FontWeight="Bold" />
+      <Grid ColumnDefinitions="*,12,*">
+        <NumericUpDown Grid.Column="0" Name="WidthNud" FormatString="0" Minimum="16" />
+        <NumericUpDown Grid.Column="2" Name="HeightNud" FormatString="0" Minimum="16" />
+      </Grid>
       <TextBlock Text="A new map starts empty; place two player-start waypoints before saving a skirmish map." TextWrapping="Wrap" Opacity="0.8" />
+      <StackPanel Name="CreateProgress" Spacing="4" IsVisible="False">
+        <ProgressBar IsIndeterminate="True" />
+        <TextBlock Name="CreateProgressLabel" HorizontalAlignment="Center" Opacity="0.9" />
+      </StackPanel>
     </StackPanel>
   </DockPanel>
 </Window>

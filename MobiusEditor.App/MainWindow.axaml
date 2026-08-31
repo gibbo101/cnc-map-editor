@@ -34,10 +34,13 @@
       <TextBlock VerticalAlignment="Center" Text="House:" />
       <ComboBox Name="HouseCombo" MinWidth="110" IsEnabled="False" />
       <Separator Width="12" />
+      <ToggleButton Name="EraserButton" Content="Eraser" IsEnabled="False" />
+      <Separator Width="12" />
       <TextBlock Name="TitleLabel" VerticalAlignment="Center" Text="No map" FontWeight="Bold" />
     </StackPanel>
     <TextBlock DockPanel.Dock="Bottom" Name="StatusLabel" Margin="6,3" Text="Open a map to begin." />
-    <TabControl DockPanel.Dock="Left" Width="200" Name="ToolTabs">
+    <Grid ColumnDefinitions="220,4,*,4,230">
+    <TabControl Grid.Column="0" Name="ToolTabs">
       <TabItem Header="Tiles">
         <ListBox Name="TemplatePalette" ItemTemplate="{StaticResource PaletteTemplate}" />
       </TabItem>
@@ -66,7 +69,9 @@
         <ListBox Name="WaypointPalette" />
       </TabItem>
     </TabControl>
-    <ScrollViewer DockPanel.Dock="Right" Width="230" VerticalScrollBarVisibility="Auto">
+    <GridSplitter Grid.Column="1" Background="#30808080" />
+    <GridSplitter Grid.Column="3" Background="#30808080" />
+    <ScrollViewer Grid.Column="4" VerticalScrollBarVisibility="Auto">
       <StackPanel Name="PropertiesPanel" IsVisible="False" Spacing="6" Margin="6">
         <TextBlock Name="PropTitle" FontWeight="Bold" />
         <TextBlock Text="House" />
@@ -92,10 +97,13 @@
         </StackPanel>
       </StackPanel>
     </ScrollViewer>
-    <Panel>
+    <Panel Grid.Column="2">
       <ScrollViewer Name="Scroller" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Background="#202020">
         <Panel Name="MapPanel" Background="#202020" HorizontalAlignment="Left" VerticalAlignment="Top">
           <Image Name="MapImage" Stretch="None" HorizontalAlignment="Left" VerticalAlignment="Top" />
+          <Border Name="BoundsBorder" IsHitTestVisible="False" IsVisible="False"
+                  BorderBrush="#B000E5FF" BorderThickness="2"
+                  HorizontalAlignment="Left" VerticalAlignment="Top" />
           <Border Name="GhostBorder" IsHitTestVisible="False" IsVisible="False"
                   BorderBrush="#DDFFDD00" BorderThickness="1" Background="#18FFDD00"
                   HorizontalAlignment="Left" VerticalAlignment="Top">
@@ -110,5 +118,6 @@
         </StackPanel>
       </Border>
     </Panel>
+    </Grid>
   </DockPanel>
 </Window>

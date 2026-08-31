@@ -64,7 +64,7 @@ namespace MobiusEditor.App.Tests
             Point click = CellCenter(window, 12, 12);
             Click(window, click, MouseButton.Left);
             Assert.Equal("celx", window.Document.Map.CellTriggers[new System.Drawing.Point(12, 12)].Trigger);
-            Click(window, click, MouseButton.Right);
+            Pump.EraseClick(window, click);
             Assert.Null(window.Document.Map.CellTriggers[new System.Drawing.Point(12, 12)]);
 
             // Picking another brush clears this one and drops the indicator layer.
@@ -95,7 +95,7 @@ namespace MobiusEditor.App.Tests
             Assert.NotNull(placed);
             Assert.Same(type, placed.Type);
 
-            Click(window, CellCenter(window, occupied.X, occupied.Y), MouseButton.Right);
+            Pump.EraseClick(window, CellCenter(window, occupied.X, occupied.Y));
             Assert.Null(window.Document.Map.Technos[occupied]);
         }
 
@@ -114,7 +114,7 @@ namespace MobiusEditor.App.Tests
             Building placed = window.Document.Map.Buildings[new System.Drawing.Point(10, 10)] as Building;
             Assert.NotNull(placed);
             Assert.Equal("Greece", placed.House.Name);
-            Click(window, CellCenter(window, 10, 10), MouseButton.Right);
+            Pump.EraseClick(window, CellCenter(window, 10, 10));
             Assert.Null(window.Document.Map.Buildings[new System.Drawing.Point(10, 10)]);
         }
 
@@ -132,7 +132,7 @@ namespace MobiusEditor.App.Tests
             Click(window, CellCenter(window, 16, 16), MouseButton.Left);
             Unit unit = Assert.IsType<Unit>(window.Document.Map.Technos[new System.Drawing.Point(16, 16)]);
             Assert.Equal("USSR", unit.House.Name);
-            Click(window, CellCenter(window, 16, 16), MouseButton.Right);
+            Pump.EraseClick(window, CellCenter(window, 16, 16));
             Assert.Null(window.Document.Map.Technos[new System.Drawing.Point(16, 16)]);
 
             ListBox infantry = window.FindControl<ListBox>("InfantryPalette");
@@ -142,7 +142,7 @@ namespace MobiusEditor.App.Tests
             Click(window, CellCenter(window, 17, 16), MouseButton.Left);
             InfantryGroup group = Assert.IsType<InfantryGroup>(window.Document.Map.Technos[new System.Drawing.Point(17, 16)]);
             Assert.Equal("USSR", group.Infantry.Single(i => i != null).House.Name);
-            Click(window, CellCenter(window, 17, 16), MouseButton.Right);
+            Pump.EraseClick(window, CellCenter(window, 17, 16));
             Assert.Null(window.Document.Map.Technos[new System.Drawing.Point(17, 16)]);
         }
 
@@ -185,7 +185,7 @@ namespace MobiusEditor.App.Tests
             Click(window, click, MouseButton.Left);
             window.Document.Map.Metrics.GetCell(new System.Drawing.Point(14, 14), out int cell);
             Assert.Equal(cell, window.Document.Map.Waypoints[index].Cell);
-            Click(window, click, MouseButton.Right);
+            Pump.EraseClick(window, click);
             Assert.False(window.Document.Map.Waypoints[index].Cell.HasValue);
         }
     }

@@ -70,9 +70,7 @@ namespace MobiusEditor.App.Tests
             Dispatcher.UIThread.RunJobs();
             Assert.NotNull(window.Document.Map.Templates[20, 20]);
 
-            window.MouseDown(click, MouseButton.Right);
-            window.MouseUp(click, MouseButton.Right);
-            Dispatcher.UIThread.RunJobs();
+            Pump.EraseClick(window, click);
             Assert.Null(window.Document.Map.Templates[20, 20]);
         }
 
@@ -94,9 +92,7 @@ namespace MobiusEditor.App.Tests
             Assert.Equal("brik", window.Document.Map.Overlay[15, 15].Type.Name);
 
             // Right-click with the wall brush erases the wall again.
-            window.MouseDown(click, MouseButton.Right);
-            window.MouseUp(click, MouseButton.Right);
-            Dispatcher.UIThread.RunJobs();
+            Pump.EraseClick(window, click);
             Assert.Null(window.Document.Map.Overlay[15, 15]);
         }
 

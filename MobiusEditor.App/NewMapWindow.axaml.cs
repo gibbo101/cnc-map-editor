@@ -21,6 +21,10 @@ namespace MobiusEditor.App
             // (Winter/Desert/Jungle/Barren/Cave in RA) have no art in this install.
             TheaterList.ItemsSource = document.Session.GameInfo.AllTheaters.Where(t => !t.IsModTheater).Select(t => t.Name).ToList();
             TheaterList.SelectedIndex = 0;
+            // The cell grid is fixed by the format; the choice is the playable bounds.
+            int maxPlayable = System.Math.Max(document.Session.GameInfo.MapSize.Width, document.Session.GameInfo.MapSize.Height) - 2;
+            WidthNud.Maximum = HeightNud.Maximum = maxPlayable;
+            WidthNud.Value = HeightNud.Value = maxPlayable;
             OkButton.Click += async (s, e) =>
             {
                 if (!(TheaterList.SelectedItem is string theater))
@@ -29,12 +33,13 @@ namespace MobiusEditor.App
                     return;
                 }
                 // First use of a theater loads its whole tileset — seconds of work that must
-                // not freeze the window.
+                // not freeze the window. The progress lives HERE, in the window being looked
+                // at — the main window's overlay would be hidden right behind this dialog.
                 OkButton.IsEnabled = CancelButton.IsEnabled = TheaterList.IsEnabled = false;
-                OkButton.Content = "Creating " + theater + " map…";
-                (Owner as MainWindow)?.ShowBusy("Creating " + theater + " map…");
-                await System.Threading.Tasks.Task.Run(() => document.NewMap(theater));
-                (Owner as MainWindow)?.HideBusy();
+                CreateProgressLabel.Text = "Creating " + theater + " map…";
+                CreateProgress.IsVisible = true;
+                System.Drawing.Size playable = new System.Drawing.Size((int)(WidthNud.Value ?? 126), (int)(HeightNud.Value ?? 126));
+                await System.Threading.Tasks.Task.Run(() => document.NewMap(theater, playable));
                 Close();
             };
             CancelButton.Click += (s, e) => Close();

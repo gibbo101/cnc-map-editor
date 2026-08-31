@@ -52,6 +52,8 @@ namespace MobiusEditor.App.Tests
             Dispatcher.UIThread.RunJobs();
             ListBox theaters = dialog.FindControl<ListBox>("TheaterList");
             theaters.SelectedItem = theaters.Items.Cast<string>().First(t => t == "Snow");
+            dialog.FindControl<NumericUpDown>("WidthNud").Value = 64;
+            dialog.FindControl<NumericUpDown>("HeightNud").Value = 48;
             dialog.FindControl<Button>("OkButton").RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
             // The map creates on a background thread now; pump until the new theater lands
             // (the old map is still open meanwhile, so the generic readiness pump would
@@ -67,6 +69,11 @@ namespace MobiusEditor.App.Tests
             Assert.Null(window.Document.Path);
             Assert.Equal("Snow", window.Document.Map.Theater.Name);
             Assert.Empty(window.Document.Map.Triggers);
+            // The chosen playable size, centered on the fixed cell grid.
+            Assert.Equal(new System.Drawing.Size(64, 48), window.Document.Map.Bounds.Size);
+            Assert.Equal(new System.Drawing.Point(32, 40), window.Document.Map.Bounds.Location);
+            // The bounds indicator follows the playable rectangle.
+            Assert.True(window.FindControl<Border>("BoundsBorder").IsVisible);
             // The palettes follow the new plugin (snow tiles, not the old map's temperate set).
             ListBox palette = window.FindControl<ListBox>("TemplatePalette");
             Assert.NotEmpty(palette.Items.Cast<PaletteEntry>().Select(p => p.Type).OfType<TemplateType>());

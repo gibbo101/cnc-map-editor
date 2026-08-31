@@ -58,6 +58,9 @@ namespace MobiusEditor.App
             UnitPalette.SelectionChanged += (s, e) => { if (UnitPalette.SelectedItem != null) ClearOtherBrushes(UnitPalette); };
             InfantryPalette.SelectionChanged += (s, e) => { if (InfantryPalette.SelectedItem != null) ClearOtherBrushes(InfantryPalette); };
             SmudgePalette.SelectionChanged += (s, e) => { if (SmudgePalette.SelectedItem != null) ClearOtherBrushes(SmudgePalette); };
+            // The eraser keeps the brush selection — the brush says WHAT gets erased; picking
+            // a brush returns to paint mode.
+            EraserButton.IsCheckedChanged += (s, e) => GhostBorder.IsVisible = false;
             HouseCombo.SelectionChanged += (s, e) =>
             {
                 if (document?.Map != null && HouseCombo.SelectedItem is string houseName)
@@ -376,9 +379,9 @@ namespace MobiusEditor.App
             BusyOverlay.IsVisible = false;
         }
 
+        /// <summary>The wheel zooms — viewport rendering made zoom a screenful, so no lag spikes.</summary>
         private void OnWheel(object sender, PointerWheelEventArgs e)
         {
-            if ((e.KeyModifiers & KeyModifiers.Control) == 0) return;
             Zoom(e.Delta.Y > 0 ? 2.0 : 0.5);
             e.Handled = true;
         }
@@ -407,7 +410,8 @@ namespace MobiusEditor.App
         private void UpdateGhost(System.Drawing.Point? cell)
         {
             PaletteEntry entry = ActiveEntry();
-            bool boxOnly = entry == null && (SelectedCellTrigger != null || SelectedWaypoint >= 0);
+            bool eraser = EraserOn;
+            bool boxOnly = entry == null && (eraser || SelectedCellTrigger != null || SelectedWaypoint >= 0);
             if (document == null || !document.IsOpen || cell == null || (entry == null && !boxOnly))
             {
                 GhostBorder.IsVisible = false;
@@ -418,9 +422,18 @@ namespace MobiusEditor.App
             GhostBorder.Margin = new Thickness(cell.Value.X * tile.Width, cell.Value.Y * tile.Height, 0, 0);
             GhostBorder.Width = footprint.Width * tile.Width;
             GhostBorder.Height = footprint.Height * tile.Height;
-            GhostImage.Source = entry?.Image;
+            GhostImage.Source = eraser ? null : entry?.Image;
+            GhostBorder.BorderBrush = eraser ? EraseBorderBrush : PlaceBorderBrush;
+            GhostBorder.Background = eraser ? EraseFillBrush : PlaceFillBrush;
             GhostBorder.IsVisible = true;
         }
+
+        private static readonly Avalonia.Media.IBrush PlaceBorderBrush = Avalonia.Media.Brush.Parse("#DDFFDD00");
+        private static readonly Avalonia.Media.IBrush PlaceFillBrush = Avalonia.Media.Brush.Parse("#18FFDD00");
+        private static readonly Avalonia.Media.IBrush EraseBorderBrush = Avalonia.Media.Brush.Parse("#DDFF4444");
+        private static readonly Avalonia.Media.IBrush EraseFillBrush = Avalonia.Media.Brush.Parse("#20FF4444");
+
+        private bool EraserOn => EraserButton.IsChecked == true;
 
         private void ClearOtherBrushes(ListBox active)
         {
@@ -428,6 +441,18 @@ namespace MobiusEditor.App
             {
                 if (!ReferenceEquals(palette, active)) palette.SelectedItem = null;
             }
+            if (active != null) EraserButton.IsChecked = false;
+        }
+
+        /// <summary>Right click: back to a neutral cursor — no brush, no eraser, no selection.</summary>
+        private void DeselectAll()
+        {
+            ClearOtherBrushes(null);
+            EraserButton.IsChecked = false;
+            selectedObject = null;
+            dragObject = null;
+            GhostBorder.IsVisible = false;
+            RefreshProperties();
         }
 
         /// <summary>The cell-trigger and waypoint brushes show their indicator layers while active.</summary>
@@ -459,10 +484,17 @@ namespace MobiusEditor.App
         private void OnPointerPressed(object sender, PointerPressedEventArgs e)
         {
             if (document == null || !document.IsOpen) return;
+            PointerPointProperties props = e.GetCurrentPoint(MapImage).Properties;
+            if (props.IsRightButtonPressed)
+            {
+                DeselectAll();
+                e.Handled = true;
+                return;
+            }
             System.Drawing.Point? cell = CellUnder(e);
             if (cell == null) return;
-            PointerPointProperties props = e.GetCurrentPoint(MapImage).Properties;
-            if (props.IsLeftButtonPressed && SelectedTemplate == null && SelectedOverlay == null && SelectedCellTrigger == null && SelectedWaypoint < 0
+            if (props.IsLeftButtonPressed && !EraserOn
+                && SelectedTemplate == null && SelectedOverlay == null && SelectedCellTrigger == null && SelectedWaypoint < 0
                 && SelectedTerrain == null && SelectedUnit == null && SelectedInfantry == null && SelectedBuilding == null && SelectedSmudge == null)
             {
                 // No brush: a left click selects the object under the cell for the properties
@@ -476,15 +508,16 @@ namespace MobiusEditor.App
             pointerSubPixel = SubPixelUnder(e);
             if (props.IsLeftButtonPressed)
             {
+                if (EraserOn)
+                {
+                    erasing = true;
+                    document.BeginStroke();
+                    EraseAt(cell.Value);
+                    return;
+                }
                 painting = true;
                 document.BeginStroke();
                 Paint(cell.Value);
-            }
-            else if (props.IsRightButtonPressed)
-            {
-                erasing = true;
-                document.BeginStroke();
-                EraseAt(cell.Value);
             }
         }
 
@@ -539,7 +572,10 @@ namespace MobiusEditor.App
             lastPaintCell = cell;
         }
 
-        /// <summary>Right-drag erases what the active brush would paint on that cell.</summary>
+        /// <summary>
+        /// The eraser removes what the selected brush would paint; with no brush, what the
+        /// active tool tab holds.
+        /// </summary>
         private void EraseAt(System.Drawing.Point cell)
         {
             if (SelectedOverlay != null) document.EraseOverlay(cell, SelectedOverlay);
@@ -550,7 +586,22 @@ namespace MobiusEditor.App
             else if (SelectedSmudge != null) document.EraseSmudge(cell, SelectedSmudge);
             else if (SelectedCellTrigger != null) document.EraseCellTrigger(cell);
             else if (SelectedWaypoint >= 0) document.EraseWaypointAt(cell);
-            else document.EraseTemplate(cell, SelectedTemplate);
+            else if (SelectedTemplate != null) document.EraseTemplate(cell, SelectedTemplate);
+            else
+            {
+                switch (ToolTabs.SelectedIndex)
+                {
+                    case 0: document.EraseTemplate(cell); break;
+                    case 1: document.EraseTerrainAt(cell); break;
+                    case 2: document.EraseOverlay(cell); break;
+                    case 3: document.EraseBuildingAt(cell); break;
+                    case 4: document.EraseUnitAt(cell); break;
+                    case 5: document.EraseInfantryAt(cell, pointerSubPixel); break;
+                    case 6: document.EraseSmudge(cell); break;
+                    case 7: document.EraseCellTrigger(cell); break;
+                    case 8: document.EraseWaypointAt(cell); break;
+                }
+            }
             lastPaintCell = cell;
         }
 
@@ -562,7 +613,32 @@ namespace MobiusEditor.App
                 if (e.Key == Key.Z) { document.Undo(); e.Handled = true; return; }
                 if (e.Key == Key.Y) { document.Redo(); e.Handled = true; return; }
             }
+            // WASD and arrow keys pan the map — unless the user is typing or browsing a list.
+            if (document != null && document.IsOpen && e.KeyModifiers == KeyModifiers.None && !FocusIsInInputControl())
+            {
+                double step = Math.Max(document.TileSize.Width * 2, Scroller.Viewport.Width / 8);
+                double dx = 0, dy = 0;
+                switch (e.Key)
+                {
+                    case Key.W: case Key.Up: dy = -step; break;
+                    case Key.S: case Key.Down: dy = step; break;
+                    case Key.A: case Key.Left: dx = -step; break;
+                    case Key.D: case Key.Right: dx = step; break;
+                }
+                if (dx != 0 || dy != 0)
+                {
+                    Scroller.Offset = new Vector(Math.Max(0, Scroller.Offset.X + dx), Math.Max(0, Scroller.Offset.Y + dy));
+                    e.Handled = true;
+                    return;
+                }
+            }
             base.OnKeyDown(e);
+        }
+
+        private bool FocusIsInInputControl()
+        {
+            object focused = FocusManager?.GetFocusedElement();
+            return focused is TextBox || focused is NumericUpDown || focused is ListBox || focused is ListBoxItem || focused is ComboBox;
         }
 
         /// <summary>
@@ -597,7 +673,7 @@ namespace MobiusEditor.App
             Title = document.Title + " — C&C Map Editor";
             ZoomLabel.Text = (document.Scale * 100).ToString("0.#") + "%";
             SaveAsButton.IsEnabled = ZoomInButton.IsEnabled = ZoomOutButton.IsEnabled = true;
-            TriggersButton.IsEnabled = TeamsButton.IsEnabled = SettingsButton.IsEnabled = true;
+            TriggersButton.IsEnabled = TeamsButton.IsEnabled = SettingsButton.IsEnabled = EraserButton.IsEnabled = true;
             UndoButton.IsEnabled = document.CanUndo;
             RedoButton.IsEnabled = document.CanRedo;
             // Rebuild the palettes only when a different map is open, or per-op refreshes would drop the selection.
@@ -651,6 +727,12 @@ namespace MobiusEditor.App
             // The panel carries the full map size so the scrollbars are right in both modes.
             MapPanel.Width = mapPixelWidth;
             MapPanel.Height = mapPixelHeight;
+            // The playable bounds: the map's edge is NOT the boundary — the game plays inside this rectangle.
+            System.Drawing.Rectangle bounds = document.Map.Bounds;
+            BoundsBorder.Margin = new Thickness(bounds.X * tile.Width - 2, bounds.Y * tile.Height - 2, 0, 0);
+            BoundsBorder.Width = bounds.Width * tile.Width + 4;
+            BoundsBorder.Height = bounds.Height * tile.Height + 4;
+            BoundsBorder.IsVisible = true;
             if ((long)mapPixelWidth * (long)mapPixelHeight <= FullSurfacePixelBudget)
             {
                 if (viewportMode)

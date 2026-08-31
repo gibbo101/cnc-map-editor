@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="MobiusEditor.App.TriggersWindow"
+        WindowStartupLocation="CenterOwner"
         Title="Triggers" Width="860" Height="560">
   <DockPanel Margin="6">
     <DockPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
