@@ -117,6 +117,46 @@ namespace MobiusEditor.Shell
             p.Trigger = trigger;
         }
 
+        /// <summary>
+        /// Keeps the AI rebuild base's priorities consecutive: renumbers every base building
+        /// 0..n-1 with the edited one at its requested (clamped) slot — the fork's
+        /// AdjustBuildPriorities. No-op when the edited building is outside the base.
+        /// </summary>
+        public static void AdjustBuildPriorities(Map map, Building edited)
+        {
+            if (edited.BasePriority < 0)
+            {
+                return;
+            }
+            List<Building> baseBuildings = map.Buildings.OfType<Building>()
+                .OrderBy(b => { map.Metrics.GetCell(b.Location, out int cell); return cell; })
+                .Select(b => b.Occupier)
+                .Where(b => b.BasePriority >= 0)
+                .ToList();
+            int newPriority = System.Math.Max(0, System.Math.Min(baseBuildings.Count - 1, edited.BasePriority));
+            List<Building> sorted = baseBuildings.OrderBy(b => b.BasePriority).ToList();
+            sorted.Remove(edited);
+            sorted.Insert(newPriority, edited);
+            for (int i = 0; i < sorted.Count; ++i)
+            {
+                sorted[i].BasePriority = i;
+            }
+        }
+
+        /// <summary>Closes the gap when a building leaves the rebuild base.</summary>
+        public static void CompactBuildPriorities(Map map)
+        {
+            Building[] baseBuildings = map.Buildings.OfType<Building>()
+                .Select(b => b.Occupier)
+                .Where(b => b.BasePriority >= 0)
+                .OrderBy(b => b.BasePriority)
+                .ToArray();
+            for (int i = 0; i < baseBuildings.Length; ++i)
+            {
+                baseBuildings[i].BasePriority = i;
+            }
+        }
+
         /// <summary>The fork's building invariants, applied after every edit.</summary>
         public static void NormalizeBuilding(IGamePlugin plugin, Building building)
         {

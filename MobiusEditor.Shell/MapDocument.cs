@@ -312,30 +312,48 @@ namespace MobiusEditor.Shell
 
         /// <summary>
         /// Applies an edit to a placed object's properties as one undo step. Buildings are
-        /// normalized to the fork's prebuilt invariants after the edit.
+        /// normalized to the fork's prebuilt invariants after the edit, and the rebuild
+        /// base's priorities renumber around them — undo restores every affected building's
+        /// priority, not just the edited one's.
         /// </summary>
         public void EditObjectProperties(object techno, Action edit)
         {
             RequireOpen();
             object before = SnapshotOf(techno);
             edit();
+            Dictionary<Building, int> prioritiesBefore = null, prioritiesAfter = null;
             if (techno is Building building)
             {
                 ObjectPropertiesPresenter.NormalizeBuilding(Plugin, building);
+                prioritiesBefore = BasePriorities();
+                if (building.BasePriority >= 0) ObjectPropertiesPresenter.AdjustBuildPriorities(Map, building);
+                else ObjectPropertiesPresenter.CompactBuildPriorities(Map);
+                prioritiesAfter = BasePriorities();
             }
             object after = SnapshotOf(techno);
             IGamePlugin plugin = Plugin;
             plugin.Dirty = true;
             MarkObjectDirty(techno);
-            void Apply(object snapshot)
+            void Apply(object snapshot, Dictionary<Building, int> priorities)
             {
                 RestoreInto(techno, snapshot);
+                if (priorities != null)
+                {
+                    foreach (KeyValuePair<Building, int> kv in priorities)
+                    {
+                        if (!ReferenceEquals(kv.Key, techno)) kv.Key.BasePriority = kv.Value;
+                    }
+                }
                 plugin.Dirty = true;
                 MarkObjectDirty(techno);
             }
-            undoRedo.Track(_ => Apply(before), _ => Apply(after), this);
+            undoRedo.Track(_ => Apply(before, prioritiesBefore), _ => Apply(after, prioritiesAfter), this);
             Changed?.Invoke(this, EventArgs.Empty);
         }
+
+        /// <summary>Every building's base priority, captured for undoing base renumbering.</summary>
+        private Dictionary<Building, int> BasePriorities() =>
+            Map.Buildings.OfType<Building>().ToDictionary(b => b.Occupier, b => b.Occupier.BasePriority);
 
         private static object SnapshotOf(object techno)
         {
@@ -635,7 +653,10 @@ namespace MobiusEditor.Shell
             return building;
         }
 
-        /// <summary>Removes the building occupying the cell. One undo step; undo re-adds it, bib and all.</summary>
+        /// <summary>
+        /// Removes the building occupying the cell. A base building leaving closes the gap in
+        /// the rebuild base's priorities. One undo step; undo re-adds it, bib, priorities and all.
+        /// </summary>
         public void EraseBuildingAt(Point location)
         {
             RequireOpen();
@@ -643,17 +664,28 @@ namespace MobiusEditor.Shell
             Map map = Map;
             Point actual = map.Buildings[building].Value;
             map.Buildings.Remove(building);
+            Dictionary<Building, int> prioritiesBefore = null, prioritiesAfter = null;
+            if (building.BasePriority >= 0)
+            {
+                prioritiesBefore = BasePriorities();
+                ObjectPropertiesPresenter.CompactBuildPriorities(map);
+                prioritiesAfter = BasePriorities();
+            }
             IGamePlugin plugin = Plugin;
             plugin.Dirty = true;
             MarkBuildingDirty(building, actual);
-            void Apply(bool add)
+            void Apply(bool add, Dictionary<Building, int> priorities)
             {
                 if (add) map.Buildings.Add(actual, building);
                 else map.Buildings.Remove(building);
+                if (priorities != null)
+                {
+                    foreach (KeyValuePair<Building, int> kv in priorities) kv.Key.BasePriority = kv.Value;
+                }
                 plugin.Dirty = true;
                 MarkBuildingDirty(building, actual);
             }
-            undoRedo.Track(_ => Apply(true), _ => Apply(false), this);
+            undoRedo.Track(_ => Apply(true, prioritiesBefore), _ => Apply(false, prioritiesAfter), this);
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
