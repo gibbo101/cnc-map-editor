@@ -59,6 +59,7 @@ namespace MobiusEditor.Shell
         private Dictionary<int, Template> templateUndo = new Dictionary<int, Template>(), templateRedo = new Dictionary<int, Template>();
         private Dictionary<int, Overlay> overlayUndo = new Dictionary<int, Overlay>(), overlayRedo = new Dictionary<int, Overlay>();
         private Dictionary<int, CellTrigger> cellTriggerUndo = new Dictionary<int, CellTrigger>(), cellTriggerRedo = new Dictionary<int, CellTrigger>();
+        private Dictionary<Point, Smudge> smudgeUndo = new Dictionary<Point, Smudge>(), smudgeRedo = new Dictionary<Point, Smudge>();
         private bool inStroke;
 
         public bool CanUndo => undoRedo.CanUndo;
@@ -269,6 +270,26 @@ namespace MobiusEditor.Shell
             }
             undoRedo.Track(_ => { if (added) Take(); else Put(); }, _ => { if (added) Put(); else Take(); }, this);
             Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        public IReadOnlyList<SmudgeType> AvailableSmudge() =>
+            Map == null ? (IReadOnlyList<SmudgeType>)Array.Empty<SmudgeType>()
+                        : Map.SmudgeTypes.Where(t => t.ExistsInTheater).ToList();
+
+        /// <summary>Places a smudge (crater, scorch, or a loose multi-cell bib); building-attached bibs are never overwritten.</summary>
+        public void PlaceSmudge(Point location, SmudgeType type)
+        {
+            RequireOpen();
+            SmudgeEdit.Place(Map, type, location, smudgeUndo, smudgeRedo);
+            AfterOperation();
+        }
+
+        /// <summary>Erases the smudge under the footprint; the whole smudge goes, from any of its cells.</summary>
+        public void EraseSmudge(Point location, SmudgeType footprint = null)
+        {
+            RequireOpen();
+            SmudgeEdit.Erase(Map, footprint, location, smudgeUndo, smudgeRedo);
+            AfterOperation();
         }
 
         public IReadOnlyList<BuildingType> AvailableBuildings() =>
@@ -627,13 +648,15 @@ namespace MobiusEditor.Shell
             MarkDirty(templateRedo.Keys);
             MarkDirty(overlayRedo.Keys);
             MarkDirty(cellTriggerRedo.Keys);
+            foreach (Point p in smudgeRedo.Keys) dirtyCells.Add(p);
+            foreach (Point p in smudgeUndo.Keys) dirtyCells.Add(p);
             if (!inStroke) CommitStroke();
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
         private void CommitStroke()
         {
-            if (templateRedo.Count == 0 && overlayRedo.Count == 0 && cellTriggerRedo.Count == 0)
+            if (templateRedo.Count == 0 && overlayRedo.Count == 0 && cellTriggerRedo.Count == 0 && smudgeRedo.Count == 0 && smudgeUndo.Count == 0)
             {
                 ResetStroke();
                 return;
@@ -641,20 +664,23 @@ namespace MobiusEditor.Shell
             Dictionary<int, Template> tUndo = templateUndo, tRedo = templateRedo;
             Dictionary<int, Overlay> oUndo = overlayUndo, oRedo = overlayRedo;
             Dictionary<int, CellTrigger> cUndo = cellTriggerUndo, cRedo = cellTriggerRedo;
+            Dictionary<Point, Smudge> sUndo = smudgeUndo, sRedo = smudgeRedo;
             Map map = Map;
             IGamePlugin plugin = Plugin;
             plugin.Dirty = true;
-            void Replay(Dictionary<int, Template> t, Dictionary<int, Overlay> o, Dictionary<int, CellTrigger> c)
+            void Replay(Dictionary<int, Template> t, Dictionary<int, Overlay> o, Dictionary<int, CellTrigger> c, Dictionary<Point, Smudge> s)
             {
                 foreach (KeyValuePair<int, Template> kv in t) map.Templates[kv.Key] = kv.Value;
                 foreach (KeyValuePair<int, Overlay> kv in o) map.Overlay[kv.Key] = kv.Value;
                 foreach (KeyValuePair<int, CellTrigger> kv in c) map.CellTriggers[kv.Key] = kv.Value;
+                foreach (KeyValuePair<Point, Smudge> kv in s) map.Smudge[kv.Key] = kv.Value;
                 plugin.Dirty = true;
                 MarkDirty(t.Keys);
                 MarkDirty(o.Keys);
                 MarkDirty(c.Keys);
+                foreach (Point p in s.Keys) dirtyCells.Add(p);
             }
-            undoRedo.Track(_ => Replay(tUndo, oUndo, cUndo), _ => Replay(tRedo, oRedo, cRedo), this);
+            undoRedo.Track(_ => Replay(tUndo, oUndo, cUndo, sUndo), _ => Replay(tRedo, oRedo, cRedo, sRedo), this);
             ResetStroke();
         }
 
@@ -666,6 +692,8 @@ namespace MobiusEditor.Shell
             overlayRedo = new Dictionary<int, Overlay>();
             cellTriggerUndo = new Dictionary<int, CellTrigger>();
             cellTriggerRedo = new Dictionary<int, CellTrigger>();
+            smudgeUndo = new Dictionary<Point, Smudge>();
+            smudgeRedo = new Dictionary<Point, Smudge>();
         }
 
         private void RequireOpen()

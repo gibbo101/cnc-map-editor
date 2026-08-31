@@ -93,6 +93,36 @@ namespace MobiusEditor.Shell.Tests
         }
 
         [Fact]
+        public void SmudgeStrokeIsUndoableAndKeepsIncrementalRenderIdentical()
+        {
+            using (MapDocument doc = Open())
+            {
+                doc.Scale = 1.0 / 16;
+                using (doc.Render()) { }
+                SmudgeType crater = doc.AvailableSmudge().First(t => !t.IsMultiCell);
+                doc.PlaceSmudge(new Point(26, 26), crater);
+                Assert.Same(crater, doc.Map.Smudge[new Point(26, 26)].Type);
+                doc.Undo();
+                Assert.Null(doc.Map.Smudge[new Point(26, 26)]);
+                doc.Redo();
+                doc.EraseSmudge(new Point(26, 26), crater);
+                Assert.Null(doc.Map.Smudge[new Point(26, 26)]);
+                using (Bitmap incremental = doc.Render())
+                {
+                    double original = doc.Scale;
+                    doc.Scale = original * 2;
+                    using (doc.Render()) { }
+                    doc.Scale = original;
+                    using (Bitmap full = doc.Render())
+                    {
+                        ImageDiff diff = ImageCompare.Compare(incremental, full);
+                        Assert.True(diff.Differing == 0, "incremental render differs from full render: " + diff);
+                    }
+                }
+            }
+        }
+
+        [Fact]
         public void ObjectEditsKeepIncrementalRenderIdentical()
         {
             using (MapDocument doc = Open())

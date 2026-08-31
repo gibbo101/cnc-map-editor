@@ -48,6 +48,7 @@ namespace MobiusEditor.App
             BuildingPalette.SelectionChanged += (s, e) => { if (BuildingPalette.SelectedItem != null) ClearOtherBrushes(BuildingPalette); };
             UnitPalette.SelectionChanged += (s, e) => { if (UnitPalette.SelectedItem != null) ClearOtherBrushes(UnitPalette); };
             InfantryPalette.SelectionChanged += (s, e) => { if (InfantryPalette.SelectedItem != null) ClearOtherBrushes(InfantryPalette); };
+            SmudgePalette.SelectionChanged += (s, e) => { if (SmudgePalette.SelectedItem != null) ClearOtherBrushes(SmudgePalette); };
             HouseCombo.SelectionChanged += (s, e) =>
             {
                 if (document?.Map != null && HouseCombo.SelectedItem is string houseName)
@@ -154,10 +155,11 @@ namespace MobiusEditor.App
         private MobiusEditor.Model.BuildingType SelectedBuilding => BuildingPalette.SelectedItem as MobiusEditor.Model.BuildingType;
         private MobiusEditor.Model.UnitType SelectedUnit => UnitPalette.SelectedItem as MobiusEditor.Model.UnitType;
         private MobiusEditor.Model.InfantryType SelectedInfantry => InfantryPalette.SelectedItem as MobiusEditor.Model.InfantryType;
+        private MobiusEditor.Model.SmudgeType SelectedSmudge => SmudgePalette.SelectedItem as MobiusEditor.Model.SmudgeType;
 
         private void ClearOtherBrushes(ListBox active)
         {
-            foreach (ListBox palette in new[] { TemplatePalette, TerrainPalette, OverlayPalette, BuildingPalette, UnitPalette, InfantryPalette, CellTriggerPalette, WaypointPalette })
+            foreach (ListBox palette in new[] { TemplatePalette, TerrainPalette, OverlayPalette, BuildingPalette, UnitPalette, InfantryPalette, SmudgePalette, CellTriggerPalette, WaypointPalette })
             {
                 if (!ReferenceEquals(palette, active)) palette.SelectedItem = null;
             }
@@ -190,7 +192,7 @@ namespace MobiusEditor.App
             if (cell == null) return;
             PointerPointProperties props = e.GetCurrentPoint(MapImage).Properties;
             if (props.IsLeftButtonPressed && SelectedTemplate == null && SelectedOverlay == null && SelectedCellTrigger == null && SelectedWaypoint < 0
-                && SelectedTerrain == null && SelectedUnit == null && SelectedInfantry == null && SelectedBuilding == null) return;
+                && SelectedTerrain == null && SelectedUnit == null && SelectedInfantry == null && SelectedBuilding == null && SelectedSmudge == null) return;
             if (props.IsLeftButtonPressed)
             {
                 painting = true;
@@ -232,6 +234,7 @@ namespace MobiusEditor.App
             else if (SelectedBuilding != null) document.PlaceBuilding(cell, SelectedBuilding);
             else if (SelectedUnit != null) document.PlaceUnit(cell, SelectedUnit);
             else if (SelectedInfantry != null) document.PlaceInfantry(cell, SelectedInfantry);
+            else if (SelectedSmudge != null) document.PlaceSmudge(cell, SelectedSmudge);
             else if (SelectedCellTrigger != null) document.PlaceCellTrigger(cell, SelectedCellTrigger);
             else if (SelectedWaypoint >= 0) document.PlaceWaypoint(SelectedWaypoint, cell);
             else document.PlaceTemplate(cell, SelectedTemplate);
@@ -246,6 +249,7 @@ namespace MobiusEditor.App
             else if (SelectedBuilding != null) document.EraseBuildingAt(cell);
             else if (SelectedUnit != null) document.EraseUnitAt(cell);
             else if (SelectedInfantry != null) document.EraseInfantryAt(cell);
+            else if (SelectedSmudge != null) document.EraseSmudge(cell, SelectedSmudge);
             else if (SelectedCellTrigger != null) document.EraseCellTrigger(cell);
             else if (SelectedWaypoint >= 0) document.EraseWaypointAt(cell);
             else document.EraseTemplate(cell, SelectedTemplate);
@@ -282,6 +286,7 @@ namespace MobiusEditor.App
                 BuildingPalette.ItemsSource = document.AvailableBuildings();
                 UnitPalette.ItemsSource = document.AvailableUnits();
                 InfantryPalette.ItemsSource = document.AvailableInfantry();
+                SmudgePalette.ItemsSource = document.AvailableSmudge();
                 WaypointPalette.ItemsSource = document.Map.Waypoints.Select((w, i) => i + ": " + w.Name).ToList();
                 HouseCombo.ItemsSource = document.Map.HouseTypes.Select(h => h.Name).ToList();
                 HouseCombo.SelectedIndex = 0;

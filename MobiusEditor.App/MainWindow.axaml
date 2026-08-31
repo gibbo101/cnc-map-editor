@@ -79,6 +79,15 @@
           </ListBox.ItemTemplate>
         </ListBox>
       </TabItem>
+      <TabItem Header="Smudge">
+        <ListBox Name="SmudgePalette">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="model:SmudgeType">
+              <TextBlock Text="{Binding Name}" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </TabItem>
       <TabItem Header="Cell trig.">
         <ListBox Name="CellTriggerPalette" />
       </TabItem>
