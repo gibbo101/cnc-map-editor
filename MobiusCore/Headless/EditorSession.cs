@@ -69,6 +69,11 @@ namespace MobiusEditor.Headless
             Globals.TheShapeCacheManager = new ShapeCacheManager();
             Globals.TheTeamColorManager = teamColors = new TeamColorManager(Archives);
             Globals.TheGameTextManager = gameText = new GameTextManager(Archives, String.Format(Globals.GameTextFilenameFormat, "EN-US"));
+            // The Remaster's master text misses strings the editor names things with (gems,
+            // tiberium, civilian buildings…); without these additions those types show their
+            // raw TEXT_ keys.
+            gameText.AddMissing = StartupLoader.AddMissingRemasterText;
+            gameText.Reset(gameType);
         }
 
         /// <summary>The theater a map file declares, read before the plugin exists because the managers must be pointed at it first.</summary>

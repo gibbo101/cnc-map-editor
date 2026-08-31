@@ -537,7 +537,7 @@ namespace MobiusEditor.Utility
         /// in the map editor.
         /// </summary>
         /// <param name="gtm">The game text manager to apply these changes on.</param>
-        private static void AddMissingRemasterText(IGameTextManager gtm, GameType gameType)
+        internal static void AddMissingRemasterText(IGameTextManager gtm, GameType gameType)
         {
             // == Buildings ==
             if (gameType == GameType.RedAlert)
@@ -576,6 +576,9 @@ namespace MobiusEditor.Utility
                 // "Gold" exists as "TEXT_CURRENCY_TACTICAL", so it does not need to be added.
                 gtm["TEXT_OVERLAY_GEMS"] = "Gems";
                 gtm["TEXT_OVERLAY_WATER_CRATE"] = "Water Crate";
+                // Vanilla RA has no Tiberium, but mods bringing the TD economy (Tiberian
+                // Factions) use the vanilla tib01 slot, which then needs its name.
+                gtm["TEXT_OVERLAY_TIBERIUM"] = "Tiberium";
             }
             gtm["TEXT_OVERLAY_WCRATE"] = "Wood Crate";
             gtm["TEXT_OVERLAY_SCRATE"] = "Steel Crate";

@@ -76,7 +76,7 @@ namespace MobiusEditor.App.Tests
             Assert.True(window.FindControl<Border>("BoundsBorder").IsVisible);
             // The palettes follow the new plugin (snow tiles, not the old map's temperate set).
             ListBox palette = window.FindControl<ListBox>("TemplatePalette");
-            Assert.NotEmpty(palette.Items.Cast<PaletteEntry>().Select(p => p.Type).OfType<TemplateType>());
+            Assert.NotEmpty(palette.Items.OfType<PaletteEntry>().Select(p => p.Type).OfType<TemplateType>());
         }
 
         [AvaloniaFact]

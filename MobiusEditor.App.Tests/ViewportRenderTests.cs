@@ -50,7 +50,7 @@ namespace MobiusEditor.App.Tests
             scroller.Offset = new Vector(60 * 128, 60 * 128);
             Dispatcher.UIThread.RunJobs();
             ListBox palette = window.FindControl<ListBox>("TemplatePalette");
-            palette.SelectedItem = palette.Items.Cast<PaletteEntry>().Single(p => (p.Type as TemplateType)?.Name == "tdsh1");
+            palette.SelectedItem = palette.Items.OfType<PaletteEntry>().Single(p => (p.Type as TemplateType)?.Name == "tdsh1");
             Dispatcher.UIThread.RunJobs();
             Point panelOrigin = panel.TranslatePoint(new Point(0, 0), window).Value;
             Point click = new Point(panelOrigin.X + 61 * 128 + 64, panelOrigin.Y + 61 * 128 + 64);

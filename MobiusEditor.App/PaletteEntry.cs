@@ -6,6 +6,13 @@ using MobiusEditor.Shell;
 
 namespace MobiusEditor.App
 {
+    /// <summary>A non-selectable group header row in a palette list.</summary>
+    public sealed class PaletteHeader
+    {
+        public string Label { get; }
+        public PaletteHeader(string label) => Label = label;
+    }
+
     /// <summary>A palette row: the Shell's palette item plus its thumbnail converted for Avalonia.</summary>
     public sealed class PaletteEntry
     {

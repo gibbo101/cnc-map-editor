@@ -52,11 +52,11 @@ namespace MobiusEditor.App
             // One brush at a time: picking in one palette clears the others. The cell-trigger
             // and waypoint brushes also switch their indicator layer on while active.
             TemplatePalette.SelectionChanged += (s, e) => { if (TemplatePalette.SelectedItem != null) ClearOtherBrushes(TemplatePalette); };
-            TerrainPalette.SelectionChanged += (s, e) => { if (TerrainPalette.SelectedItem != null) ClearOtherBrushes(TerrainPalette); };
-            OverlayPalette.SelectionChanged += (s, e) => { if (OverlayPalette.SelectedItem != null) ClearOtherBrushes(OverlayPalette); };
-            BuildingPalette.SelectionChanged += (s, e) => { if (BuildingPalette.SelectedItem != null) ClearOtherBrushes(BuildingPalette); };
-            UnitPalette.SelectionChanged += (s, e) => { if (UnitPalette.SelectedItem != null) ClearOtherBrushes(UnitPalette); };
-            InfantryPalette.SelectionChanged += (s, e) => { if (InfantryPalette.SelectedItem != null) ClearOtherBrushes(InfantryPalette); };
+            TerrainPalette.SelectionChanged += (s, e) => { if (GuardHeader(TerrainPalette)) return; if (TerrainPalette.SelectedItem != null) ClearOtherBrushes(TerrainPalette); };
+            OverlayPalette.SelectionChanged += (s, e) => { if (GuardHeader(OverlayPalette)) return; if (OverlayPalette.SelectedItem != null) ClearOtherBrushes(OverlayPalette); };
+            BuildingPalette.SelectionChanged += (s, e) => { if (GuardHeader(BuildingPalette)) return; if (BuildingPalette.SelectedItem != null) ClearOtherBrushes(BuildingPalette); };
+            UnitPalette.SelectionChanged += (s, e) => { if (GuardHeader(UnitPalette)) return; if (UnitPalette.SelectedItem != null) ClearOtherBrushes(UnitPalette); };
+            InfantryPalette.SelectionChanged += (s, e) => { if (GuardHeader(InfantryPalette)) return; if (InfantryPalette.SelectedItem != null) ClearOtherBrushes(InfantryPalette); };
             SmudgePalette.SelectionChanged += (s, e) => { if (SmudgePalette.SelectedItem != null) ClearOtherBrushes(SmudgePalette); };
             // The eraser keeps the brush selection — the brush says WHAT gets erased; picking
             // a brush returns to paint mode.
@@ -435,6 +435,32 @@ namespace MobiusEditor.App
 
         private bool EraserOn => EraserButton.IsChecked == true;
 
+        /// <summary>Palette rows grouped by faction/resource category with header rows between groups.</summary>
+        private static List<object> GroupedEntries<T>(IReadOnlyList<T> types)
+        {
+            List<object> list = new List<object>();
+            var entries = types.Cast<object>().Select(t => new PaletteEntry(MobiusEditor.Shell.PaletteItem.From(t))).ToList();
+            foreach (var group in entries
+                .GroupBy(e => MobiusEditor.Shell.PaletteGrouping.GroupOf(e.Type))
+                .OrderBy(g => MobiusEditor.Shell.PaletteGrouping.OrderOf(g.Key)))
+            {
+                if (!string.IsNullOrEmpty(group.Key)) list.Add(new PaletteHeader(group.Key));
+                list.AddRange(group);
+            }
+            return list;
+        }
+
+        /// <summary>Group headers are not brushes; selecting one bounces the selection off.</summary>
+        private bool GuardHeader(ListBox palette)
+        {
+            if (palette.SelectedItem is PaletteHeader)
+            {
+                palette.SelectedItem = null;
+                return true;
+            }
+            return false;
+        }
+
         private void ClearOtherBrushes(ListBox active)
         {
             foreach (ListBox palette in new[] { TemplatePalette, TerrainPalette, OverlayPalette, BuildingPalette, UnitPalette, InfantryPalette, SmudgePalette, CellTriggerPalette, WaypointPalette })
@@ -680,11 +706,11 @@ namespace MobiusEditor.App
             if (!ReferenceEquals(paletteForPlugin, document.Plugin))
             {
                 TemplatePalette.ItemsSource = document.AvailableTemplates().Select(t => new PaletteEntry(MobiusEditor.Shell.PaletteItem.From(t))).ToList();
-                TerrainPalette.ItemsSource = document.AvailableTerrain().Select(t => new PaletteEntry(MobiusEditor.Shell.PaletteItem.From(t))).ToList();
-                OverlayPalette.ItemsSource = document.AvailableOverlays().Select(t => new PaletteEntry(MobiusEditor.Shell.PaletteItem.From(t))).ToList();
-                BuildingPalette.ItemsSource = document.AvailableBuildings().Select(t => new PaletteEntry(MobiusEditor.Shell.PaletteItem.From(t))).ToList();
-                UnitPalette.ItemsSource = document.AvailableUnits().Select(t => new PaletteEntry(MobiusEditor.Shell.PaletteItem.From(t))).ToList();
-                InfantryPalette.ItemsSource = document.AvailableInfantry().Select(t => new PaletteEntry(MobiusEditor.Shell.PaletteItem.From(t))).ToList();
+                TerrainPalette.ItemsSource = GroupedEntries(document.AvailableTerrain());
+                OverlayPalette.ItemsSource = GroupedEntries(document.AvailableOverlays());
+                BuildingPalette.ItemsSource = GroupedEntries(document.AvailableBuildings());
+                UnitPalette.ItemsSource = GroupedEntries(document.AvailableUnits());
+                InfantryPalette.ItemsSource = GroupedEntries(document.AvailableInfantry());
                 SmudgePalette.ItemsSource = document.AvailableSmudge().Select(t => new PaletteEntry(MobiusEditor.Shell.PaletteItem.From(t))).ToList();
                 WaypointPalette.ItemsSource = document.Map.Waypoints.Select((w, i) => i + ": " + w.Name).ToList();
                 HouseCombo.ItemsSource = document.Map.HouseTypes.Select(h => h.Name).ToList();

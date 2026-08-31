@@ -4,8 +4,8 @@
         xmlns:app="using:MobiusEditor.App"
         x:Class="MobiusEditor.App.MainWindow"
         Title="C&amp;C Map Editor" Width="1280" Height="800">
-  <Window.Resources>
-    <DataTemplate x:Key="PaletteTemplate" x:DataType="app:PaletteEntry">
+  <Window.DataTemplates>
+    <DataTemplate x:DataType="app:PaletteEntry">
       <StackPanel Orientation="Horizontal" Spacing="6">
         <Border Width="40" Height="40" Background="#20808080">
           <Image Source="{Binding Image}" Stretch="Uniform" />
@@ -13,7 +13,10 @@
         <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
       </StackPanel>
     </DataTemplate>
-  </Window.Resources>
+    <DataTemplate x:DataType="app:PaletteHeader">
+      <TextBlock Text="{Binding Label}" FontWeight="Bold" Opacity="0.7" Margin="0,6,0,2" />
+    </DataTemplate>
+  </Window.DataTemplates>
   <DockPanel>
     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="6">
       <Button Name="NewButton" Content="New…" IsEnabled="False" />
@@ -42,25 +45,25 @@
     <Grid ColumnDefinitions="220,4,*,4,230">
     <TabControl Grid.Column="0" Name="ToolTabs">
       <TabItem Header="Tiles">
-        <ListBox Name="TemplatePalette" ItemTemplate="{StaticResource PaletteTemplate}" />
+        <ListBox Name="TemplatePalette" />
       </TabItem>
       <TabItem Header="Terrain">
-        <ListBox Name="TerrainPalette" ItemTemplate="{StaticResource PaletteTemplate}" />
+        <ListBox Name="TerrainPalette" />
       </TabItem>
       <TabItem Header="Overlay">
-        <ListBox Name="OverlayPalette" ItemTemplate="{StaticResource PaletteTemplate}" />
+        <ListBox Name="OverlayPalette" />
       </TabItem>
       <TabItem Header="Buildings">
-        <ListBox Name="BuildingPalette" ItemTemplate="{StaticResource PaletteTemplate}" />
+        <ListBox Name="BuildingPalette" />
       </TabItem>
       <TabItem Header="Units">
-        <ListBox Name="UnitPalette" ItemTemplate="{StaticResource PaletteTemplate}" />
+        <ListBox Name="UnitPalette" />
       </TabItem>
       <TabItem Header="Infantry">
-        <ListBox Name="InfantryPalette" ItemTemplate="{StaticResource PaletteTemplate}" />
+        <ListBox Name="InfantryPalette" />
       </TabItem>
       <TabItem Header="Smudge">
-        <ListBox Name="SmudgePalette" ItemTemplate="{StaticResource PaletteTemplate}" />
+        <ListBox Name="SmudgePalette" />
       </TabItem>
       <TabItem Header="Cell trig.">
         <ListBox Name="CellTriggerPalette" />

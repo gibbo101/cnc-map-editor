@@ -69,7 +69,7 @@ namespace MobiusEditor.App.Tests
 
             // Picking another brush clears this one and drops the indicator layer.
             ListBox templates = window.FindControl<ListBox>("TemplatePalette");
-            templates.SelectedItem = templates.Items.Cast<PaletteEntry>().First();
+            templates.SelectedItem = templates.Items.OfType<PaletteEntry>().First();
             Dispatcher.UIThread.RunJobs();
             Assert.Null(palette.SelectedItem);
         }
@@ -79,7 +79,7 @@ namespace MobiusEditor.App.Tests
         {
             MainWindow window = Open();
             ListBox palette = window.FindControl<ListBox>("TerrainPalette");
-            PaletteEntry entry = palette.Items.Cast<PaletteEntry>().First();
+            PaletteEntry entry = palette.Items.OfType<PaletteEntry>().First();
             TerrainType type = (TerrainType)entry.Type;
             palette.SelectedItem = entry;
             Dispatcher.UIThread.RunJobs();
@@ -107,7 +107,7 @@ namespace MobiusEditor.App.Tests
             house.SelectedItem = house.Items.Cast<string>().First(h => h == "Greece");
             Dispatcher.UIThread.RunJobs();
             ListBox palette = window.FindControl<ListBox>("BuildingPalette");
-            palette.SelectedItem = palette.Items.Cast<PaletteEntry>().First(p => (p.Type as BuildingType)?.HasBib == true);
+            palette.SelectedItem = palette.Items.OfType<PaletteEntry>().First(p => (p.Type as BuildingType)?.HasBib == true);
             Dispatcher.UIThread.RunJobs();
 
             Click(window, CellCenter(window, 10, 10), MouseButton.Left);
@@ -127,7 +127,7 @@ namespace MobiusEditor.App.Tests
             Dispatcher.UIThread.RunJobs();
 
             ListBox units = window.FindControl<ListBox>("UnitPalette");
-            units.SelectedItem = units.Items.Cast<PaletteEntry>().First(p => (p.Type as UnitType)?.IsGroundUnit == true);
+            units.SelectedItem = units.Items.OfType<PaletteEntry>().First(p => (p.Type as UnitType)?.IsGroundUnit == true);
             Dispatcher.UIThread.RunJobs();
             Click(window, CellCenter(window, 16, 16), MouseButton.Left);
             Unit unit = Assert.IsType<Unit>(window.Document.Map.Technos[new System.Drawing.Point(16, 16)]);
@@ -136,7 +136,7 @@ namespace MobiusEditor.App.Tests
             Assert.Null(window.Document.Map.Technos[new System.Drawing.Point(16, 16)]);
 
             ListBox infantry = window.FindControl<ListBox>("InfantryPalette");
-            infantry.SelectedItem = infantry.Items.Cast<PaletteEntry>().First(p => p.Type is InfantryType);
+            infantry.SelectedItem = infantry.Items.OfType<PaletteEntry>().First(p => p.Type is InfantryType);
             Dispatcher.UIThread.RunJobs();
             Assert.Null(units.SelectedItem);
             Click(window, CellCenter(window, 17, 16), MouseButton.Left);
@@ -147,11 +147,35 @@ namespace MobiusEditor.App.Tests
         }
 
         [AvaloniaFact]
+        public void PalettesGroupByFactionWithUnselectableHeaders()
+        {
+            MainWindow window = Open();
+            ListBox units = window.FindControl<ListBox>("UnitPalette");
+            var items = units.Items.Cast<object>().ToList();
+            Assert.Contains(items, i => (i as PaletteHeader)?.Label == "Allies");
+            Assert.Contains(items, i => (i as PaletteHeader)?.Label == "Soviets");
+            // The TF mod is loaded in the test session, so its faction groups appear.
+            Assert.Contains(items, i => (i as PaletteHeader)?.Label == "GDI (mod)");
+            Assert.True(items.FindIndex(i => (i as PaletteHeader)?.Label == "Allies")
+                < items.FindIndex(i => (i as PaletteHeader)?.Label == "Soviets"));
+
+            // The overlay palette leads with the harvestables.
+            var overlays = window.FindControl<ListBox>("OverlayPalette").Items.Cast<object>().ToList();
+            PaletteHeader first = Assert.IsType<PaletteHeader>(overlays[0]);
+            Assert.Equal("Resources", first.Label);
+
+            // Headers are not brushes: selecting one bounces off.
+            units.SelectedItem = items.First(i => i is PaletteHeader);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Null(units.SelectedItem);
+        }
+
+        [AvaloniaFact]
         public void PalettesShowThumbnailsAndTheGhostFollowsTheBrush()
         {
             MainWindow window = Open();
             ListBox units = window.FindControl<ListBox>("UnitPalette");
-            PaletteEntry entry = units.Items.Cast<PaletteEntry>().First(p => (p.Type as UnitType)?.IsGroundUnit == true);
+            PaletteEntry entry = units.Items.OfType<PaletteEntry>().First(p => (p.Type as UnitType)?.IsGroundUnit == true);
             // Friendly label and a rendered thumbnail, not the bare INI name.
             Assert.Equal(((UnitType)entry.Type).DisplayName, entry.Label);
             Assert.NotNull(entry.Image);

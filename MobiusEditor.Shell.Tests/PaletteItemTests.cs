@@ -36,6 +36,41 @@ namespace MobiusEditor.Shell.Tests
         }
 
         [Fact]
+        public void OverlaysResolveTheirNamesAndOnlyOfferTheaterArt()
+        {
+            using (MapDocument doc = Open())
+            {
+                foreach (OverlayType overlay in doc.AvailableOverlays())
+                {
+                    Assert.True(overlay.ExistsInTheater, overlay.Name + " has no art in this theater");
+                    Assert.False(PaletteItem.From(overlay).Label.StartsWith("TEXT_"),
+                        overlay.Name + " shows its raw text key: " + overlay.DisplayName);
+                }
+                Assert.Contains(doc.AvailableOverlays(), o => o.Name == "gold01");
+            }
+        }
+
+        [Fact]
+        public void TypesGroupByFactionAndResources()
+        {
+            using (MapDocument doc = Open())
+            {
+                Assert.Equal("Resources", PaletteGrouping.GroupOf(doc.AvailableOverlays().First(o => o.Name == "gold01")));
+                Assert.Equal("Walls", PaletteGrouping.GroupOf(doc.AvailableOverlays().First(o => o.Name == "brik")));
+                Assert.Equal("Resources", PaletteGrouping.GroupOf(doc.Map.TerrainTypes.First(t => t.Name == "mine")));
+                Assert.Equal("Soviets", PaletteGrouping.GroupOf(doc.AvailableUnits().First(u => u.Name == "3tnk")));
+                Assert.Equal("Allies", PaletteGrouping.GroupOf(doc.AvailableUnits().First(u => u.Name == "1tnk")));
+                // Tiberian Factions types split by the mod's faction slots.
+                BuildingType obelisk = doc.AvailableBuildings().FirstOrDefault(b => b.Name == "tdobli");
+                if (obelisk != null) Assert.Equal("Nod (mod)", PaletteGrouping.GroupOf(obelisk));
+                UnitType tsHover = doc.AvailableUnits().FirstOrDefault(u => u.Name.StartsWith("tshvr"));
+                if (tsHover != null) Assert.Equal("TS GDI (mod)", PaletteGrouping.GroupOf(tsHover));
+                Assert.True(PaletteGrouping.OrderOf("Allies") < PaletteGrouping.OrderOf("Soviets"));
+                Assert.True(PaletteGrouping.OrderOf("Resources") < PaletteGrouping.OrderOf("Walls"));
+            }
+        }
+
+        [Fact]
         public void ObjectsUseDisplayNamesAndFootprints()
         {
             using (MapDocument doc = Open())
