@@ -248,24 +248,44 @@ Wine.** It would not inform the native build at all, nothing is blocked today th
 would unblock (campaign authoring is deferred behind the AI milestone), and a working stopgap
 would only tempt the native editor to slip. Not part of the plan.
 
-## RESUME HERE (2026-08-31, end of the manifest-seam + editing-core session)
+## RESUME HERE (2026-08-31, end of the trigger-arc session)
 
-Everything below in steps 1–4 is current. The next session picks up the trigger arc, in order:
-1. **The structured event/action parameter-type table** — a `TriggerArgType`-style enum + per
-   event/action tables for RA, lifted from `GamePluginRA.GetEventString`/`GetActionString`
-   (`:5755`/`:5724`) plus the fork's `TriggersDialog.UpdateTriggerEventControls`/
-   `UpdateTriggerActionControls` coercion switches (the de-facto spec; details in the trigger
-   exploration — key facts: `TeamMissionArgType` is the only structured metadata today,
-   Check* validators at GamePluginRA:5140-5601 are the semantic layer, `IGamePlugin.
-   CheckTriggers` already has an autofix flag).
-2. **The mission-pattern generators** (format DECIDED, see step 4): `MissionSpec` JSON parse →
-   pure functions emitting raw triggers/teamtypes via TriggerEditor/TeamTypeEditor → a
-   `cncmap expand-mission <map> <spec.json> --out <path>` command. v1 patterns: attack-wave,
-   reinforce, win, lose + the `raw` passthrough. Validate expansions with
-   `plugin.CheckTriggers` (no fatals) and ground trigger encodings against a real campaign
-   mission INI if in doubt.
-3. Trigger GUI panel over EditTriggers/EditTeamTypes (the document API is done and undoable).
-4. Docked tool panels; dirty-cell rendering when brush perf starts to matter.
+**The trigger arc SHIPPED steps 1–3 (2026-08-31 overnight, all committed on main):**
+1. ~~The structured event/action parameter-type table~~ DONE: `TriggerArgType` enum
+   (`Model/TriggerArg.cs`) + per-game tables (`RedAlert/TriggerArgTypes.cs`,
+   `TiberianDawn/TriggerArgTypes.cs`, SS inherits TD), exposed through six new IGamePlugin
+   members (GetEventArgType / GetActionArgType / GetArgOptions / GetArgRange /
+   CoerceEventArg / CoerceActionArg). Full 33-event/37-action RA mapping pinned in
+   `TriggerArgTypesTests` against the fork's dialog switches. Coercion asymmetries pinned
+   deliberately: RA no-arg EVENTS blank Data+Team, no-arg ACTIONS leave them; TD no-arg
+   events blank Data only; matched team refs take the list's casing, trigger refs keep
+   their own.
+2. ~~The mission-pattern generators~~ DONE: `Headless/MissionSpec.cs` (Newtonsoft, //
+   comments OK, flat pattern list) + `Headless/MissionExpander.cs` → `cncmap
+   expand-mission <map> <spec.json> --out <path>`. v1 patterns win/lose/reinforce/
+   attack-wave (times in game TIME units = tenths of a minute) + `raw` rows parsed by
+   `GamePluginRA.ParseRawScriptRows` (reuses the private load path; index refs resolve
+   within the pattern's own rows). All-or-nothing: build errors or CheckTriggers fatals →
+   nothing committed, CLI writes nothing. Grounded against scu01ea.ini (extracted from
+   MAIN.MIX → general.mix — the workspace's ra_mix_extract.py can NOT read the Remastered
+   MAIN.MIX; our own MixFile can).
+3. ~~Trigger GUI panel~~ DONE: `MapDocument.BeginTriggerEdit`/`BeginTeamTypeEdit`
+   interactive sessions (working copy open across a dialog's life, Commit = one undo
+   step, Cancel = no trace; EditTriggers/EditTeamTypes now wrap them),
+   `Shell/TriggerArgPresenter` (headless Update*Controls: coerce then say
+   None/Number/DataList/NameList + options/range/value), and Avalonia `TriggersWindow` +
+   `TeamTypesWindow` off the toolbar. Event 2 hides+resets outside multi-event styles.
+   Teamtype dialog first pass: flags/numbers/house/trigger link + plain class & order
+   rows; the ORDER ARGUMENT is a raw number with an ArgType hint line — a per-ArgType
+   value control (waypoint list, options dropdown) is the known polish gap.
+
+Next, in order:
+4. Docked tool panels; dirty-cell rendering when brush perf starts to matter
+   (`MapDocument.Render` passes `null` cells to `MapRenderer.Render` — the fork's cell-set
+   parameter is the hook).
+5. Teamtype order-argument value controls per `TeamMissionArgType` (see step 3 gap).
+6. TD mission patterns for `expand-mission` if TD scripting is ever wanted (RA-only today,
+   clean error on TD maps).
 
 Cross-repo loose end: `scripts/editor_manifest.py` + `resources/.../mapeditor.json` sit
 UNTRACKED on the mod repo's `building-upgrades` checkout awaiting Luke's branch decision;
