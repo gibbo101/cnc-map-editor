@@ -305,16 +305,28 @@ incremental rendering pixel-identical, and `PlacedObjectSaveTests` pins that
 editor-CREATED objects survive save/reload. Tool tabs: Tiles / Terrain / Overlay /
 Buildings / Units / Infantry / Smudge / Cell trig. / Waypoints + a toolbar House combo.
 
-Next candidates (no committed order — pick by appetite):
-- Object PROPERTY editing on placed objects (house/strength/direction/mission/trigger of
-  an existing unit or building — everything places with defaults today); moving placed
-  objects (fork drag-move); the rebuild-base (BasePriority) editor.
-- Sub-cell infantry stop picking from the pointer position (placement fills the first
-  free stop today).
-- Trigger dialog polish: the fork's per-control tooltips, a CheckTriggers button, trigger
-  filter box; editing existing teamtype order rows in place (add/remove only today).
-- TD mission patterns for `expand-mission` if TD scripting is ever wanted (RA-only today,
-  clean error on TD maps).
+**PROPERTY EDITING + POLISH SHIPPED (2026-08-31 morning, commits a6b191c → 969a5a6):**
+- ~~Object property editing~~ DONE: brushless left click selects the object under the cell
+  (sub-cell aware for infantry); a docked properties panel edits it with the fork's
+  ObjectProperties rules (`Shell/ObjectPropertiesPresenter` — aircraft never get triggers,
+  buildings gate house/strength/direction/trigger behind IsPrebuilt, turret-only direction,
+  RA extras with NormalizeBuilding invariants). One undo step per change via CloneDataFrom
+  snapshots; the panel drops the selection when undo retires the object.
+- ~~Sub-cell infantry stops~~ DONE: place/erase/select use `ClosestStoppingTypes` over the
+  pointer's 24x24 in-cell position.
+- ~~Trigger dialog polish~~ DONE: Check button (CheckTriggers over the working list,
+  results in-dialog), filter box (name/house/event/action match), teamtype order rows
+  update in place.
+
+Next candidates (no committed order):
+- **Luke's UI feedback pass** — he's deliberately holding feedback until the surface is
+  fuller; it now is. Expect layout/UX rework requests before more features.
+- Drag-moving placed objects (fork's select-and-drag); the rebuild-base priority editor
+  (port AdjustBuildPriorities — priorities of other base buildings shift when one joins).
+- Per-control tooltips in the dialogs (needs `TriggerEventInfo`/`TriggerActionInfo`, which
+  are null stubs in our GamePluginRA — port the fork's texts first).
+- TD mission patterns for `expand-mission` — agreed LOW priority (Luke, 2026-08-31:
+  feature-completeness only; defer until a real TD authoring need appears).
 Full oracle tier re-verified green mid-session (363/363, 14m50s) after the IGamePlugin
 additions and `ParseRawScriptRows`, and again at session end after SmudgeEdit landed.
 
