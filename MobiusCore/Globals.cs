@@ -277,6 +277,14 @@ namespace MobiusEditor
         public const long MaxMapSize = 0x20000;
 
         public static IArchiveManager TheArchiveManager;
+        /// <summary>
+        /// Editor type manifests (mapeditor.json) of the active mods, keyed by game ("RA"/"TD"),
+        /// each list in mod load order. Keyed per game because sessions for different games
+        /// coexist in one process; a second session for the SAME game overwrites its slot,
+        /// like every other manager here.
+        /// </summary>
+        public static readonly System.Collections.Generic.Dictionary<string, System.Collections.Generic.IReadOnlyList<Headless.ModManifest>> TheModManifests =
+            new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IReadOnlyList<Headless.ModManifest>>(StringComparer.OrdinalIgnoreCase);
         public static ITilesetManager TheTilesetManager;
         public static ITeamColorManager TheTeamColorManager;
         public static IGameTextManager TheGameTextManager;

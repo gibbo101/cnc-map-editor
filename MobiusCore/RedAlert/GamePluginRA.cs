@@ -12,6 +12,7 @@
 // distributed with this program. You should have received a copy of the
 // GNU General Public License along with permitted additional restrictions
 // with this program. If not, see https://github.com/electronicarts/CnC_Remastered_Collection
+using MobiusEditor.Headless;
 using MobiusEditor.Interface;
 using MobiusEditor.Model;
 using MobiusEditor.Utility;
@@ -264,7 +265,8 @@ namespace MobiusEditor.RedAlert
         public static IEnumerable<string> MoviesClassic => movieTypesRa.Where(mv => !movieTypesRemarksNew.Contains(mv));
         public static IEnumerable<string> Themes => themeTypes;
         private Dictionary<string, BuildingType> bareRuleBuildings;
-        private static readonly IEnumerable<ITechnoType> fullTechnoTypes;
+        /// <summary>Vanilla infantry + units (aircraft included) plus this plugin's mod-manifest technos.</summary>
+        private readonly List<ITechnoType> technoTypes;
 
         public GameInfo GameInfo => gameTypeInfo;
         public bool IsMegaMap => true;
@@ -538,10 +540,9 @@ namespace MobiusEditor.RedAlert
             return newIniFormat;
         }
 
-        static GamePluginRA()
-        {
-            fullTechnoTypes = InfantryTypes.GetTypes().Cast<ITechnoType>().Concat(UnitTypes.GetTypes(false).Cast<ITechnoType>());
-        }
+        /// <summary>The active manifests for this game, in mod load order.</summary>
+        private static List<ModManifest> RaManifests() =>
+            Globals.TheModManifests.TryGetValue("RA", out IReadOnlyList<ModManifest> m) ? m.ToList() : new List<ModManifest>();
 
         public IEnumerable<string> Initialize()
         {
@@ -647,15 +648,28 @@ namespace MobiusEditor.RedAlert
             // Remap classic Einstein DOS graphics to no longer look like Mobius.
             InfantryTypes.Einstein.ClassicGraphicsRemap = Globals.FixClassicEinstein ? InfantryClassicRemap.RemapEinstein : null;
 
+            // Mod types come from the active manifests, merged after the vanilla tables with the
+            // same Globals filters the vanilla GetTypes calls apply. Fresh instances per plugin,
+            // so per-theater Init never mutates another session's types.
+            List<ModManifest> manifests = RaManifests();
+            List<string> modTypeWarnings = new List<string>();
+            List<TemplateType> templateTypes = ModTypeFactory.MergeTemplates(TemplateTypes.GetTypes(), manifests, modTypeWarnings);
+            List<BuildingType> buildingTypes = ModTypeFactory.MergeBuildings(BuildingTypes.GetTypes(), manifests, Globals.AllowWallBuildings, modTypeWarnings);
+            List<InfantryType> infantryTypes = ModTypeFactory.MergeInfantry(InfantryTypes.GetTypes(), manifests, modTypeWarnings);
+            List<UnitType> unitTypes = ModTypeFactory.MergeUnits(UnitTypes.GetTypes(false), manifests, modTypeWarnings);
+            foreach (string warning in modTypeWarnings) CoreDiagnostics.Report("Mod manifest", warning);
+            technoTypes = infantryTypes.Cast<ITechnoType>().Concat(unitTypes.Cast<ITechnoType>()).ToList();
+            IEnumerable<UnitType> mapUnitTypes = Globals.DisableAirUnits ? unitTypes.Where(t => !t.IsAircraft) : unitTypes;
+
             Map = new Map(basicSection, null, gameTypeInfo.MapSize, typeof(House), houseTypes, null,
-                TheaterTypes.GetTypes(), TemplateTypes.GetTypes(),
+                TheaterTypes.GetTypes(), templateTypes,
                 TerrainTypes.GetTypes(), OverlayTypes.GetTypes(), SmudgeTypes.GetTypes(Globals.ConvertCraters),
                 EventTypes.GetTypes(), cellEventTypes, unitEventTypes, structureEventTypes, terrainEventTypes,
                 ActionTypes.GetTypes(), cellActionTypes, unitActionTypes, structureActionTypes, terrainActionTypes,
                 MissionTypes.GetTypes(), MissionTypes.GetUnassignableTypes(), MissionTypes.MISSION_GUARD, MissionTypes.MISSION_STOP, MissionTypes.MISSION_HARVEST,
-                MissionTypes.MISSION_UNLOAD, DirectionTypes.GetMainTypes(), DirectionTypes.GetAllTypes(), InfantryTypes.GetTypes(),
-                UnitTypes.GetTypes(Globals.DisableAirUnits), BuildingTypes.GetTypes(), TeamMissionTypes.GetTypes(),
-                fullTechnoTypes, waypoints, movieTypes, movieEmpty, themeEmpty.Yield().Concat(themeTypes), themeEmpty,
+                MissionTypes.MISSION_UNLOAD, DirectionTypes.GetMainTypes(), DirectionTypes.GetAllTypes(), infantryTypes,
+                mapUnitTypes, buildingTypes, TeamMissionTypes.GetTypes(),
+                technoTypes, waypoints, movieTypes, movieEmpty, themeEmpty.Yield().Concat(themeTypes), themeEmpty,
                 Constants.DefaultDropZoneRadius, Constants.DefaultGapRadius, Constants.DefaultJamRadius, Constants.DefaultGoldValue, Constants.DefaultGemValue);
             Map.BasicSection.PropertyChanged += BasicSection_PropertyChanged;
             Map.MapSection.PropertyChanged += MapSection_PropertyChanged;
@@ -998,7 +1012,7 @@ namespace MobiusEditor.RedAlert
                             modified = true;
                             continue;
                         }
-                        ITechnoType type = fullTechnoTypes.Where(t => t.Equals(classTokens[0])).FirstOrDefault();
+                        ITechnoType type = technoTypes.Where(t => t.Equals(classTokens[0])).FirstOrDefault();
                         byte count = Byte.Parse(classTokens[1]);
                         if (type == null)
                         {
@@ -1412,7 +1426,7 @@ namespace MobiusEditor.RedAlert
                 tfTdFallbackMap = new Dictionary<ushort, TemplateType>();
                 Dictionary<string, TemplateType> vanillaByName = new Dictionary<string, TemplateType>(StringComparer.OrdinalIgnoreCase);
                 List<TemplateType> tdTypes = new List<TemplateType>();
-                foreach (TemplateType tt in TemplateTypes.GetTypes())
+                foreach (TemplateType tt in Map.TemplateTypes)
                 {
                     if (tt.IsGroup)
                     {
@@ -3559,7 +3573,8 @@ namespace MobiusEditor.RedAlert
         private static IEnumerable<string> UpdateBuildingRules(INI ini, string iniName, bool cumulative, Map map, GameInfo gi, bool forFootPrintTest, bool allowImage, HashSet<Point> refreshPoints)
         {
             List<string> errors = new List<string>();
-            IEnumerable<BuildingType> origs = cumulative ? map.BuildingTypes.Select(b => b.Clone()) : BuildingTypes.GetTypes();
+            IEnumerable<BuildingType> origs = cumulative ? map.BuildingTypes.Select(b => b.Clone())
+                : ModTypeFactory.MergeBuildings(BuildingTypes.GetTypes(), RaManifests(), Globals.AllowWallBuildings, new List<string>());
             Dictionary<string, BuildingType> originals = origs.ToDictionary(b => b.Name, StringComparer.OrdinalIgnoreCase);
             List<(Point Location, Building Occupier)> buildings = map.Buildings.OfType<Building>()
                  .OrderBy(pb => pb.Location.Y * map.Metrics.Width + pb.Location.X).ToList();

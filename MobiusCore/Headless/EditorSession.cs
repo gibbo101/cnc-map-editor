@@ -18,6 +18,10 @@ namespace MobiusEditor.Headless
         public string GameDir { get; }
         public GameType GameType { get; }
         public IReadOnlyList<string> ModDirs { get; }
+        /// <summary>Type manifests of the mods that ship one for this session's game, in mod order.</summary>
+        public IReadOnlyList<ModManifest> ModManifests { get; }
+        /// <summary>Problems reading the mods' mapeditor.json files; also appended to every Load's errors.</summary>
+        public IReadOnlyList<string> ManifestLoadWarnings { get; }
         public MegafileManager Archives { get; }
         public GameInfo GameInfo { get; }
         private readonly Dictionary<TheaterType, TilesetManager> tilesets = new Dictionary<TheaterType, TilesetManager>();
@@ -32,6 +36,25 @@ namespace MobiusEditor.Headless
             bool hasData = Directory.Exists(gameDir) && Directory.EnumerateDirectories(gameDir).Any(d => string.Equals(Path.GetFileName(d), "DATA", StringComparison.OrdinalIgnoreCase));
             if (!hasData) throw new DirectoryNotFoundException("Not a C&C Remastered install (no DATA folder): " + gameDir);
             ModDirs = (modDirs ?? Enumerable.Empty<string>()).ToList();
+            List<ModManifest> manifests = new List<ModManifest>();
+            List<string> manifestWarnings = new List<string>();
+            string manifestGame = gameType == GameType.TiberianDawn ? "TD" : gameType == GameType.RedAlert ? "RA" : gameType.ToString();
+            foreach (string dir in ModDirs)
+            {
+                ModInfo mod = ModDiscovery.Read(dir);
+                if (mod?.EditorManifestPath == null) continue;
+                ModManifest manifest = ModManifest.Load(mod.EditorManifestPath, mod.Name, manifestWarnings);
+                if (manifest == null) continue;
+                if (!string.Equals(manifest.GameType, manifestGame, StringComparison.OrdinalIgnoreCase))
+                {
+                    manifestWarnings.Add($"{mod.Name}: {ModManifest.FileName} is for {manifest.GameType}, this session is {manifestGame}; ignoring it.");
+                    continue;
+                }
+                manifests.Add(manifest);
+            }
+            ModManifests = manifests;
+            ManifestLoadWarnings = manifestWarnings;
+            Globals.TheModManifests[manifestGame] = manifests;
             Dictionary<GameType, string[]> modPaths = new Dictionary<GameType, string[]> { { gameType, ModDirs.ToArray() } };
             Dictionary<GameType, string> gameFolders = new Dictionary<GameType, string>();
             GameInfo[] infos = GameTypeFactory.GetGameInfos();
@@ -88,7 +111,7 @@ namespace MobiusEditor.Headless
             // Classic TD terrain is 64x64 (8 KiB of cells); the editor's 128x128 "megamap" .bin is four times that.
             bool megaMap = GameType == GameType.RedAlert || (binContent != null && binContent.Length >= 128 * 128 * 2);
             IGamePlugin plugin = GameInfo.CreatePlugin(false, megaMap);
-            errors = plugin.Load(mapPath, mapPath, File.ReadAllBytes(mapPath), binPath, binContent, ref ft).ToArray();
+            errors = ManifestLoadWarnings.Concat(plugin.Load(mapPath, mapPath, File.ReadAllBytes(mapPath), binPath, binContent, ref ft)).ToArray();
             return plugin;
         }
     }
