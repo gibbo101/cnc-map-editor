@@ -23,9 +23,9 @@ namespace MobiusEditor.Headless
         public static List<UnitType> Units(ModManifest manifest) =>
             manifest.Units.Select(u => (UnitType)(u.Kind switch
             {
-                ManifestUnitKind.Vehicle => new VehicleType(u.Id, u.Name, u.TextId, u.Owner, u.BodyFrames, u.TurretFrames, u.Turret, u.Turret2, u.TurretOffset, u.TurretY, u.Flags) { ModSource = manifest.ModName, NameOverride = u.DisplayName, DefaultNameOverride = u.DisplayName },
-                ManifestUnitKind.Aircraft => new AircraftType(u.Id, u.Name, u.TextId, u.Owner, u.BodyFrames, u.TurretFrames, u.Turret, u.Turret2, u.TurretOffset, u.TurretY, u.Flags) { ModSource = manifest.ModName, NameOverride = u.DisplayName, DefaultNameOverride = u.DisplayName },
-                ManifestUnitKind.Vessel => new VesselType(u.Id, u.Name, u.TextId, u.Owner, u.BodyFrames, u.TurretFrames, u.Turret, u.Turret2, u.TurretOffset, u.TurretY, u.Flags) { ModSource = manifest.ModName, NameOverride = u.DisplayName, DefaultNameOverride = u.DisplayName },
+                ManifestUnitKind.Vehicle => new VehicleType(u.Id, u.Name, u.TextId, u.Owner, u.BodyFrames, u.TurretFrames, u.Turret, u.Turret2, u.TurretOffset, u.TurretY, u.Flags) { ModSource = manifest.ModName, NameOverride = u.DisplayName, DefaultNameOverride = u.DisplayName, WalkFrames = u.WalkFrames },
+                ManifestUnitKind.Aircraft => new AircraftType(u.Id, u.Name, u.TextId, u.Owner, u.BodyFrames, u.TurretFrames, u.Turret, u.Turret2, u.TurretOffset, u.TurretY, u.Flags) { ModSource = manifest.ModName, NameOverride = u.DisplayName, DefaultNameOverride = u.DisplayName, WalkFrames = u.WalkFrames },
+                ManifestUnitKind.Vessel => new VesselType(u.Id, u.Name, u.TextId, u.Owner, u.BodyFrames, u.TurretFrames, u.Turret, u.Turret2, u.TurretOffset, u.TurretY, u.Flags) { ModSource = manifest.ModName, NameOverride = u.DisplayName, DefaultNameOverride = u.DisplayName, WalkFrames = u.WalkFrames },
                 _ => throw new InvalidOperationException("unreachable"),
             })).ToList();
 

@@ -957,6 +957,14 @@ namespace MobiusEditor.Render
                 icon = BodyShape[Facing32[unit.Direction.ID]];
                 bodyFrames = 32;
             }
+            // Walker gait layout: the body is bodyFrames facing blocks of WalkFrames each,
+            // standing on the first frame of the block; a shared-image turret block starts
+            // after the whole body run, which scaling bodyFrames places correctly.
+            if (unitType.WalkFrames > 1)
+            {
+                icon *= unitType.WalkFrames;
+                bodyFrames *= unitType.WalkFrames;
+            }
             // Special logic for TD gunboat's damaged states.
             // East facing is not actually possible to set in missions. This is just the turret facing.
             if (frameUsage.HasFlag(FrameUsage.DamageStates))

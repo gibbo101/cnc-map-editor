@@ -182,6 +182,10 @@ namespace MobiusEditor.Model
         public int TurretY { get; private set; }
         public UnitTypeFlag Flags { get; private set; }
         public FrameUsage BodyFrameUsage { get; private set; }
+        /// <summary>Walker gait stride: the body tileset is facing blocks of this many frames and the
+        /// standing shape is the first of a facing's block; a shared-image turret block follows the
+        /// whole body run. 0 (or 1) = plain one-frame-per-facing layout.</summary>
+        public int WalkFrames { get; set; }
         public FrameUsage TurretFrameUsage { get; private set; }
         public virtual Rectangle OverlapBounds => new Rectangle(-1, -1, 3, 3);
         // Units are big enough to be visible even when partially overlapped, so they only count as overlapped if their center is overlapped.

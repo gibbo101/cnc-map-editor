@@ -132,6 +132,25 @@ namespace MobiusCore.Tests
         }
 
         [Fact]
+        public void WalkFramesParseAndReachTheUnitType()
+        {
+            List<string> warnings = new List<string>();
+            ModManifest m = ModManifest.Parse(@"{ ""format"": 1, ""game_type"": ""RA"",
+                ""units"": [
+                    { ""id"": 38, ""kind"": ""vehicle"", ""name"": ""tstitn"", ""display_name"": ""Titan"",
+                      ""owner"": ""GoodGuy"", ""body_frames"": [""Frames08Cardinal""], ""walk_frames"": 12,
+                      ""turret_frames"": [""Frames32Full""], ""flags"": [""Turret"", ""Armed""] },
+                    { ""id"": 24, ""kind"": ""vehicle"", ""name"": ""plain"", ""display_name"": ""Plain"",
+                      ""owner"": ""GoodGuy"", ""body_frames"": [""Frames32Full""] } ] }", "TF", warnings);
+            Assert.Empty(warnings);
+            Assert.Equal(12, m.Units[0].WalkFrames);
+            Assert.Equal(0, m.Units[1].WalkFrames);
+            List<UnitType> built = ModTypeFactory.Units(m);
+            Assert.Equal(12, built[0].WalkFrames);
+            Assert.Equal(0, built[1].WalkFrames);
+        }
+
+        [Fact]
         public void EntryWithNeitherTextIdNorDisplayNameIsSkippedWithAWarning()
         {
             List<string> warnings = new List<string>();

@@ -75,6 +75,10 @@ disabled air units).
 - `turret` / `turret2` — separate turret art names (only honoured with the `Turret` /
   `DoubleTurret` flags, matching the engine); `turret_offset` / `turret_y` — turret draw
   offsets.
+- `walk_frames` — walker gait stride (0/omitted = plain layout): the body tileset is laid
+  out as one block of `walk_frames` frames per facing (facing count from `body_frames`),
+  the standing shape is the first frame of a facing's block, and a shared-image turret
+  block starts right after the whole body run.
 - `flags` — array of `UnitTypeFlag` member names: `FixedWing`, `Turret`, `DoubleTurret`,
   `Armed`, `Harvester`, `NoRemap`, `BuildingRemap`, `ExpansionOnly`, `GapGenerator`,
   `Jammer`, `NoRules`.

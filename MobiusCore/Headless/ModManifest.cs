@@ -48,6 +48,8 @@ namespace MobiusEditor.Headless
         public string DisplayName { get; set; }
         public string Owner { get; set; }
         public FrameUsage BodyFrames { get; set; }
+        /// <summary>Walker gait stride: body frames are facing blocks of this many frames, standing on the first. 0 = plain layout.</summary>
+        public int WalkFrames { get; set; }
         public FrameUsage TurretFrames { get; set; }
         public string Turret { get; set; }
         public string Turret2 { get; set; }
@@ -165,6 +167,7 @@ namespace MobiusEditor.Headless
             DisplayName = (string)o["display_name"],
             Owner = Required<string>(o, "owner"),
             BodyFrames = ParseFlags<FrameUsage>(Require(o, "body_frames")),
+            WalkFrames = (int?)o["walk_frames"] ?? 0,
             TurretFrames = ParseFlags<FrameUsage>(o["turret_frames"]),
             Turret = (string)o["turret"],
             Turret2 = (string)o["turret2"],
