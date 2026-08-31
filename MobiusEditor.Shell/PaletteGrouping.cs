@@ -52,6 +52,9 @@ namespace MobiusEditor.Shell
 
         private static string Faction(string owner, string modSource, string name)
         {
+            // EA's data scatters the giant ants across USSR/Ukraine/Germany; they are the
+            // "It Came From Red Alert" specials, not faction units.
+            if (name != null && name.StartsWith("ant", StringComparison.OrdinalIgnoreCase)) return "Misc";
             if (!string.IsNullOrEmpty(modSource))
             {
                 bool ts = name != null && name.StartsWith("ts", StringComparison.OrdinalIgnoreCase);

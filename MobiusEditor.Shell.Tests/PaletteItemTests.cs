@@ -65,6 +65,11 @@ namespace MobiusEditor.Shell.Tests
                 if (obelisk != null) Assert.Equal("Nod (mod)", PaletteGrouping.GroupOf(obelisk));
                 UnitType tsHover = doc.AvailableUnits().FirstOrDefault(u => u.Name.StartsWith("tshvr"));
                 if (tsHover != null) Assert.Equal("TS GDI (mod)", PaletteGrouping.GroupOf(tsHover));
+                // EA gives ant1/ant2/ant3 to USSR/Ukraine/Germany; they belong in Misc, not the factions.
+                foreach (UnitType ant in doc.AvailableUnits().Where(u => u.Name.StartsWith("ant")))
+                {
+                    Assert.Equal("Misc", PaletteGrouping.GroupOf(ant));
+                }
                 Assert.True(PaletteGrouping.OrderOf("Allies") < PaletteGrouping.OrderOf("Soviets"));
                 Assert.True(PaletteGrouping.OrderOf("Resources") < PaletteGrouping.OrderOf("Walls"));
             }
