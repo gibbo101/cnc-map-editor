@@ -317,8 +317,19 @@ would only tempt the native editor to slip. Not part of the plan.
    footprint, Ctrl+Z/Ctrl+Y + toolbar Undo/Redo — proven by headless pointer/keyboard tests
    (`PaintingTests`), still never launched on a desktop. Known perf debt: every op re-renders
    the whole map bitmap; fine at 128x128, wants dirty-cell rendering before bigger brushes.
-   Next: overlay/wall/resource brushes in the GUI (ops exist headlessly), docked tool panels,
-   and the trigger editor with mission-pattern templates.
+   **Overlay/wall/resource brushes SHIPPED in the GUI** (second palette, one active brush at
+   a time, same category-guarded core ops as the CLI). **TRIGGER FOUNDATION STARTED
+   2026-08-31:** `TriggerEditor`/`TeamTypeEditor` in MobiusCore port the fork's dialog
+   semantics headlessly — working copy + rename ledger, the fork's name invariant ladder
+   (non-empty / length cap / not "None" / INI-safe / case-insensitively unique), add/clone/
+   remove/rename with in-list action-reference rewriting, one-shot Commit through the
+   already-ported `Map.ApplyTriggerNameChanges` / `ApplyTeamTypeRenames` + cleanup sweeps,
+   committed list sorted (saves write trigger/team references as LIST INDICES — order is
+   file format). Not yet: undo integration into MapDocument, a trigger GUI, the structured
+   event/action parameter-type table (lift from `GetEventString`/`GetActionString` + the
+   fork's `Update*Controls` coercion switches), and the mission-pattern GENERATORS (pure
+   functions, spec in → raw trigger/teamtype rows out) — the spec format wants Luke's input
+   since it is the campaign-authoring UX. Next: those, plus docked tool panels.
 
 Open shim gaps to close as they are hit: `RotateFlip` rotations, sub-byte indexed writes,
 text metrics are approximate (annotation layers only), `Region.Exclude` on infinite regions.
