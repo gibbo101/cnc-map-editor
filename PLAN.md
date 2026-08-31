@@ -408,19 +408,35 @@ editor.sh — commits bcf804d, 38ba086; crash fix 071dbae):**
   on saved maps still render white (the map really holds them); eraser with a resource
   brush removes them.
 
+**MANIFEST BUILDINGS DRIFT CLOSED (2026-08-31, Luke: "No TS buildings?"):** the mod's
+`editor_manifest.py` BUILDINGS table now runs to id 136 — all 25 buildings added since the
+seed (TS tree, faction-split yards/factories/helipads), committed on the mod repo's
+`drop-pods` branch (a000ce6a) with sizes/occupancy re-verified against the bdata.cpp ctors
+(the defines.h enum comments were STALE: TSPROC is 4×3, TSWEAP 5×3). None have vanilla
+text ids, so the manifest grew an optional `display_name` (editor: parse + NameOverride;
+one of text_id/display_name required). TRAP FIXED: a rules pass reset `NameOverride=null`,
+wiping manifest names — types now carry `DefaultNameOverride` and resets restore it (and
+`BuildingType.Clone()` now copies both). Grouping: mod types owned by a vanilla side
+(afact/sweap…) group under Allies/Soviets, not the mod bucket. Deck: new manifest pushed
+(md5-verified, adjacent DLL confirmed = local build), editor redeployed.
+
 Next candidates (no committed order):
-- More UI feedback from Luke as he uses it (Deck deploy current as of 9603676:
-  grouping + label/theater fixes included; desktop editor.sh always builds fresh).
+- **UNITS DRIFT (immediate follow-up):** 12 placeable vehicles (TSHVR 37, TSTITN 38,
+  TSHMEC 39, TDNMCV 41, TDGMCV 42, TSMCV 44, TSHARV 45, TSSMEC 46, TSSONIC 47, TSAPC 48,
+  TSSUBTANK 50, TSSAPC 51 — EXCLUDE the TSMDIV 49 token), VESSEL_TDGUNBOAT (7), aircraft
+  TDCARGO (7)/TDAPACHE (8)/TDPARADROP (11). Verify each INI name and art frame layout
+  (body_frames/turret) against udata.cpp/tileset XMLs before writing entries — don't
+  trust the id list blind.
+- More UI feedback from Luke as he uses it (desktop editor.sh always builds fresh).
 - Ghost polish: live semi-transparent RENDER preview (fork-style) instead of the
-  thumbnail stretch.
+  thumbnail stretch. Blossom-tree thumbnail could show the mature frame (frame_offset).
+- Random map generator — Luke asked 2026-08-31 (stretch goal). Nothing exists in the
+  fork to port; would be our own feature (terrain synthesis onto the template tables +
+  resource/start-point seeding, deterministic via DeterministicRandom).
 - TD mission patterns for `expand-mission` — agreed LOW priority (Luke, 2026-08-31:
   feature-completeness only; defer until a real TD authoring need appears).
 Full oracle tier re-verified green mid-session (363/363, 14m50s) after the IGamePlugin
 additions and `ParseRawScriptRows`, and again at session end after SmudgeEdit landed.
-
-Cross-repo loose end: `scripts/editor_manifest.py` + `resources/.../mapeditor.json` sit
-UNTRACKED on the mod repo's `building-upgrades` checkout awaiting Luke's branch decision;
-the drift data pass (TDGFACT/TSPOWR/TS-tree/TDNMCV + the building-upgrades types) follows it.
 
 ## Order of work for the next session
 
