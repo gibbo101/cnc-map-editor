@@ -838,6 +838,55 @@ namespace MobiusEditor.Shell
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
+        /// <summary>Applies an edit to the map settings ([Basic] plus the briefing) as one undo step.</summary>
+        public void EditMapSettings(Action edit)
+        {
+            RequireOpen();
+            Dictionary<string, object> before = SnapshotSettings();
+            edit();
+            Dictionary<string, object> after = SnapshotSettings();
+            IGamePlugin plugin = Plugin;
+            plugin.Dirty = true;
+            void Apply(Dictionary<string, object> snapshot)
+            {
+                RestoreSettings(snapshot);
+                plugin.Dirty = true;
+                InvalidateRenderCache();
+            }
+            undoRedo.Track(_ => Apply(before), _ => Apply(after), this);
+            InvalidateRenderCache();
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        private Dictionary<string, object> SnapshotSettings()
+        {
+            BasicSection basic = Map.BasicSection;
+            return new Dictionary<string, object>
+            {
+                ["Name"] = basic.Name,
+                ["Author"] = basic.Author,
+                ["Player"] = basic.Player,
+                ["BasePlayer"] = basic.BasePlayer,
+                ["SoloMission"] = basic.SoloMission,
+                ["ExpansionEnabled"] = basic.ExpansionEnabled,
+                ["Percent"] = basic.Percent,
+                ["Briefing"] = Map.BriefingSection.Briefing,
+            };
+        }
+
+        private void RestoreSettings(Dictionary<string, object> snapshot)
+        {
+            BasicSection basic = Map.BasicSection;
+            basic.Name = (string)snapshot["Name"];
+            basic.Author = (string)snapshot["Author"];
+            basic.Player = (string)snapshot["Player"];
+            basic.BasePlayer = (string)snapshot["BasePlayer"];
+            basic.SoloMission = (bool)snapshot["SoloMission"];
+            basic.ExpansionEnabled = (bool)snapshot["ExpansionEnabled"];
+            basic.Percent = (int)snapshot["Percent"];
+            Map.BriefingSection.Briefing = (string)snapshot["Briefing"];
+        }
+
         /// <summary>Runs one trigger editing session and commits it as a single undo step; undo restores the previous list and every rewired referrer.</summary>
         public void EditTriggers(Action<TriggerEditor> edit)
         {

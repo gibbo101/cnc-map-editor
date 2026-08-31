@@ -17,7 +17,9 @@ namespace MobiusEditor.App
         public NewMapWindow(MapDocument document) : this()
         {
             this.document = document;
-            TheaterList.ItemsSource = document.Session.GameInfo.AllTheaters.Select(t => t.Name).ToList();
+            // Only the theaters the Remastered game actually supports; the CnCNet extras
+            // (Winter/Desert/Jungle/Barren/Cave in RA) have no art in this install.
+            TheaterList.ItemsSource = document.Session.GameInfo.AllTheaters.Where(t => !t.IsModTheater).Select(t => t.Name).ToList();
             TheaterList.SelectedIndex = 0;
             OkButton.Click += (s, e) =>
             {

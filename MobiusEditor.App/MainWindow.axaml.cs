@@ -44,6 +44,7 @@ namespace MobiusEditor.App
             ZoomOutButton.Click += (s, e) => Zoom(0.5);
             UndoButton.Click += (s, e) => document?.Undo();
             RedoButton.Click += (s, e) => document?.Redo();
+            SettingsButton.Click += (s, e) => OpenSettingsDialog();
             TriggersButton.Click += (s, e) => OpenTriggersDialog();
             TeamsButton.Click += (s, e) => OpenTeamsDialog();
             // One brush at a time: picking in one palette clears the others. The cell-trigger
@@ -281,6 +282,15 @@ namespace MobiusEditor.App
             };
         }
 
+        /// <summary>Opens the map settings dialog; returned for the headless tests.</summary>
+        public MapSettingsWindow OpenSettingsDialog()
+        {
+            if (document == null || !document.IsOpen) return null;
+            MapSettingsWindow dialog = new MapSettingsWindow(document);
+            dialog.Show(this);
+            return dialog;
+        }
+
         /// <summary>Opens the new-map theater picker; returned for the headless tests.</summary>
         public NewMapWindow OpenNewMapDialog()
         {
@@ -481,7 +491,7 @@ namespace MobiusEditor.App
             Title = document.Title + " — C&C Map Editor";
             ZoomLabel.Text = (document.Scale * 100).ToString("0.#") + "%";
             SaveAsButton.IsEnabled = ZoomInButton.IsEnabled = ZoomOutButton.IsEnabled = true;
-            TriggersButton.IsEnabled = TeamsButton.IsEnabled = true;
+            TriggersButton.IsEnabled = TeamsButton.IsEnabled = SettingsButton.IsEnabled = true;
             UndoButton.IsEnabled = document.CanUndo;
             RedoButton.IsEnabled = document.CanRedo;
             // Rebuild the palettes only when a different map is open, or per-op refreshes would drop the selection.

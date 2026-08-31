@@ -1,0 +1,29 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="MobiusEditor.App.MapSettingsWindow"
+        Title="Map settings" Width="420" Height="520">
+  <DockPanel Margin="6">
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6" Margin="0,6,0,0">
+      <Button Name="OkButton" Content="OK" MinWidth="80" />
+      <Button Name="CancelButton" Content="Cancel" MinWidth="80" />
+    </StackPanel>
+    <StackPanel Spacing="6">
+      <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Name" VerticalAlignment="Center" />
+        <TextBox Grid.Row="0" Grid.Column="1" Name="NameBox" Margin="0,2" />
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Author" VerticalAlignment="Center" />
+        <TextBox Grid.Row="1" Grid.Column="1" Name="AuthorBox" Margin="0,2" />
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="Player" VerticalAlignment="Center" />
+        <ComboBox Grid.Row="2" Grid.Column="1" Name="PlayerCombo" HorizontalAlignment="Stretch" Margin="0,2" />
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="Base player" VerticalAlignment="Center" />
+        <ComboBox Grid.Row="3" Grid.Column="1" Name="BasePlayerCombo" HorizontalAlignment="Stretch" Margin="0,2" />
+        <TextBlock Grid.Row="4" Grid.Column="0" Text="Build level %" VerticalAlignment="Center" />
+        <NumericUpDown Grid.Row="4" Grid.Column="1" Name="PercentNud" Margin="0,2" FormatString="0" Minimum="0" Maximum="100" />
+      </Grid>
+      <CheckBox Name="SoloCheck" Content="Single-player mission (save needs the Home waypoint, not player starts)" />
+      <CheckBox Name="ExpansionCheck" Content="Expansion units enabled" />
+      <TextBlock Text="Briefing" FontWeight="Bold" />
+      <TextBox Name="BriefingBox" AcceptsReturn="True" TextWrapping="Wrap" Height="160" />
+    </StackPanel>
+  </DockPanel>
+</Window>
