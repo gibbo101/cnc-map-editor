@@ -18,7 +18,7 @@
           <Button Name="RemoveButton" Content="Remove" />
           <Button Name="CheckButton" Content="Check" />
         </StackPanel>
-        <TextBox Name="FilterBox" DockPanel.Dock="Top" Watermark="Filter…" Margin="0,0,0,6" />
+        <TextBox Name="FilterBox" DockPanel.Dock="Top" PlaceholderText="Filter…" Margin="0,0,0,6" />
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
           <Button Name="RenameButton" DockPanel.Dock="Right" Content="Rename" />
           <TextBox Name="RenameBox" Margin="0,0,6,0" />

@@ -332,9 +332,10 @@ commits bc9bbd3 → 1309629):**
 - **STEAM DECK DEPLOYED (2026-08-31): `deploy-deck.sh`** publishes self-contained linux-x64
   editor+CLI and rsyncs to Luke's Deck (`~/cnc-map-editor/`, desktop-mode
   `run-editor.sh` auto-loads the deployed TF mod, `--no-mod` opts out). Verified ON the
-  Deck: deployed CLI loaded a TF CustomMaps .mpr with the deployed mod's manifest. Deployed
-  at commit a2a0680 vintage — REDEPLOY (`DECK_HOST=deck@<deck-ip> ./deploy-deck.sh`)
-  after further changes; the Deck comes online intermittently.
+  Deck: deployed CLI loaded a TF CustomMaps .mpr with the deployed mod's manifest. Deploy
+  is CURRENT as of 4e4360c (drag-move + base priorities included) — REDEPLOY
+  (`DECK_HOST=deck@<deck-ip> ./deploy-deck.sh`) after further changes; the Deck comes
+  online intermittently.
 
 Next candidates (no committed order):
 - **Luke's UI feedback pass** — he's deliberately holding feedback until the surface is
