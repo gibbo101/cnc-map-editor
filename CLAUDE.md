@@ -24,6 +24,9 @@ oracle/              regen.sh generates every oracle fixture with the fork's mon
                      they must never be committed; each machine regenerates them from its own
                      game install (and again whenever the fork changes).
 artifacts/           test output (gitignored).
+docs/                format contracts. mapeditor-json.md = the per-mod type manifest a mod
+                     ships beside ccmod.json (TF generates its own with the mod repo's
+                     scripts/editor_manifest.py); nothing mod-specific is compiled in.
 ```
 
 ## Build / test
@@ -35,7 +38,7 @@ env -u DISPLAY dotnet test MobiusCore.Tests --filter Category!=Oracle   # inner 
 env -u DISPLAY dotnet test MobiusCli.Tests                              # CLI, ~1 min
 env -u DISPLAY dotnet test MobiusEditor.Shell.Tests                     # GUI view-models, seconds
 env -u DISPLAY dotnet test MobiusEditor.App.Tests                       # Avalonia headless UI, seconds
-env -u DISPLAY dotnet test MobiusCore.Tests                              # + oracle tier (~3 min): 2 renders, 31 round trips
+env -u DISPLAY dotnet test MobiusCore.Tests                              # + oracle tier (~11 min): renders + 261 byte-exact round trips
 dotnet run --project MobiusCli -- info <map> [--mod <dir>]              # the CLI itself
 ```
 

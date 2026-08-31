@@ -264,13 +264,34 @@ would only tempt the native editor to slip. Not part of the plan.
    section in saves — the editor computes "vanilla-safe / needs mod X" from map content, and
    the 261-map byte-exact save oracle stays pristine. And the manifest seam comes before more
    GUI: mod tables move from compiled-in C# to mod-build-time data (`mapeditor.json`), TF being
-   the first mod that ships one.** STARTED: `ModDiscovery` reads `ccmod.json` under a Mods
-   root (Proton prefix Documents on Linux) and the Workshop cache; `cncmap mods` lists them in
-   load order; `EditorSession` takes the ordered mod list; `cncmap validate` = load errors +
-   unknown entries + the plugin's blocking-save check. `EditorSession` is game-aware
-   (`--game-type RA|TD`): TD INI+BIN community maps load and render. Not yet: per-mod editor
-   manifest, map remembering its profile, vanilla-safe classification. (TD lossless retention
-   DONE.) ~~Lossless loading of unknown entities~~ DONE 2026-08-30:
+   the first mod that ships one.** **THE MANIFEST SEAM SHIPPED 2026-08-31 (overnight):** the
+   four compiled `*TF.cs` tables are DELETED; a mod ships `mapeditor.json` beside `ccmod.json`
+   (schema: `docs/mapeditor-json.md`, format 1 — buildings/units/infantry/templates; templates
+   carry no theatre data, availability stays tileset-resolved). Editor side:
+   `Headless/ModManifest` (never-throwing parser, per-entry skip + warning), `ModTypeFactory`
+   (fresh instances per plugin; merge = vanilla order then (load order, id), units grouped
+   vehicle/aircraft/vessel, first-loaded-wins collisions), `Globals.TheModManifests` keyed
+   **per game** (an RA and a TD session coexist in-process — a single slot cost 33 oracle
+   tests before `ModManifestSessionTests` pinned it). TF side:
+   `scripts/editor_manifest.py` in the mod repo generates the manifest — buildings/units/
+   infantry as reviewed embedded tables, templates derived from `td_ra_tile_map.json` + the
+   **fork's TD `TemplateTypes.cs`** (proven provenance of the old generated table, quirks and
+   all: rv13's comma, sh27 over-length, sh51 zeros, clear1 as ordinary 4x4). Field-level
+   parity with the compiled tables was proven pre-deletion (`ModManifestParityTests`' first
+   revision, in git history); the full oracle tier is the permanent proof. `cncmap info` /
+   `validate` now report `requires mods: <names>` vs `vanilla-safe` from placed content
+   (`ModSource` provenance on the four type classes). The oracle also flushed out a
+   **pre-existing cross-game session bug**: theater probes (smudge availability, template
+   tiles) go through `Globals.TheArchiveManager`, which whichever session's CTOR ran last
+   owned — so an RA load after a TD load checked `cr1.tem` against TD-desert archives and
+   silently dropped scm06ea's five craters from the save (order-dependent: only visible in a
+   full-suite run). Fix: `EditorSession.Load` re-points the session-scoped globals (archive /
+   team-color / game-text managers) the way it already re-pointed the tileset manager —
+   the loading session owns the process globals. Pinned by `ModManifestSessionTests`. NOTE: the manifest ships TF's
+   editor-known types — the DLL's drifted extras (TDGFACT/TDNFACT/TSPOWR, the TS tree,
+   TDNMCV/TDGMCV…) and the `building-upgrades` branch's new types are the data follow-up in
+   `editor_manifest.py`. Map remembering its profile: dead by decision (content-derived).
+   ~~Lossless loading of unknown entities~~ DONE 2026-08-30:
    `Map.UnknownEntries` keeps unknown structures/units/infantry/aircraft/ships/terrain/smudge
    verbatim and the RA save writes them back after the known entries (`LosslessLoadTests`);
    `cncmap info` lists them. Not yet covered: `[OVERLAY]` text entries, unknown trigger/team
