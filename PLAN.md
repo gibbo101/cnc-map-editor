@@ -420,13 +420,23 @@ wiping manifest names — types now carry `DefaultNameOverride` and resets resto
 (afact/sweap…) group under Allies/Soviets, not the mod bucket. Deck: new manifest pushed
 (md5-verified, adjacent DLL confirmed = local build), editor redeployed.
 
+**UNITS DRIFT ALSO CLOSED (2026-09-01, editor commit b8dbe89):** 14 vehicles (ids 37–51:
+TS wave + the four split MCVs — SMCV 40 and AMCV 43 were missing from the original list;
+TSMDIV 49 is a purchase token, deliberately absent). Vessels and aircraft turned out to
+already be in the manifest. The walkers needed a real feature: manifest `walk_frames`
+(TSTITN/TSSMEC 8 facings × 12, TSHMEC 32 × 8) — walker tilesets pack facing BLOCKS of
+walk stages (unit.cpp gait contract; TSTITN's shared-image turret block at 96–127), and
+the renderer now multiplies the facing index by the stride (`WalkerFrameTests` pins east
+= shape 72/192). NOTE: Luke's mod-repo session swept the 14 uncommitted vehicle entries
+into its own commit 691e3db6 ("Pod dome...") on main — content landed, just not under its
+own commit. SESSION-END STATE: core fast + full Shell tiers green with the walker change;
+CLI + App tiers and a final oracle run were NOT yet re-run after it (walker guard is
+`WalkFrames > 1`, vanilla types 0 → no-op, so low risk); Deck still has the 28-unit
+manifest and the pre-walk_frames editor — push `build/remaster/Vanilla_RA/mapeditor.json`
+(md5-check the adjacent DLL first; Luke's session deployed a new DLL 2026-08-31 night)
+and `./deploy-deck.sh`.
+
 Next candidates (no committed order):
-- **UNITS DRIFT (immediate follow-up):** 12 placeable vehicles (TSHVR 37, TSTITN 38,
-  TSHMEC 39, TDNMCV 41, TDGMCV 42, TSMCV 44, TSHARV 45, TSSMEC 46, TSSONIC 47, TSAPC 48,
-  TSSUBTANK 50, TSSAPC 51 — EXCLUDE the TSMDIV 49 token), VESSEL_TDGUNBOAT (7), aircraft
-  TDCARGO (7)/TDAPACHE (8)/TDPARADROP (11). Verify each INI name and art frame layout
-  (body_frames/turret) against udata.cpp/tileset XMLs before writing entries — don't
-  trust the id list blind.
 - More UI feedback from Luke as he uses it (desktop editor.sh always builds fresh).
 - Ghost polish: live semi-transparent RENDER preview (fork-style) instead of the
   thumbnail stretch. Blossom-tree thumbnail could show the mature frame (frame_offset).
