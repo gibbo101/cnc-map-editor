@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Linq;
 using MobiusEditor.Headless;
 using MobiusEditor.Interface;
 using MobiusEditor.Model;
@@ -83,6 +84,11 @@ namespace MobiusEditor.Shell
             undoRedo.Redo(new UndoRedoArgs { Source = this });
             Changed?.Invoke(this, EventArgs.Empty);
         }
+
+        /// <summary>Templates a palette should offer: available in the map's theater, groups shown instead of their members.</summary>
+        public IReadOnlyList<TemplateType> AvailableTemplates() =>
+            Map == null ? (IReadOnlyList<TemplateType>)Array.Empty<TemplateType>()
+                        : Map.TemplateTypes.Where(t => t.ExistsInTheater && !t.IsGrouped).ToList();
 
         /// <summary>Stamps a template at cell (or one picked icon of it); the Clear template erases, because null cells ARE clear terrain.</summary>
         public void PlaceTemplate(Point cell, TemplateType type, Point? icon = null)

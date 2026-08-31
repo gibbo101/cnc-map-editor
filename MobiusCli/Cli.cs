@@ -15,6 +15,8 @@ namespace MobiusCli
         public string GameDir;
         public List<string> ModDirs = new List<string>();
         public Dictionary<string, string> Options = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        /// <summary>Every option in command-line order, repeats preserved — for commands whose options are an ordered operation list.</summary>
+        public List<KeyValuePair<string, string>> Sequence = new List<KeyValuePair<string, string>>();
 
         public static Invocation Parse(string[] args)
         {
@@ -26,6 +28,7 @@ namespace MobiusCli
                 {
                     string name = a.Substring(2);
                     string value = i + 1 < args.Length && !args[i + 1].StartsWith("--") ? args[++i] : "true";
+                    inv.Sequence.Add(new KeyValuePair<string, string>(name, value));
                     if (name == "game") inv.GameDir = value;
                     else if (name == "mod") inv.ModDirs.Add(value);
                     else inv.Options[name] = value;
@@ -41,7 +44,7 @@ namespace MobiusCli
 
     public static class Cli
     {
-        public const string Usage = "usage: cncmap <info|validate|render|save> <map> [args] [--game <dir>] [--game-type RA|TD] [--mod <dir>]...\n       cncmap mods [--mods-root <dir>] [--no-workshop]";
+        public const string Usage = "usage: cncmap <info|validate|render|save> <map> [args] [--game <dir>] [--game-type RA|TD] [--mod <dir>]...\n       cncmap edit <map> --out <path> [--place <tile>@<x>,<y>] [--erase <x>,<y>] [--place-overlay <name>@<x>,<y>] [--erase-overlay <x>,<y>]...\n       cncmap mods [--mods-root <dir>] [--no-workshop]";
 
         /// <summary>Runs one command; returns the process exit code. Errors go to stderr, results to stdout.</summary>
         public static int Run(string[] args, TextWriter stdout, TextWriter stderr)
@@ -57,6 +60,7 @@ namespace MobiusCli
                     case "mods": return Commands.Mods(inv, stdout);
                     case "render": return Commands.Render(inv, OpenSession(inv), stdout);
                     case "save": return Commands.Save(inv, OpenSession(inv), stdout);
+                    case "edit": return Commands.Edit(inv, OpenSession(inv), stdout);
                     case null: stderr.WriteLine(Usage); return 2;
                     default: stderr.WriteLine("unknown command: " + inv.Command); stderr.WriteLine(Usage); return 2;
                 }

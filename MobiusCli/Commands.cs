@@ -72,6 +72,79 @@ namespace MobiusCli
             return problems == 0 ? 0 : 1;
         }
 
+        /// <summary>
+        /// Applies the command line's place/erase options in order and saves to --out (never the
+        /// input). A template with no art in the map's theater is an error, not a silent no-op.
+        /// </summary>
+        public static int Edit(Invocation inv, EditorSession session, TextWriter o)
+        {
+            string mapPath = MapArg(inv);
+            string outPath = inv.Option("out") ?? throw new ArgumentException("edit needs --out <path>");
+            if (string.Equals(System.IO.Path.GetFullPath(outPath), System.IO.Path.GetFullPath(mapPath), StringComparison.Ordinal))
+            {
+                throw new ArgumentException("--out must differ from the input map; edit never overwrites its input.");
+            }
+            IGamePlugin plugin = session.Load(mapPath, out _);
+            Map map = plugin.Map;
+            MobiusEditor.Utility.DeterministicRandom random = new MobiusEditor.Utility.DeterministicRandom(0x5EED);
+            System.Collections.Generic.Dictionary<int, Template> tUndo = new System.Collections.Generic.Dictionary<int, Template>(), tRedo = new System.Collections.Generic.Dictionary<int, Template>();
+            System.Collections.Generic.Dictionary<int, Overlay> oUndo = new System.Collections.Generic.Dictionary<int, Overlay>(), oRedo = new System.Collections.Generic.Dictionary<int, Overlay>();
+            int ops = 0;
+            foreach (System.Collections.Generic.KeyValuePair<string, string> op in inv.Sequence)
+            {
+                switch (op.Key)
+                {
+                    case "place":
+                        (string tileName, Point tileAt) = ParseNameAt(op.Value);
+                        TemplateType template = map.TemplateTypes.FirstOrDefault(t => string.Equals(t.Name, tileName, StringComparison.OrdinalIgnoreCase))
+                            ?? throw new ArgumentException($"unknown template '{tileName}'");
+                        if (!template.ExistsInTheater) throw new ArgumentException($"template '{tileName}' has no art in theater {map.Theater.Name}");
+                        TemplateEdit.Place(map.TemplateTypes, map.Templates, template, tileAt, null, random, tUndo, tRedo);
+                        ops++;
+                        break;
+                    case "erase":
+                        TemplateEdit.Erase(map.Templates, null, null, ParsePoint(op.Value), tUndo, tRedo);
+                        ops++;
+                        break;
+                    case "place-overlay":
+                        (string overlayName, Point overlayAt) = ParseNameAt(op.Value);
+                        OverlayType overlayType = map.OverlayTypes.FirstOrDefault(t => string.Equals(t.Name, overlayName, StringComparison.OrdinalIgnoreCase))
+                            ?? throw new ArgumentException($"unknown overlay '{overlayName}'");
+                        OverlayEdit.Place(map, overlayType, overlayAt, oUndo, oRedo);
+                        ops++;
+                        break;
+                    case "erase-overlay":
+                        Point at = ParsePoint(op.Value);
+                        if (map.Metrics.GetCell(at, out int cell) && map.Overlay[cell] != null)
+                        {
+                            OverlayEdit.Erase(map, map.Overlay[cell].Type, at, oUndo, oRedo);
+                        }
+                        ops++;
+                        break;
+                }
+            }
+            plugin.Save(outPath, FileType.INI);
+            o.WriteLine($"{ops} operation(s) applied; wrote {outPath}");
+            return 0;
+        }
+
+        private static (string name, Point at) ParseNameAt(string value)
+        {
+            int split = value.LastIndexOf('@');
+            if (split <= 0) throw new ArgumentException($"expected <name>@<x>,<y>, got '{value}'");
+            return (value.Substring(0, split), ParsePoint(value.Substring(split + 1)));
+        }
+
+        private static Point ParsePoint(string value)
+        {
+            string[] parts = value.Split(',');
+            if (parts.Length != 2 || !int.TryParse(parts[0], out int x) || !int.TryParse(parts[1], out int y))
+            {
+                throw new ArgumentException($"expected <x>,<y>, got '{value}'");
+            }
+            return new Point(x, y);
+        }
+
         /// <summary>Distinct mods that supplied the types the map actually places; empty = vanilla-safe.</summary>
         private static List<string> RequiredMods(Map map) =>
             map.Templates.Select(t => t.Value?.Type?.ModSource)

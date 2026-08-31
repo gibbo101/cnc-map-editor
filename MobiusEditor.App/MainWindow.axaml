@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:model="using:MobiusEditor.Model"
         x:Class="MobiusEditor.App.MainWindow"
         Title="C&amp;C Map Editor" Width="1280" Height="800">
   <DockPanel>
@@ -11,9 +12,22 @@
       <TextBlock Name="ZoomLabel" VerticalAlignment="Center" Text="25%" />
       <Button Name="ZoomInButton" Content="+" IsEnabled="False" />
       <Separator Width="12" />
+      <Button Name="UndoButton" Content="Undo" IsEnabled="False" />
+      <Button Name="RedoButton" Content="Redo" IsEnabled="False" />
+      <Separator Width="12" />
       <TextBlock Name="TitleLabel" VerticalAlignment="Center" Text="No map" FontWeight="Bold" />
     </StackPanel>
     <TextBlock DockPanel.Dock="Bottom" Name="StatusLabel" Margin="6,3" Text="Open a map to begin." />
+    <DockPanel DockPanel.Dock="Left" Width="180">
+      <TextBlock DockPanel.Dock="Top" Margin="6,3" Text="Terrain" FontWeight="Bold" />
+      <ListBox Name="TemplatePalette">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="model:TemplateType">
+            <TextBlock Text="{Binding Name}" />
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </DockPanel>
     <ScrollViewer Name="Scroller" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Background="#202020">
       <Image Name="MapImage" Stretch="None" HorizontalAlignment="Left" VerticalAlignment="Top" />
     </ScrollViewer>

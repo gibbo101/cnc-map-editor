@@ -20,6 +20,12 @@ namespace MobiusEditor.App
     {
         private EditorSession session;
         private MapDocument document;
+        private string paletteForPath;
+        private System.Drawing.Point? lastPaintCell;
+        private bool painting, erasing;
+
+        /// <summary>The open document; the window is a thin skin over it (tests reach through here).</summary>
+        public MapDocument Document => document;
 
         public MainWindow() : this(Array.Empty<string>()) { }
 
@@ -30,6 +36,10 @@ namespace MobiusEditor.App
             SaveAsButton.Click += async (s, e) => await SaveAsAsync();
             ZoomInButton.Click += (s, e) => Zoom(2.0);
             ZoomOutButton.Click += (s, e) => Zoom(0.5);
+            UndoButton.Click += (s, e) => document?.Undo();
+            RedoButton.Click += (s, e) => document?.Redo();
+            MapImage.PointerPressed += OnPointerPressed;
+            MapImage.PointerReleased += OnPointerReleased;
             MapImage.PointerMoved += OnPointerMoved;
             MapImage.PointerWheelChanged += OnWheel;
             Opened += (s, e) => StartSession(args);
@@ -99,12 +109,76 @@ namespace MobiusEditor.App
             e.Handled = true;
         }
 
+        private MobiusEditor.Model.TemplateType SelectedTemplate => TemplatePalette.SelectedItem as MobiusEditor.Model.TemplateType;
+
+        private System.Drawing.Point? CellUnder(PointerEventArgs e)
+        {
+            Point p = e.GetPosition(MapImage);
+            return document.CellAt((int)p.X, (int)p.Y);
+        }
+
+        private void OnPointerPressed(object sender, PointerPressedEventArgs e)
+        {
+            if (document == null || !document.IsOpen) return;
+            System.Drawing.Point? cell = CellUnder(e);
+            if (cell == null) return;
+            PointerPointProperties props = e.GetCurrentPoint(MapImage).Properties;
+            if (props.IsLeftButtonPressed && SelectedTemplate != null)
+            {
+                painting = true;
+                document.BeginStroke();
+                Paint(cell.Value);
+            }
+            else if (props.IsRightButtonPressed)
+            {
+                erasing = true;
+                document.BeginStroke();
+                EraseAt(cell.Value);
+            }
+        }
+
+        private void OnPointerReleased(object sender, PointerReleasedEventArgs e)
+        {
+            if (!painting && !erasing) return;
+            painting = erasing = false;
+            lastPaintCell = null;
+            document.EndStroke();
+        }
+
         private void OnPointerMoved(object sender, PointerEventArgs e)
         {
             if (document == null || !document.IsOpen) return;
-            Point p = e.GetPosition(MapImage);
-            System.Drawing.Point? cell = document.CellAt((int)p.X, (int)p.Y);
+            System.Drawing.Point? cell = CellUnder(e);
+            if (cell != null && cell != lastPaintCell)
+            {
+                if (painting) Paint(cell.Value);
+                else if (erasing) EraseAt(cell.Value);
+            }
             StatusLabel.Text = cell == null ? "" : document.Describe(cell.Value);
+        }
+
+        private void Paint(System.Drawing.Point cell)
+        {
+            document.PlaceTemplate(cell, SelectedTemplate);
+            lastPaintCell = cell;
+        }
+
+        /// <summary>Right-drag erases the selected template's footprint per cell, like the fork's tool.</summary>
+        private void EraseAt(System.Drawing.Point cell)
+        {
+            document.EraseTemplate(cell, SelectedTemplate);
+            lastPaintCell = cell;
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            if (document != null && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+            {
+                if (e.Key == Key.Z && e.KeyModifiers.HasFlag(KeyModifiers.Shift)) { document.Redo(); e.Handled = true; return; }
+                if (e.Key == Key.Z) { document.Undo(); e.Handled = true; return; }
+                if (e.Key == Key.Y) { document.Redo(); e.Handled = true; return; }
+            }
+            base.OnKeyDown(e);
         }
 
         private void Refresh()
@@ -114,6 +188,14 @@ namespace MobiusEditor.App
             Title = document.Title + " — C&C Map Editor";
             ZoomLabel.Text = (document.Scale * 100).ToString("0.#") + "%";
             SaveAsButton.IsEnabled = ZoomInButton.IsEnabled = ZoomOutButton.IsEnabled = true;
+            UndoButton.IsEnabled = document.CanUndo;
+            RedoButton.IsEnabled = document.CanRedo;
+            // Rebuild the palette only when a different map is open, or per-op refreshes would drop the selection.
+            if (paletteForPath != document.Path)
+            {
+                TemplatePalette.ItemsSource = document.AvailableTemplates();
+                paletteForPath = document.Path;
+            }
             using (System.Drawing.Bitmap rendered = document.Render())
             {
                 MapImage.Source = ToAvalonia(rendered);

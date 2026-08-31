@@ -310,8 +310,15 @@ would only tempt the native editor to slip. Not part of the plan.
    assignment). `MapDocument` gains PlaceTemplate/EraseTemplate/PlaceOverlay/EraseOverlay with
    per-stroke undo/redo over the already-ported `UndoRedoList` (BeginStroke/EndStroke batches
    a drag into one step). Invariant pinned: edits + undo leave a save byte-identical.
-   Next: `cncmap edit` mutate commands over the same ops, the first GUI brush (click-to-paint
-   on the canvas), docked tool panels, and the trigger editor with mission-pattern templates.
+   **`cncmap edit` SHIPPED** (ordered `--place <tile>@<x>,<y>` / `--erase` / `--place-overlay`
+   / `--erase-overlay` ops, never overwrites its input, theater-unavailable template = error
+   not silent no-op) and the **first GUI brush SHIPPED**: theater-filtered template palette
+   (docked left), left-click/drag paints with stroke batching, right-click erases the
+   footprint, Ctrl+Z/Ctrl+Y + toolbar Undo/Redo — proven by headless pointer/keyboard tests
+   (`PaintingTests`), still never launched on a desktop. Known perf debt: every op re-renders
+   the whole map bitmap; fine at 128x128, wants dirty-cell rendering before bigger brushes.
+   Next: overlay/wall/resource brushes in the GUI (ops exist headlessly), docked tool panels,
+   and the trigger editor with mission-pattern templates.
 
 Open shim gaps to close as they are hit: `RotateFlip` rotations, sub-byte indexed writes,
 text metrics are approximate (annotation layers only), `Region.Exclude` on infinite regions.
