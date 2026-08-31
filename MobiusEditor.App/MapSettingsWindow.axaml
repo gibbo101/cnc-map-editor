@@ -2,7 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="MobiusEditor.App.MapSettingsWindow"
         WindowStartupLocation="CenterOwner"
-        Title="Map settings" Width="420" Height="520">
+        Title="Map settings" Width="420" SizeToContent="Height">
   <DockPanel Margin="6">
     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6" Margin="0,6,0,0">
       <Button Name="OkButton" Content="OK" MinWidth="80" />
