@@ -57,6 +57,7 @@ namespace MobiusCore.Tests
             EditorSession host = EditorHost.Shared;
             IGamePlugin plugin = host.Load(mapPath, out string[] errors);
             output.WriteLine("load errors: " + errors.Length);
+            foreach (string error in errors) output.WriteLine("  " + error);
             string outPath = TestPaths.Output(Path.Combine("saves", mapName));
             Directory.CreateDirectory(Path.GetDirectoryName(outPath));
             plugin.Save(outPath, FileType.INI);

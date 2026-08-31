@@ -25,6 +25,8 @@ namespace MobiusEditor.Headless
         public MegafileManager Archives { get; }
         public GameInfo GameInfo { get; }
         private readonly Dictionary<TheaterType, TilesetManager> tilesets = new Dictionary<TheaterType, TilesetManager>();
+        private readonly TeamColorManager teamColors;
+        private readonly GameTextManager gameText;
 
         public EditorSession(string gameDir, IEnumerable<string> modDirs) : this(gameDir, GameType.RedAlert, modDirs) { }
 
@@ -65,8 +67,8 @@ namespace MobiusEditor.Headless
             foreach (GameInfo gi in infos.Where(g => g != null)) gi.InitClassicFiles(Archives.ClassicFileManager, loadErrors, fileLoadErrors, true);
             Globals.TheArchiveManager = Archives;
             Globals.TheShapeCacheManager = new ShapeCacheManager();
-            Globals.TheTeamColorManager = new TeamColorManager(Archives);
-            Globals.TheGameTextManager = new GameTextManager(Archives, String.Format(Globals.GameTextFilenameFormat, "EN-US"));
+            Globals.TheTeamColorManager = teamColors = new TeamColorManager(Archives);
+            Globals.TheGameTextManager = gameText = new GameTextManager(Archives, String.Format(Globals.GameTextFilenameFormat, "EN-US"));
         }
 
         /// <summary>The theater a map file declares, read before the plugin exists because the managers must be pointed at it first.</summary>
@@ -96,6 +98,12 @@ namespace MobiusEditor.Headless
         {
             if (!File.Exists(mapPath)) throw new FileNotFoundException("Map not found: " + mapPath, mapPath);
             TheaterType theater = PeekTheater(mapPath);
+            // The loading session owns the process globals: theater probes (template tiles,
+            // smudge availability) go through Globals.TheArchiveManager, which a session for
+            // the other game may have claimed since this session's ctor ran.
+            Globals.TheArchiveManager = Archives;
+            Globals.TheTeamColorManager = teamColors;
+            Globals.TheGameTextManager = gameText;
             Archives.Reset(GameType, theater);
             if (!tilesets.TryGetValue(theater, out TilesetManager manager))
             {
