@@ -382,10 +382,37 @@ a brush shows a footprint-sized ghost of the selected type snapped to the hovere
 plain highlight box for cell-trigger/waypoint brushes). Palette thumbnails verified by
 Deck screenshot. Deck deploy current as of 8d2cd83.
 
+**LIVE FEEDBACK ROUNDS 2-4 (2026-08-31 late evening, Luke testing on desktop via
+editor.sh — commits bcf804d, 38ba086; crash fix 071dbae):**
+- 100% zoom CRASHED the Deck (SIGABRT in journal: 16384² = 1 GB bitmap) → **viewport
+  rendering** past a 4096² surface budget: `MapDocument.RenderBlock(cellBlock)` renders
+  only the cells around the viewport (pixel-identical to the full render's crop within 1
+  channel unit of Skia transform rounding — tolerance-1 in the test), positioned inside a
+  full-size panel so scrollbars span the map; pointer handling moved to the panel
+  (map-absolute coords in both modes).
+- Interaction redesign per Luke: RIGHT CLICK DESELECTS (brush, eraser, selection);
+  erase = toolbar **Eraser toggle** + left click/drag (brush picks the category, active
+  tab when no brush; red ghost box). Wheel zooms without modifier, pivoting on the
+  viewport center; WASD/arrows pan (unless an input control has focus); grid splitters
+  resize both sidebars; playable-bounds cyan indicator (map edge ≠ boundary); New… takes
+  a playable size (centered on the fixed grid) and shows progress IN the dialog (the main
+  overlay sat hidden exactly behind it); dialogs open CenterOwner.
+- Palettes group with headers: Allies/Soviets (vanilla owner houses), GDI (mod)/Nod (mod)
+  from TF's GoodGuy/BadGuy manifest owners, ts- name prefix → TS GDI (mod); Civilian,
+  Misc; Resources leads Overlay (ore/gems/tib) and Terrain (ore mine, blossom trees).
+  Headers unselectable.
+- Bugs from screenshots: raw TEXT_ overlay labels (EditorSession never wired the fork's
+  `AddMissing` text patches; RA also needed TEXT_OVERLAY_TIBERIUM — vanilla RA has no
+  Tiberium, TF does) and white-square placements (palette offered overlays with no
+  theater art — now `ExistsInTheater`-filtered). NOTE: already-placed white tib01 squares
+  on saved maps still render white (the map really holds them); eraser with a resource
+  brush removes them.
+
 Next candidates (no committed order):
-- More UI feedback from Luke as he uses it (this round: palettes+ghost; expect more).
+- More UI feedback from Luke as he uses it; DECK REDEPLOY PENDING (Deck offline at
+  38ba086 — a monitor watches for it; desktop editor.sh always builds fresh).
 - Ghost polish: live semi-transparent RENDER preview (fork-style) instead of the
-  thumbnail stretch; erase-mode ghost styling.
+  thumbnail stretch.
 - TD mission patterns for `expand-mission` — agreed LOW priority (Luke, 2026-08-31:
   feature-completeness only; defer until a real TD authoring need appears).
 Full oracle tier re-verified green mid-session (363/363, 14m50s) after the IGamePlugin
