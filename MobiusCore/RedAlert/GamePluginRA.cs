@@ -5808,6 +5808,18 @@ namespace MobiusEditor.RedAlert
             return null;
         }
 
+        public TriggerArgType GetEventArgType(string eventType) => TriggerArgTypes.ForEvent(eventType);
+
+        public TriggerArgType GetActionArgType(string actionType) => TriggerArgTypes.ForAction(actionType);
+
+        public List<(long Value, string Label)> GetArgOptions(TriggerArgType argType) => TriggerArgTypes.Options(Map, argType);
+
+        public (long Min, long Max)? GetArgRange(TriggerArgType argType) => TriggerArgTypes.Range(argType);
+
+        public void CoerceEventArg(TriggerEvent evt) => TriggerArgTypes.CoerceEvent(Map, evt);
+
+        public void CoerceActionArg(TriggerAction act, IEnumerable<Trigger> currentTriggers) => TriggerArgTypes.CoerceAction(Map, act, currentTriggers);
+
         public ITeamColor[] GetFlagColors()
         {
             string[] flagColorNames = new string[] {

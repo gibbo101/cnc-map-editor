@@ -163,6 +163,26 @@ namespace MobiusEditor.Interface
         /// <returns>Information about the selected event.</returns>
         string TriggerActionInfo(List<Trigger> currentTriggers, string actionName);
 
+        /// <summary>The kind of parameter the given trigger event type carries; None for unknown types.</summary>
+        TriggerArgType GetEventArgType(string eventType);
+
+        /// <summary>The kind of parameter the given trigger action type carries; None for unknown types.</summary>
+        TriggerArgType GetActionArgType(string actionType);
+
+        /// <summary>Dropdown options for a Data-carried arg type, built from current map state.
+        /// Null when the type has no option list (no argument, free numbers, and the name-carried
+        /// team/trigger references, whose candidates are the lists being edited).</summary>
+        List<(long Value, string Label)> GetArgOptions(TriggerArgType argType);
+
+        /// <summary>Inclusive spinner range for the free-numeric arg types; null for the rest.</summary>
+        (long Min, long Max)? GetArgRange(TriggerArgType argType);
+
+        /// <summary>Coerces the event's parameter fields into validity for its event type, as the editing dialog does.</summary>
+        void CoerceEventArg(TriggerEvent evt);
+
+        /// <summary>Coerces the action's parameter fields; trigger references are checked against the given working list.</summary>
+        void CoerceActionArg(TriggerAction act, IEnumerable<Trigger> currentTriggers);
+
         /// <summary>Re-initialises the flag colors for this game.</summary>
         /// <returns>The team colors</returns>
         ITeamColor[] GetFlagColors();

@@ -4678,6 +4678,22 @@ namespace MobiusEditor.TiberianDawn
             return String.Join("\n", info.ToArray());
         }
 
+        public TriggerArgType GetEventArgType(string eventType) => TriggerArgTypes.ForEvent(eventType);
+
+        /// <summary>Tiberian Dawn trigger actions carry no parameter.</summary>
+        public TriggerArgType GetActionArgType(string actionType) => TriggerArgType.None;
+
+        public List<(long Value, string Label)> GetArgOptions(TriggerArgType argType) => TriggerArgTypes.Options(Map, argType);
+
+        public (long Min, long Max)? GetArgRange(TriggerArgType argType) => TriggerArgTypes.Range(argType);
+
+        public void CoerceEventArg(TriggerEvent evt) => TriggerArgTypes.CoerceEvent(Map, evt);
+
+        /// <summary>No-op: no Tiberian Dawn action carries a parameter to coerce.</summary>
+        public void CoerceActionArg(TriggerAction act, IEnumerable<Trigger> currentTriggers)
+        {
+        }
+
         public virtual ITeamColor[] GetFlagColors()
         {
             string[] flagColorNames = new string[] {
