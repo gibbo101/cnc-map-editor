@@ -409,8 +409,8 @@ editor.sh — commits bcf804d, 38ba086; crash fix 071dbae):**
   brush removes them.
 
 Next candidates (no committed order):
-- More UI feedback from Luke as he uses it; DECK REDEPLOY PENDING (Deck offline at
-  38ba086 — a monitor watches for it; desktop editor.sh always builds fresh).
+- More UI feedback from Luke as he uses it (Deck deploy current as of 9603676:
+  grouping + label/theater fixes included; desktop editor.sh always builds fresh).
 - Ghost polish: live semi-transparent RENDER preview (fork-style) instead of the
   thumbnail stretch.
 - TD mission patterns for `expand-mission` — agreed LOW priority (Luke, 2026-08-31:
