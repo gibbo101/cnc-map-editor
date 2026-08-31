@@ -99,6 +99,34 @@ namespace MobiusEditor.App.Tests
         }
 
         [AvaloniaFact]
+        public void UnitAndInfantryBrushesUseTheToolbarHouse()
+        {
+            MainWindow window = Open();
+            ComboBox house = window.FindControl<ComboBox>("HouseCombo");
+            house.SelectedItem = house.Items.Cast<string>().First(h => h == "USSR");
+            Dispatcher.UIThread.RunJobs();
+
+            ListBox units = window.FindControl<ListBox>("UnitPalette");
+            units.SelectedItem = units.Items.Cast<UnitType>().First(t => t.IsGroundUnit);
+            Dispatcher.UIThread.RunJobs();
+            Click(window, CellCenter(window, 16, 16), MouseButton.Left);
+            Unit unit = Assert.IsType<Unit>(window.Document.Map.Technos[new System.Drawing.Point(16, 16)]);
+            Assert.Equal("USSR", unit.House.Name);
+            Click(window, CellCenter(window, 16, 16), MouseButton.Right);
+            Assert.Null(window.Document.Map.Technos[new System.Drawing.Point(16, 16)]);
+
+            ListBox infantry = window.FindControl<ListBox>("InfantryPalette");
+            infantry.SelectedItem = infantry.Items.Cast<InfantryType>().First();
+            Dispatcher.UIThread.RunJobs();
+            Assert.Null(units.SelectedItem);
+            Click(window, CellCenter(window, 17, 16), MouseButton.Left);
+            InfantryGroup group = Assert.IsType<InfantryGroup>(window.Document.Map.Technos[new System.Drawing.Point(17, 16)]);
+            Assert.Equal("USSR", group.Infantry.Single(i => i != null).House.Name);
+            Click(window, CellCenter(window, 17, 16), MouseButton.Right);
+            Assert.Null(window.Document.Map.Technos[new System.Drawing.Point(17, 16)]);
+        }
+
+        [AvaloniaFact]
         public void WaypointBrushPlacesAndErasesTheFlag()
         {
             MainWindow window = Open();

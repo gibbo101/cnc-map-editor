@@ -135,6 +135,142 @@ namespace MobiusEditor.Shell
             AfterOperation();
         }
 
+        private HouseType placementHouse;
+        /// <summary>The house newly placed units, infantry and buildings belong to; defaults to the map's first house.</summary>
+        public HouseType PlacementHouse
+        {
+            get => placementHouse ?? Map?.HouseTypes.First();
+            set => placementHouse = value;
+        }
+
+        public IReadOnlyList<UnitType> AvailableUnits() =>
+            Map == null ? (IReadOnlyList<UnitType>)Array.Empty<UnitType>() : Map.UnitTypes.ToList();
+
+        public IReadOnlyList<InfantryType> AvailableInfantry() =>
+            Map == null ? (IReadOnlyList<InfantryType>)Array.Empty<InfantryType>() : Map.InfantryTypes.ToList();
+
+        /// <summary>Places a unit with the fork's defaults: placement house, full strength, north facing, the type's default mission. One undo step; null when refused.</summary>
+        public Unit PlaceUnit(Point location, UnitType type)
+        {
+            RequireOpen();
+            if (type == null) return null;
+            Unit unit = new Unit
+            {
+                Type = type,
+                House = PlacementHouse,
+                Strength = 256,
+                Direction = Map.UnitDirectionTypes.First(d => d.Facing == FacingType.North),
+                Mission = Map.GetDefaultMission(type),
+            };
+            if (!Map.Technos.Add(location, unit)) return null;
+            TrackOccupier(unit, location, added: true);
+            return unit;
+        }
+
+        /// <summary>Removes the unit occupying the cell. One undo step.</summary>
+        public void EraseUnitAt(Point location)
+        {
+            RequireOpen();
+            if (!(Map.Technos[location] is Unit unit)) return;
+            Point actual = Map.Technos[unit].Value;
+            Map.Technos.Remove(unit);
+            TrackOccupier(unit, actual, added: false);
+        }
+
+        /// <summary>
+        /// Places one infantryman into the cell's first free stop; the shared InfantryGroup
+        /// appears with the first man. One undo step per man; null when the cell is full or
+        /// held by something else.
+        /// </summary>
+        public Infantry PlaceInfantry(Point location, InfantryType type)
+        {
+            RequireOpen();
+            if (type == null || !Map.Metrics.GetCell(location, out int cell)) return null;
+            ICellOccupier techno = Map.Technos[cell];
+            InfantryGroup group;
+            if (techno == null)
+            {
+                group = new InfantryGroup();
+                if (!Map.Technos.Add(location, group)) return null;
+            }
+            else if (techno is InfantryGroup existing)
+            {
+                group = existing;
+            }
+            else
+            {
+                return null;
+            }
+            int stop = Array.FindIndex(group.Infantry, i => i == null);
+            if (stop < 0)
+            {
+                return null;
+            }
+            Infantry infantry = new Infantry(group)
+            {
+                Type = type,
+                House = PlacementHouse,
+                Strength = 256,
+                Direction = Map.UnitDirectionTypes.First(d => d.Facing == FacingType.North),
+                Mission = Map.GetDefaultMission(type),
+            };
+            group.Infantry[stop] = infantry;
+            TrackInfantry(location, cell, stop, infantry, added: true);
+            return infantry;
+        }
+
+        /// <summary>Removes one infantryman (the first occupied stop); the group leaves with the last man. One undo step.</summary>
+        public void EraseInfantryAt(Point location)
+        {
+            RequireOpen();
+            if (!Map.Metrics.GetCell(location, out int cell)) return;
+            if (!(Map.Technos[cell] is InfantryGroup group)) return;
+            int stop = Array.FindIndex(group.Infantry, i => i != null);
+            if (stop < 0) return;
+            Infantry infantry = group.Infantry[stop];
+            group.Infantry[stop] = null;
+            if (group.Infantry.All(i => i == null))
+            {
+                Map.Technos.Remove(group);
+            }
+            TrackInfantry(location, cell, stop, infantry, added: false);
+        }
+
+        private void TrackInfantry(Point location, int cell, int stop, Infantry infantry, bool added)
+        {
+            Map map = Map;
+            IGamePlugin plugin = Plugin;
+            plugin.Dirty = true;
+            dirtyCells.Add(location);
+            void Put()
+            {
+                if (!(map.Technos[cell] is InfantryGroup group))
+                {
+                    group = new InfantryGroup();
+                    map.Technos.Add(location, group);
+                }
+                group.Infantry[stop] = infantry;
+                infantry.InfantryGroup = group;
+                plugin.Dirty = true;
+                dirtyCells.Add(location);
+            }
+            void Take()
+            {
+                if (map.Technos[cell] is InfantryGroup group)
+                {
+                    group.Infantry[stop] = null;
+                    if (group.Infantry.All(i => i == null))
+                    {
+                        map.Technos.Remove(group);
+                    }
+                }
+                plugin.Dirty = true;
+                dirtyCells.Add(location);
+            }
+            undoRedo.Track(_ => { if (added) Take(); else Put(); }, _ => { if (added) Put(); else Take(); }, this);
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
         /// <summary>Terrain objects (trees, rocks) with art in the map's theater.</summary>
         public IReadOnlyList<TerrainType> AvailableTerrain() =>
             Map == null ? (IReadOnlyList<TerrainType>)Array.Empty<TerrainType>()

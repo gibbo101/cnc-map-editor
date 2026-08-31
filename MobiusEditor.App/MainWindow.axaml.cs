@@ -45,6 +45,15 @@ namespace MobiusEditor.App
             TemplatePalette.SelectionChanged += (s, e) => { if (TemplatePalette.SelectedItem != null) ClearOtherBrushes(TemplatePalette); };
             TerrainPalette.SelectionChanged += (s, e) => { if (TerrainPalette.SelectedItem != null) ClearOtherBrushes(TerrainPalette); };
             OverlayPalette.SelectionChanged += (s, e) => { if (OverlayPalette.SelectedItem != null) ClearOtherBrushes(OverlayPalette); };
+            UnitPalette.SelectionChanged += (s, e) => { if (UnitPalette.SelectedItem != null) ClearOtherBrushes(UnitPalette); };
+            InfantryPalette.SelectionChanged += (s, e) => { if (InfantryPalette.SelectedItem != null) ClearOtherBrushes(InfantryPalette); };
+            HouseCombo.SelectionChanged += (s, e) =>
+            {
+                if (document?.Map != null && HouseCombo.SelectedItem is string houseName)
+                {
+                    document.PlacementHouse = document.Map.HouseTypes.First(h => h.Name == houseName);
+                }
+            };
             CellTriggerPalette.SelectionChanged += (s, e) => { if (CellTriggerPalette.SelectedItem != null) ClearOtherBrushes(CellTriggerPalette); UpdateIndicatorLayers(); };
             WaypointPalette.SelectionChanged += (s, e) => { if (WaypointPalette.SelectedItem != null) ClearOtherBrushes(WaypointPalette); UpdateIndicatorLayers(); };
             MapImage.PointerPressed += OnPointerPressed;
@@ -141,10 +150,12 @@ namespace MobiusEditor.App
         private string SelectedCellTrigger => CellTriggerPalette.SelectedItem as string;
         private int SelectedWaypoint => WaypointPalette.SelectedIndex;
         private MobiusEditor.Model.TerrainType SelectedTerrain => TerrainPalette.SelectedItem as MobiusEditor.Model.TerrainType;
+        private MobiusEditor.Model.UnitType SelectedUnit => UnitPalette.SelectedItem as MobiusEditor.Model.UnitType;
+        private MobiusEditor.Model.InfantryType SelectedInfantry => InfantryPalette.SelectedItem as MobiusEditor.Model.InfantryType;
 
         private void ClearOtherBrushes(ListBox active)
         {
-            foreach (ListBox palette in new[] { TemplatePalette, TerrainPalette, OverlayPalette, CellTriggerPalette, WaypointPalette })
+            foreach (ListBox palette in new[] { TemplatePalette, TerrainPalette, OverlayPalette, UnitPalette, InfantryPalette, CellTriggerPalette, WaypointPalette })
             {
                 if (!ReferenceEquals(palette, active)) palette.SelectedItem = null;
             }
@@ -176,7 +187,8 @@ namespace MobiusEditor.App
             System.Drawing.Point? cell = CellUnder(e);
             if (cell == null) return;
             PointerPointProperties props = e.GetCurrentPoint(MapImage).Properties;
-            if (props.IsLeftButtonPressed && SelectedTemplate == null && SelectedOverlay == null && SelectedCellTrigger == null && SelectedWaypoint < 0 && SelectedTerrain == null) return;
+            if (props.IsLeftButtonPressed && SelectedTemplate == null && SelectedOverlay == null && SelectedCellTrigger == null && SelectedWaypoint < 0
+                && SelectedTerrain == null && SelectedUnit == null && SelectedInfantry == null) return;
             if (props.IsLeftButtonPressed)
             {
                 painting = true;
@@ -215,17 +227,21 @@ namespace MobiusEditor.App
         {
             if (SelectedOverlay != null) document.PlaceOverlay(cell, SelectedOverlay);
             else if (SelectedTerrain != null) document.PlaceTerrain(cell, SelectedTerrain);
+            else if (SelectedUnit != null) document.PlaceUnit(cell, SelectedUnit);
+            else if (SelectedInfantry != null) document.PlaceInfantry(cell, SelectedInfantry);
             else if (SelectedCellTrigger != null) document.PlaceCellTrigger(cell, SelectedCellTrigger);
             else if (SelectedWaypoint >= 0) document.PlaceWaypoint(SelectedWaypoint, cell);
             else document.PlaceTemplate(cell, SelectedTemplate);
             lastPaintCell = cell;
         }
 
-        /// <summary>Right-drag erases what the active brush would paint: the overlay's category, the terrain object, the template's footprint, the cell trigger, or the waypoint flag on the cell.</summary>
+        /// <summary>Right-drag erases what the active brush would paint on that cell.</summary>
         private void EraseAt(System.Drawing.Point cell)
         {
             if (SelectedOverlay != null) document.EraseOverlay(cell, SelectedOverlay);
             else if (SelectedTerrain != null) document.EraseTerrainAt(cell);
+            else if (SelectedUnit != null) document.EraseUnitAt(cell);
+            else if (SelectedInfantry != null) document.EraseInfantryAt(cell);
             else if (SelectedCellTrigger != null) document.EraseCellTrigger(cell);
             else if (SelectedWaypoint >= 0) document.EraseWaypointAt(cell);
             else document.EraseTemplate(cell, SelectedTemplate);
@@ -259,7 +275,12 @@ namespace MobiusEditor.App
                 TemplatePalette.ItemsSource = document.AvailableTemplates();
                 TerrainPalette.ItemsSource = document.AvailableTerrain();
                 OverlayPalette.ItemsSource = document.AvailableOverlays();
+                UnitPalette.ItemsSource = document.AvailableUnits();
+                InfantryPalette.ItemsSource = document.AvailableInfantry();
                 WaypointPalette.ItemsSource = document.Map.Waypoints.Select((w, i) => i + ": " + w.Name).ToList();
+                HouseCombo.ItemsSource = document.Map.HouseTypes.Select(h => h.Name).ToList();
+                HouseCombo.SelectedIndex = 0;
+                HouseCombo.IsEnabled = true;
                 paletteForPath = document.Path;
             }
             // The eligible cell triggers follow the trigger list; rebuild only when it actually changed.

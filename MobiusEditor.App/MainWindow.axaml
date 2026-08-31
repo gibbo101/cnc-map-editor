@@ -18,6 +18,9 @@
       <Button Name="TriggersButton" Content="Triggers…" IsEnabled="False" />
       <Button Name="TeamsButton" Content="Teams…" IsEnabled="False" />
       <Separator Width="12" />
+      <TextBlock VerticalAlignment="Center" Text="House:" />
+      <ComboBox Name="HouseCombo" MinWidth="110" IsEnabled="False" />
+      <Separator Width="12" />
       <TextBlock Name="TitleLabel" VerticalAlignment="Center" Text="No map" FontWeight="Bold" />
     </StackPanel>
     <TextBlock DockPanel.Dock="Bottom" Name="StatusLabel" Margin="6,3" Text="Open a map to begin." />
@@ -44,6 +47,24 @@
         <ListBox Name="OverlayPalette">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="model:OverlayType">
+              <TextBlock Text="{Binding Name}" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </TabItem>
+      <TabItem Header="Units">
+        <ListBox Name="UnitPalette">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="model:UnitType">
+              <TextBlock Text="{Binding Name}" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </TabItem>
+      <TabItem Header="Infantry">
+        <ListBox Name="InfantryPalette">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="model:InfantryType">
               <TextBlock Text="{Binding Name}" />
             </DataTemplate>
           </ListBox.ItemTemplate>
