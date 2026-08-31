@@ -32,7 +32,9 @@ namespace MobiusEditor.App
                 // not freeze the window.
                 OkButton.IsEnabled = CancelButton.IsEnabled = TheaterList.IsEnabled = false;
                 OkButton.Content = "Creating " + theater + " map…";
+                (Owner as MainWindow)?.ShowBusy("Creating " + theater + " map…");
                 await System.Threading.Tasks.Task.Run(() => document.NewMap(theater));
+                (Owner as MainWindow)?.HideBusy();
                 Close();
             };
             CancelButton.Click += (s, e) => Close();

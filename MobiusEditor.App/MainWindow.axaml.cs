@@ -68,11 +68,14 @@ namespace MobiusEditor.App
             CellTriggerPalette.SelectionChanged += (s, e) => { if (CellTriggerPalette.SelectedItem != null) ClearOtherBrushes(CellTriggerPalette); UpdateIndicatorLayers(); };
             WaypointPalette.SelectionChanged += (s, e) => { if (WaypointPalette.SelectedItem != null) ClearOtherBrushes(WaypointPalette); UpdateIndicatorLayers(); };
             WireProperties();
-            MapImage.PointerPressed += OnPointerPressed;
-            MapImage.PointerReleased += OnPointerReleased;
-            MapImage.PointerMoved += OnPointerMoved;
-            MapImage.PointerWheelChanged += OnWheel;
-            MapImage.PointerExited += (s, e) => GhostBorder.IsVisible = false;
+            // Pointer handling lives on the panel, whose coordinates are map-absolute in both
+            // render modes (the image itself shifts around inside it in viewport mode).
+            MapPanel.PointerPressed += OnPointerPressed;
+            MapPanel.PointerReleased += OnPointerReleased;
+            MapPanel.PointerMoved += OnPointerMoved;
+            MapPanel.PointerWheelChanged += OnWheel;
+            MapPanel.PointerExited += (s, e) => GhostBorder.IsVisible = false;
+            Scroller.ScrollChanged += (s, e) => { if (viewportMode && document != null && document.IsOpen) PresentViewportIfMoved(); };
             Opened += (s, e) => StartSession(args);
         }
 
@@ -95,6 +98,7 @@ namespace MobiusEditor.App
                 game = game ?? SteamAssist.TryGetSteamGameFolder(MobiusEditor.Program.RemasterSteamId, "TiberianDawn.dll", "RedAlert.dll");
                 if (game == null) { StatusLabel.Text = "Game install not found; start with --game <dir>."; return; }
                 StatusLabel.Text = "Loading game data…";
+                ShowBusy("Loading game data…");
                 session = await System.Threading.Tasks.Task.Run(() => new EditorSession(game, mods));
                 document = new MapDocument(session);
                 // Edits fire Changed on the UI thread; background map opens fire it from the loader thread.
@@ -107,19 +111,22 @@ namespace MobiusEditor.App
                 StatusLabel.Text = "Game: " + game + (mods.Count == 0 ? "" : "; mods: " + string.Join(", ", mods.Select(Path.GetFileName)));
                 string map = args.FirstOrDefault(a => !a.StartsWith("--") && File.Exists(a));
                 if (map != null) await OpenInBackground(map);
+                else HideBusy();
             }
-            catch (Exception ex) { StatusLabel.Text = "Failed to start: " + ex.Message; }
+            catch (Exception ex) { StatusLabel.Text = "Failed to start: " + ex.Message; HideBusy(); }
         }
 
         /// <summary>Loads a map off the UI thread; the theater switch alone takes seconds on first use.</summary>
         private async System.Threading.Tasks.Task OpenInBackground(string path)
         {
             StatusLabel.Text = "Opening " + Path.GetFileName(path) + "…";
+            ShowBusy("Opening " + Path.GetFileName(path) + "…");
             try
             {
                 await System.Threading.Tasks.Task.Run(() => document.Open(path));
             }
             catch (Exception ex) { StatusLabel.Text = "Open failed: " + ex.Message; }
+            finally { HideBusy(); }
         }
 
         private async System.Threading.Tasks.Task OpenAsync()
@@ -341,11 +348,32 @@ namespace MobiusEditor.App
             return dialog;
         }
 
+        /// <summary>Zooms about the viewport center instead of the map corner.</summary>
         private void Zoom(double factor)
         {
             if (document == null || !document.IsOpen) return;
+            double fx = MapPanel.Width > 0 ? (Scroller.Offset.X + Scroller.Viewport.Width / 2) / MapPanel.Width : 0.5;
+            double fy = MapPanel.Height > 0 ? (Scroller.Offset.Y + Scroller.Viewport.Height / 2) / MapPanel.Height : 0.5;
             document.Scale *= factor;
             Refresh();
+            double nx = fx * MapPanel.Width - Scroller.Viewport.Width / 2;
+            double ny = fy * MapPanel.Height - Scroller.Viewport.Height / 2;
+            // The scroll extent follows the panel size on the next layout pass; set the offset after it.
+            Avalonia.Threading.Dispatcher.UIThread.Post(
+                () => Scroller.Offset = new Vector(Math.Max(0, nx), Math.Max(0, ny)),
+                Avalonia.Threading.DispatcherPriority.Loaded);
+        }
+
+        /// <summary>The busy overlay: an indeterminate spinner over the map area during long loads.</summary>
+        public void ShowBusy(string text)
+        {
+            BusyLabel.Text = text;
+            BusyOverlay.IsVisible = true;
+        }
+
+        public void HideBusy()
+        {
+            BusyOverlay.IsVisible = false;
         }
 
         private void OnWheel(object sender, PointerWheelEventArgs e)
@@ -418,13 +446,13 @@ namespace MobiusEditor.App
 
         private System.Drawing.Point? CellUnder(PointerEventArgs e)
         {
-            Point p = e.GetPosition(MapImage);
+            Point p = e.GetPosition(MapPanel);
             return document.CellAt((int)p.X, (int)p.Y);
         }
 
         private System.Drawing.Point? SubPixelUnder(PointerEventArgs e)
         {
-            Point p = e.GetPosition(MapImage);
+            Point p = e.GetPosition(MapPanel);
             return document.SubPixelAt((int)p.X, (int)p.Y);
         }
 
@@ -604,43 +632,133 @@ namespace MobiusEditor.App
             if (document.LoadNotes.Length > 0) StatusLabel.Text = document.LoadNotes.Length + " load note(s): " + document.LoadNotes[0];
         }
 
+        /// <summary>Above this many pixels the whole-map surface would risk gigabyte bitmaps (a 128-cell map at 100% is 16384², 1 GB — the Deck crash), so the viewport path takes over.</summary>
+        private const long FullSurfacePixelBudget = 4096L * 4096;
+        private bool viewportMode;
+        private System.Drawing.Rectangle viewportBlock;
+
         /// <summary>
-        /// Copies the document's render cache into a reused frame bitmap — only the region
-        /// that actually changed — and invalidates the image. Reallocating and fully copying
-        /// a whole-map bitmap on every operation is what made painting laggy on weak hardware.
+        /// Presents the map: at modest zooms the cached whole-map surface with dirty-region
+        /// copies; past the surface budget, only the block of cells around the viewport is
+        /// rendered and positioned inside the full-size panel, so zooming to 100% costs a
+        /// screenful, not gigabytes.
         /// </summary>
         private void PresentFrame()
         {
-            System.Drawing.Bitmap cache = document.UpdateRenderCache(out System.Drawing.Rectangle dirty);
-            if (frameBitmap == null || frameBitmap.PixelSize.Width != cache.Width || frameBitmap.PixelSize.Height != cache.Height)
+            System.Drawing.Size tile = document.TileSize;
+            double mapPixelWidth = document.Map.Metrics.Width * (double)tile.Width;
+            double mapPixelHeight = document.Map.Metrics.Height * (double)tile.Height;
+            // The panel carries the full map size so the scrollbars are right in both modes.
+            MapPanel.Width = mapPixelWidth;
+            MapPanel.Height = mapPixelHeight;
+            if ((long)mapPixelWidth * (long)mapPixelHeight <= FullSurfacePixelBudget)
             {
-                WriteableBitmap old = frameBitmap;
-                frameBitmap = new WriteableBitmap(new PixelSize(cache.Width, cache.Height), new Vector(96, 96), PixelFormats.Bgra8888, AlphaFormat.Unpremul);
-                MapImage.Source = frameBitmap;
-                old?.Dispose();
+                if (viewportMode)
+                {
+                    viewportMode = false;
+                    viewportBlock = System.Drawing.Rectangle.Empty;
+                    MapImage.Margin = new Thickness(0);
+                }
+                PresentFull();
+            }
+            else
+            {
+                viewportMode = true;
+                PresentViewport();
+            }
+        }
+
+        private void PresentFull()
+        {
+            System.Drawing.Bitmap cache = document.UpdateRenderCache(out System.Drawing.Rectangle dirty);
+            if (EnsureFrame(cache.Width, cache.Height))
+            {
                 dirty = new System.Drawing.Rectangle(0, 0, cache.Width, cache.Height);
             }
             if (dirty.Width <= 0 || dirty.Height <= 0)
             {
                 return;
             }
-            BitmapData data = cache.LockBits(new System.Drawing.Rectangle(0, 0, cache.Width, cache.Height), ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            CopyToFrame(cache, dirty, dirty);
+            MapImage.InvalidateVisual();
+        }
+
+        /// <summary>The block of cells the viewport needs, with a margin so small scrolls stay free.</summary>
+        private System.Drawing.Rectangle NeededCells(int margin)
+        {
+            System.Drawing.Size tile = document.TileSize;
+            int x0 = (int)(Scroller.Offset.X / tile.Width) - margin;
+            int y0 = (int)(Scroller.Offset.Y / tile.Height) - margin;
+            int x1 = (int)((Scroller.Offset.X + Scroller.Viewport.Width) / tile.Width) + margin + 1;
+            int y1 = (int)((Scroller.Offset.Y + Scroller.Viewport.Height) / tile.Height) + margin + 1;
+            System.Drawing.Rectangle cells = System.Drawing.Rectangle.FromLTRB(x0, y0, x1, y1);
+            cells.Intersect(new System.Drawing.Rectangle(0, 0, document.Map.Metrics.Width, document.Map.Metrics.Height));
+            return cells;
+        }
+
+        private void PresentViewport()
+        {
+            viewportBlock = NeededCells(3);
+            RenderViewportBlock();
+        }
+
+        /// <summary>On scroll, re-render only when the viewport leaves the current block.</summary>
+        private void PresentViewportIfMoved()
+        {
+            System.Drawing.Rectangle needed = NeededCells(1);
+            if (!viewportBlock.Contains(needed))
+            {
+                viewportBlock = NeededCells(3);
+                RenderViewportBlock();
+            }
+        }
+
+        private void RenderViewportBlock()
+        {
+            if (viewportBlock.Width <= 0 || viewportBlock.Height <= 0) return;
+            System.Drawing.Size tile = document.TileSize;
+            using (System.Drawing.Bitmap block = document.RenderBlock(viewportBlock))
+            {
+                EnsureFrame(block.Width, block.Height);
+                System.Drawing.Rectangle all = new System.Drawing.Rectangle(0, 0, block.Width, block.Height);
+                CopyToFrame(block, all, all);
+            }
+            MapImage.Margin = new Thickness(viewportBlock.X * tile.Width, viewportBlock.Y * tile.Height, 0, 0);
+            MapImage.InvalidateVisual();
+        }
+
+        /// <summary>Reuses the frame bitmap, recreating on size change; true when recreated.</summary>
+        private bool EnsureFrame(int width, int height)
+        {
+            if (frameBitmap != null && frameBitmap.PixelSize.Width == width && frameBitmap.PixelSize.Height == height)
+            {
+                return false;
+            }
+            WriteableBitmap old = frameBitmap;
+            frameBitmap = new WriteableBitmap(new PixelSize(width, height), new Vector(96, 96), PixelFormats.Bgra8888, AlphaFormat.Unpremul);
+            MapImage.Source = frameBitmap;
+            old?.Dispose();
+            return true;
+        }
+
+        private void CopyToFrame(System.Drawing.Bitmap source, System.Drawing.Rectangle srcRect, System.Drawing.Rectangle dstRect)
+        {
+            BitmapData data = source.LockBits(new System.Drawing.Rectangle(0, 0, source.Width, source.Height), ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
             try
             {
                 using (ILockedFramebuffer fb = frameBitmap.Lock())
                 {
-                    int rowBytes = dirty.Width * 4;
+                    int rowBytes = srcRect.Width * 4;
                     byte[] row = new byte[rowBytes];
-                    for (int y = dirty.Top; y < dirty.Bottom; y++)
+                    for (int y = 0; y < srcRect.Height; y++)
                     {
-                        Marshal.Copy(data.Scan0 + y * data.Stride + dirty.X * 4, row, 0, rowBytes);
-                        Marshal.Copy(row, 0, fb.Address + y * fb.RowBytes + dirty.X * 4, rowBytes);
+                        Marshal.Copy(data.Scan0 + (srcRect.Y + y) * data.Stride + srcRect.X * 4, row, 0, rowBytes);
+                        Marshal.Copy(row, 0, fb.Address + (dstRect.Y + y) * fb.RowBytes + dstRect.X * 4, rowBytes);
                     }
                 }
             }
-            finally { cache.UnlockBits(data); }
+            finally { source.UnlockBits(data); }
             if (!ReferenceEquals(MapImage.Source, frameBitmap)) MapImage.Source = frameBitmap;
-            MapImage.InvalidateVisual();
         }
     }
 }

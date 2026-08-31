@@ -92,15 +92,23 @@
         </StackPanel>
       </StackPanel>
     </ScrollViewer>
-    <ScrollViewer Name="Scroller" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Background="#202020">
-      <Panel HorizontalAlignment="Left" VerticalAlignment="Top">
-        <Image Name="MapImage" Stretch="None" HorizontalAlignment="Left" VerticalAlignment="Top" />
-        <Border Name="GhostBorder" IsHitTestVisible="False" IsVisible="False"
-                BorderBrush="#DDFFDD00" BorderThickness="1" Background="#18FFDD00"
-                HorizontalAlignment="Left" VerticalAlignment="Top">
-          <Image Name="GhostImage" Opacity="0.6" Stretch="Fill" />
-        </Border>
-      </Panel>
-    </ScrollViewer>
+    <Panel>
+      <ScrollViewer Name="Scroller" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Background="#202020">
+        <Panel Name="MapPanel" Background="#202020" HorizontalAlignment="Left" VerticalAlignment="Top">
+          <Image Name="MapImage" Stretch="None" HorizontalAlignment="Left" VerticalAlignment="Top" />
+          <Border Name="GhostBorder" IsHitTestVisible="False" IsVisible="False"
+                  BorderBrush="#DDFFDD00" BorderThickness="1" Background="#18FFDD00"
+                  HorizontalAlignment="Left" VerticalAlignment="Top">
+            <Image Name="GhostImage" Opacity="0.6" Stretch="Fill" />
+          </Border>
+        </Panel>
+      </ScrollViewer>
+      <Border Name="BusyOverlay" IsVisible="False" Background="#60000000">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+          <ProgressBar IsIndeterminate="True" Width="240" />
+          <TextBlock Name="BusyLabel" Foreground="White" HorizontalAlignment="Center" />
+        </StackPanel>
+      </Border>
+    </Panel>
   </DockPanel>
 </Window>

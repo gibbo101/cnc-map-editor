@@ -100,6 +100,45 @@ namespace MobiusEditor.Shell.Tests
         }
 
         [Fact]
+        public void RenderBlockMatchesTheFullRenderCrop()
+        {
+            using (MapDocument doc = Open())
+            {
+                doc.Scale = 0.25;
+                Rectangle block = new Rectangle(38, 34, 12, 9);
+                using (Bitmap blockRender = doc.RenderBlock(block))
+                using (Bitmap full = doc.Render())
+                {
+                    System.Drawing.Size tile = doc.TileSize;
+                    Rectangle cropRect = new Rectangle(block.X * tile.Width, block.Y * tile.Height, block.Width * tile.Width, block.Height * tile.Height);
+                    using (Bitmap crop = new Bitmap(cropRect.Width, cropRect.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb))
+                    {
+                        System.Drawing.Imaging.BitmapData src = full.LockBits(cropRect, System.Drawing.Imaging.ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                        System.Drawing.Imaging.BitmapData dst = crop.LockBits(new Rectangle(0, 0, cropRect.Width, cropRect.Height), System.Drawing.Imaging.ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                        try
+                        {
+                            byte[] row = new byte[cropRect.Width * 4];
+                            for (int y = 0; y < cropRect.Height; y++)
+                            {
+                                System.Runtime.InteropServices.Marshal.Copy(src.Scan0 + y * src.Stride, row, 0, row.Length);
+                                System.Runtime.InteropServices.Marshal.Copy(row, 0, dst.Scan0 + y * dst.Stride, row.Length);
+                            }
+                        }
+                        finally
+                        {
+                            full.UnlockBits(src);
+                            crop.UnlockBits(dst);
+                        }
+                        // Tolerance 1: drawing under a translated transform shifts Skia's blend
+                        // rounding on partially transparent sprites by at most one channel unit.
+                        ImageDiff diff = ImageCompare.Compare(blockRender, crop, 1);
+                        Assert.True(diff.Differing == 0, "block render differs from the full render's crop: " + diff);
+                    }
+                }
+            }
+        }
+
+        [Fact]
         public void TriggerSessionsInvalidateTheWholeCache()
         {
             using (MapDocument doc = Open())

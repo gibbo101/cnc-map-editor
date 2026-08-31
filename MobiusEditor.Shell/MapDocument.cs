@@ -1165,6 +1165,29 @@ namespace MobiusEditor.Shell
             return copy;
         }
 
+        /// <summary>
+        /// Renders just the given cell block into a bitmap of exactly that block, at the
+        /// current scale — the viewport path for zoom levels where a whole-map surface would
+        /// be gigabytes. The caller owns the bitmap. Pixels are identical to the matching
+        /// crop of a full render (the same guarantee the dirty-cell repaints pin): the
+        /// renderer includes anything whose sprite overlaps the block.
+        /// </summary>
+        public Bitmap RenderBlock(Rectangle cellBlock)
+        {
+            if (Plugin == null) throw new InvalidOperationException("No map is open.");
+            cellBlock.Intersect(new Rectangle(0, 0, Map.Metrics.Width, Map.Metrics.Height));
+            Size tile = TileSize;
+            Bitmap block = new Bitmap(Math.Max(1, cellBlock.Width * tile.Width), Math.Max(1, cellBlock.Height * tile.Height), PixelFormat.Format32bppArgb);
+            block.SetResolution(96, 96);
+            HashSet<Point> cells = new HashSet<Point>(cellBlock.Points());
+            using (Graphics g = Graphics.FromImage(block))
+            {
+                g.TranslateTransform(-cellBlock.X * tile.Width, -cellBlock.Y * tile.Height);
+                MapRenderer.Render(Plugin.GameInfo, Map, g, cells, Layers, Scale, false, Globals.TheShapeCacheManager);
+            }
+            return block;
+        }
+
         /// <summary>Forces the next Render to repaint from scratch.</summary>
         private void InvalidateRenderCache() => renderCacheValid = false;
 
