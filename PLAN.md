@@ -368,11 +368,13 @@ cost as CLI) — a splash/async load is the follow-up if it bothers.
 TRAP: `pgrep -f "reaper SteamLaunch"` over ssh matches its own command line — use
 `pgrep -af` and eyeball, or exact names.
 
+~~Async session startup~~ DONE (03c9e95): session + map loads run off the UI thread behind
+status lines; the window paints immediately (verified live: fully interactive UI 4s after
+Game Mode launch). Deck deploy current as of 03c9e95.
+
 Next candidates (no committed order):
 - **Luke's UI feedback pass** — he's deliberately holding feedback until the surface is
   fuller; it now is, and it's on his Deck. Expect layout/UX rework requests.
-- Async session startup with a loading indicator (the ~15-20s archive load currently
-  blocks the window).
 - TD mission patterns for `expand-mission` — agreed LOW priority (Luke, 2026-08-31:
   feature-completeness only; defer until a real TD authoring need appears).
 Full oracle tier re-verified green mid-session (363/363, 14m50s) after the IGamePlugin
