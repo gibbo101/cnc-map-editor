@@ -19,6 +19,8 @@ namespace MobiusEditor.Headless
         public int Id { get; set; }
         public string Name { get; set; }
         public string TextId { get; set; }
+        /// <summary>Literal display name for types with no game-text entry; overrides TextId when set.</summary>
+        public string DisplayName { get; set; }
         public int PowerProduction { get; set; }
         public int PowerUsage { get; set; }
         public int Storage { get; set; }
@@ -42,6 +44,8 @@ namespace MobiusEditor.Headless
         public ManifestUnitKind Kind { get; set; }
         public string Name { get; set; }
         public string TextId { get; set; }
+        /// <summary>Literal display name for types with no game-text entry; overrides TextId when set.</summary>
+        public string DisplayName { get; set; }
         public string Owner { get; set; }
         public FrameUsage BodyFrames { get; set; }
         public FrameUsage TurretFrames { get; set; }
@@ -57,6 +61,8 @@ namespace MobiusEditor.Headless
         public int Id { get; set; }
         public string Name { get; set; }
         public string TextId { get; set; }
+        /// <summary>Literal display name for types with no game-text entry; overrides TextId when set.</summary>
+        public string DisplayName { get; set; }
         public string Owner { get; set; }
         public UnitTypeFlag Flags { get; set; }
     }
@@ -133,7 +139,8 @@ namespace MobiusEditor.Headless
         {
             Id = Required<int>(o, "id"),
             Name = Required<string>(o, "name"),
-            TextId = Required<string>(o, "text_id"),
+            TextId = TextIdOrDisplayName(o),
+            DisplayName = (string)o["display_name"],
             PowerProduction = (int?)o["power_production"] ?? 0,
             PowerUsage = (int?)o["power_usage"] ?? 0,
             Storage = (int?)o["storage"] ?? 0,
@@ -154,7 +161,8 @@ namespace MobiusEditor.Headless
             Id = Required<int>(o, "id"),
             Kind = ParseKind(Required<string>(o, "kind")),
             Name = Required<string>(o, "name"),
-            TextId = Required<string>(o, "text_id"),
+            TextId = TextIdOrDisplayName(o),
+            DisplayName = (string)o["display_name"],
             Owner = Required<string>(o, "owner"),
             BodyFrames = ParseFlags<FrameUsage>(Require(o, "body_frames")),
             TurretFrames = ParseFlags<FrameUsage>(o["turret_frames"]),
@@ -169,7 +177,8 @@ namespace MobiusEditor.Headless
         {
             Id = Required<int>(o, "id"),
             Name = Required<string>(o, "name"),
-            TextId = Required<string>(o, "text_id"),
+            TextId = TextIdOrDisplayName(o),
+            DisplayName = (string)o["display_name"],
             Owner = Required<string>(o, "owner"),
             Flags = ParseFlags<UnitTypeFlag>(o["flags"]),
         };
@@ -183,6 +192,17 @@ namespace MobiusEditor.Headless
             Lands = Required<string>(o, "lands"),
             Mask = (string)o["mask"],
         };
+
+        /// <summary>Every named entry carries text_id, display_name, or both; neither is an error.</summary>
+        private static string TextIdOrDisplayName(JObject o)
+        {
+            string textId = (string)o["text_id"];
+            if (textId == null && (string)o["display_name"] == null)
+            {
+                throw new FormatException("missing 'text_id' (or 'display_name')");
+            }
+            return textId;
+        }
 
         private static T Required<T>(JObject o, string key)
         {

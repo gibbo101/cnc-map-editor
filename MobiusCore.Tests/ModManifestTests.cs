@@ -109,6 +109,42 @@ namespace MobiusCore.Tests
         }
 
         [Fact]
+        public void DisplayNameSubstitutesForTextIdAndBecomesTheNameOverride()
+        {
+            List<string> warnings = new List<string>();
+            ModManifest m = ModManifest.Parse(@"{ ""format"": 1, ""game_type"": ""RA"",
+                ""buildings"": [
+                    { ""id"": 112, ""name"": ""tspowr"", ""text_id"": null, ""display_name"": ""Tiberian Power Plant"",
+                      ""width"": 2, ""height"": 2, ""occupy_mask"": ""00 11"", ""owner"": ""GoodGuy"" } ],
+                ""units"": [
+                    { ""id"": 37, ""kind"": ""vehicle"", ""name"": ""tshvr"", ""display_name"": ""Hover MLRS"",
+                      ""owner"": ""GoodGuy"", ""body_frames"": [""Frames32Full""] } ],
+                ""infantry"": [
+                    { ""id"": 30, ""name"": ""tsjump"", ""display_name"": ""Jumpjet Infantry"", ""owner"": ""GoodGuy"" } ] }",
+                "TF", warnings);
+            Assert.Empty(warnings);
+            ManifestBuilding b = Assert.Single(m.Buildings);
+            Assert.Null(b.TextId);
+            Assert.Equal("Tiberian Power Plant", b.DisplayName);
+            Assert.Equal("Tiberian Power Plant", ModTypeFactory.Buildings(m).Single().NameOverride);
+            Assert.Equal("Hover MLRS", ModTypeFactory.Units(m).Single().NameOverride);
+            Assert.Equal("Jumpjet Infantry", ModTypeFactory.Infantry(m).Single().NameOverride);
+        }
+
+        [Fact]
+        public void EntryWithNeitherTextIdNorDisplayNameIsSkippedWithAWarning()
+        {
+            List<string> warnings = new List<string>();
+            ModManifest m = ModManifest.Parse(@"{ ""format"": 1, ""game_type"": ""RA"",
+                ""buildings"": [
+                    { ""id"": 87, ""name"": ""unnamed"", ""width"": 1, ""height"": 1, ""owner"": ""Neutral"" } ] }", "TF", warnings);
+            Assert.Empty(m.Buildings);
+            string warning = Assert.Single(warnings);
+            Assert.Contains("unnamed", warning);
+            Assert.Contains("text_id", warning);
+        }
+
+        [Fact]
         public void UnknownFlagRejectsTheEntryWithAWarning()
         {
             List<string> warnings = new List<string>();

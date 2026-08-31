@@ -43,6 +43,9 @@ disabled air units).
 
 - `id` — the engine's `StructType` enum ordinal. `name` — IniName (lowercase). `text_id` —
   localisation key. `owner` — house name (`GoodGuy`, `BadGuy`, `Neutral`, ...).
+- `display_name` — literal English label for a type with no game-text entry (buildings,
+  units and infantry). Overrides `text_id` when both are set; each entry needs at least one
+  of the two.
 - `width`/`height` — footprint in cells; `occupy_mask` — rows separated by spaces, `'0'` a
   free cell, anything else occupied; `null`/omitted = fully occupied.
 - `graphics_source` — art name when it differs from `name` (null falls back to `name`);
