@@ -12,6 +12,7 @@
       <TextBlock Text="Theater" FontWeight="Bold" />
       <ListBox Name="TheaterList" Height="150" />
       <TextBlock Text="Playable size (cells)" FontWeight="Bold" />
+      <ComboBox Name="SizePreset" HorizontalAlignment="Stretch" />
       <Grid ColumnDefinitions="*,12,*">
         <NumericUpDown Grid.Column="0" Name="WidthNud" FormatString="0" Minimum="16" />
         <NumericUpDown Grid.Column="2" Name="HeightNud" FormatString="0" Minimum="16" />

@@ -25,6 +25,23 @@ namespace MobiusEditor.App
             int maxPlayable = System.Math.Max(document.Session.GameInfo.MapSize.Width, document.Session.GameInfo.MapSize.Height) - 2;
             WidthNud.Maximum = HeightNud.Maximum = maxPlayable;
             WidthNud.Value = HeightNud.Value = maxPlayable;
+            // Standard presets fill the boxes; the boxes stay editable for odd sizes.
+            (string Label, int Size)[] presets =
+            {
+                ($"Full ({maxPlayable} × {maxPlayable})", maxPlayable),
+                ("Large (96 × 96)", 96),
+                ("Medium (64 × 64)", 64),
+                ("Small (48 × 48)", 48),
+            };
+            SizePreset.ItemsSource = presets.Where(p => p.Size <= maxPlayable).Select(p => p.Label).ToList();
+            SizePreset.SelectedIndex = 0;
+            SizePreset.SelectionChanged += (s, e) =>
+            {
+                if (SizePreset.SelectedIndex >= 0)
+                {
+                    WidthNud.Value = HeightNud.Value = presets[SizePreset.SelectedIndex].Size;
+                }
+            };
             OkButton.Click += async (s, e) =>
             {
                 if (!(TheaterList.SelectedItem is string theater))
