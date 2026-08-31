@@ -128,6 +128,38 @@ namespace MobiusCli
             return 0;
         }
 
+        /// <summary>
+        /// Expands a JSON mission spec (patterns + raw rows) into the map's triggers and
+        /// teamtypes, and saves to --out (never the input). Refused entirely — nothing
+        /// written — when any pattern fails to build or the expanded triggers fail the
+        /// game's trigger check with fatals.
+        /// </summary>
+        public static int ExpandMission(Invocation inv, EditorSession session, TextWriter o)
+        {
+            string mapPath = MapArg(inv);
+            if (inv.Positional.Count < 2) throw new ArgumentException("expand-mission needs a spec: cncmap expand-mission <map> <spec.json> --out <path>");
+            string specPath = inv.Positional[1];
+            string outPath = inv.Option("out") ?? throw new ArgumentException("expand-mission needs --out <path>");
+            if (string.Equals(System.IO.Path.GetFullPath(outPath), System.IO.Path.GetFullPath(mapPath), StringComparison.Ordinal))
+            {
+                throw new ArgumentException("--out must differ from the input map; expand-mission never overwrites its input.");
+            }
+            MissionSpec spec = MissionSpec.Parse(File.ReadAllText(specPath), out string[] specErrors);
+            if (spec == null || specErrors.Length > 0)
+            {
+                throw new ArgumentException("spec problems:\n  " + string.Join("\n  ", specErrors));
+            }
+            IGamePlugin plugin = session.Load(mapPath, out _);
+            if (!MissionExpander.Expand(plugin, spec, out string[] errors, out string[] warnings))
+            {
+                throw new ArgumentException("expansion refused:\n  " + string.Join("\n  ", errors));
+            }
+            foreach (string w in warnings) o.WriteLine("warning: " + w);
+            plugin.Save(outPath, FileType.INI);
+            o.WriteLine($"expanded {spec.Patterns.Count} pattern(s): map now has {plugin.Map.Triggers.Count} trigger(s), {plugin.Map.TeamTypes.Count} teamtype(s); wrote {outPath}");
+            return 0;
+        }
+
         private static (string name, Point at) ParseNameAt(string value)
         {
             int split = value.LastIndexOf('@');

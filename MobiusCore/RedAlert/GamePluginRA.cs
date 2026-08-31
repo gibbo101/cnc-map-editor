@@ -5820,6 +5820,36 @@ namespace MobiusEditor.RedAlert
 
         public void CoerceActionArg(TriggerAction act, IEnumerable<Trigger> currentTriggers) => TriggerArgTypes.CoerceAction(Map, act, currentTriggers);
 
+        /// <summary>
+        /// Parses literal [Trigs]/[TeamTypes] rows in the game's INI encoding through the same
+        /// code path a map load uses, so anything a real mission file encodes parses here too.
+        /// Index references — teams in trigger rows, triggers in team rows — resolve within the
+        /// given rows only; out-of-range indices become None. Parse problems land in errors.
+        /// </summary>
+        public (List<Trigger> Triggers, List<TeamType> TeamTypes) ParseRawScriptRows(
+            IEnumerable<KeyValuePair<string, string>> triggerRows,
+            IEnumerable<KeyValuePair<string, string>> teamTypeRows,
+            List<string> errors)
+        {
+            INI ini = new INI();
+            INISection teamsSection = ini.Sections.Add("TeamTypes");
+            foreach (KeyValuePair<string, string> row in teamTypeRows ?? Enumerable.Empty<KeyValuePair<string, string>>())
+            {
+                teamsSection[row.Key] = row.Value;
+            }
+            INISection trigsSection = ini.Sections.Add("Trigs");
+            foreach (KeyValuePair<string, string> row in triggerRows ?? Enumerable.Empty<KeyValuePair<string, string>>())
+            {
+                trigsSection[row.Key] = row.Value;
+            }
+            bool modified = false;
+            List<TeamType> teamTypes = LoadTeamTypes(ini, errors, ref modified);
+            List<Trigger> triggers = LoadTriggers(ini, errors, ref modified);
+            HashSet<string> checkUnitTrigs = Trigger.None.Yield().Concat(Map.FilterUnitTriggers(triggers).Select(t => t.Name)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            LinkTriggersAndTeams(triggers, teamTypes, checkUnitTrigs, errors, ref modified);
+            return (triggers, teamTypes);
+        }
+
         public ITeamColor[] GetFlagColors()
         {
             string[] flagColorNames = new string[] {
