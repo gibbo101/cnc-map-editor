@@ -1088,6 +1088,18 @@ namespace MobiusEditor.Shell
         /// </summary>
         public Bitmap Render()
         {
+            UpdateRenderCache(out _);
+            return CopyBitmap(renderCache);
+        }
+
+        /// <summary>
+        /// Brings the cached render up to date and returns it, along with the pixel region
+        /// that changed since the last call — the whole bitmap after a rebuild, empty when
+        /// nothing changed. The returned bitmap IS the cache: never dispose or mutate it, and
+        /// copy what you need out of it before the next document operation.
+        /// </summary>
+        public Bitmap UpdateRenderCache(out Rectangle dirtyPixels)
+        {
             if (Plugin == null) throw new InvalidOperationException("No map is open.");
             Size tile = TileSize;
             int width = Map.Metrics.Width * tile.Width, height = Map.Metrics.Height * tile.Height;
@@ -1106,16 +1118,26 @@ namespace MobiusEditor.Shell
                 renderCacheLayers = Layers;
                 renderCacheValid = true;
                 dirtyCells.Clear();
+                dirtyPixels = new Rectangle(0, 0, width, height);
             }
             else if (dirtyCells.Count > 0)
             {
+                HashSet<Point> cells = ExpandedDirtyCells();
                 using (Graphics g = Graphics.FromImage(renderCache))
                 {
-                    MapRenderer.Render(Plugin.GameInfo, Map, g, ExpandedDirtyCells(), Layers, Scale, false, Globals.TheShapeCacheManager);
+                    MapRenderer.Render(Plugin.GameInfo, Map, g, cells, Layers, Scale, false, Globals.TheShapeCacheManager);
                 }
                 dirtyCells.Clear();
+                int minX = cells.Min(p => p.X), maxX = cells.Max(p => p.X);
+                int minY = cells.Min(p => p.Y), maxY = cells.Max(p => p.Y);
+                dirtyPixels = new Rectangle(minX * tile.Width, minY * tile.Height,
+                    (maxX - minX + 1) * tile.Width, (maxY - minY + 1) * tile.Height);
             }
-            return CopyBitmap(renderCache);
+            else
+            {
+                dirtyPixels = Rectangle.Empty;
+            }
+            return renderCache;
         }
 
         /// <summary>Raw pixel copy — DrawImage would blend, which is not exact for translucent pixels.</summary>

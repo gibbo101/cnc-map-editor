@@ -21,6 +21,8 @@ namespace MobiusEditor.App
         private EditorSession session;
         private MapDocument document;
         private object paletteForPlugin;
+        private object fittedForPlugin;
+        private WriteableBitmap frameBitmap;
         private System.Drawing.Point? lastPaintCell;
         private bool painting, erasing;
         private object selectedObject;
@@ -484,9 +486,34 @@ namespace MobiusEditor.App
             base.OnKeyDown(e);
         }
 
+        /// <summary>
+        /// A freshly opened map starts fitted to the viewport — on a small screen that means a
+        /// far smaller render surface, which is most of the difference between smooth and
+        /// laggy. Returns false while the viewport is not laid out yet (a retry is queued),
+        /// so the first expensive render never happens at the wrong scale.
+        /// </summary>
+        private bool FitToViewport()
+        {
+            if (ReferenceEquals(fittedForPlugin, document.Plugin)) return true;
+            double vw = Scroller.Bounds.Width, vh = Scroller.Bounds.Height;
+            if (vw < 50 || vh < 50)
+            {
+                Avalonia.Threading.Dispatcher.UIThread.Post(Refresh, Avalonia.Threading.DispatcherPriority.Background);
+                return false;
+            }
+            fittedForPlugin = document.Plugin;
+            double mapW = document.Map.Metrics.Width * 128.0, mapH = document.Map.Metrics.Height * 128.0;
+            double[] steps = { 1, 0.5, 0.25, 0.125, 1.0 / 16 };
+            double fit = steps.FirstOrDefault(s => mapW * s <= vw && mapH * s <= vh);
+            if (fit == 0) fit = 1.0 / 16;
+            if (document.Scale > fit) document.Scale = fit;
+            return true;
+        }
+
         private void Refresh()
         {
             if (document == null || !document.IsOpen) return;
+            if (!FitToViewport()) return;
             TitleLabel.Text = document.Title;
             Title = document.Title + " — C&C Map Editor";
             ZoomLabel.Text = (document.Scale * 100).ToString("0.#") + "%";
@@ -518,35 +545,49 @@ namespace MobiusEditor.App
                 CellTriggerPalette.ItemsSource = cellTriggers;
                 if (selected != null) CellTriggerPalette.SelectedItem = cellTriggers.FirstOrDefault(n => n.Equals(selected, StringComparison.OrdinalIgnoreCase));
             }
-            using (System.Drawing.Bitmap rendered = document.Render())
-            {
-                MapImage.Source = ToAvalonia(rendered);
-            }
+            PresentFrame();
             // Undo can retire the selected object; drop the panel when it does.
             if (selectedObject != null && !document.IsObjectOnMap(selectedObject)) RefreshProperties();
             if (document.LoadNotes.Length > 0) StatusLabel.Text = document.LoadNotes.Length + " load note(s): " + document.LoadNotes[0];
         }
 
-        /// <summary>Copies a core bitmap (BGRA, unpremultiplied) into an Avalonia bitmap of the same layout.</summary>
-        private static WriteableBitmap ToAvalonia(System.Drawing.Bitmap source)
+        /// <summary>
+        /// Copies the document's render cache into a reused frame bitmap — only the region
+        /// that actually changed — and invalidates the image. Reallocating and fully copying
+        /// a whole-map bitmap on every operation is what made painting laggy on weak hardware.
+        /// </summary>
+        private void PresentFrame()
         {
-            WriteableBitmap wb = new WriteableBitmap(new PixelSize(source.Width, source.Height), new Vector(96, 96), PixelFormats.Bgra8888, AlphaFormat.Unpremul);
-            BitmapData data = source.LockBits(new System.Drawing.Rectangle(0, 0, source.Width, source.Height), ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            System.Drawing.Bitmap cache = document.UpdateRenderCache(out System.Drawing.Rectangle dirty);
+            if (frameBitmap == null || frameBitmap.PixelSize.Width != cache.Width || frameBitmap.PixelSize.Height != cache.Height)
+            {
+                WriteableBitmap old = frameBitmap;
+                frameBitmap = new WriteableBitmap(new PixelSize(cache.Width, cache.Height), new Vector(96, 96), PixelFormats.Bgra8888, AlphaFormat.Unpremul);
+                MapImage.Source = frameBitmap;
+                old?.Dispose();
+                dirty = new System.Drawing.Rectangle(0, 0, cache.Width, cache.Height);
+            }
+            if (dirty.Width <= 0 || dirty.Height <= 0)
+            {
+                return;
+            }
+            BitmapData data = cache.LockBits(new System.Drawing.Rectangle(0, 0, cache.Width, cache.Height), ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
             try
             {
-                using (ILockedFramebuffer fb = wb.Lock())
+                using (ILockedFramebuffer fb = frameBitmap.Lock())
                 {
-                    int rowBytes = source.Width * 4;
+                    int rowBytes = dirty.Width * 4;
                     byte[] row = new byte[rowBytes];
-                    for (int y = 0; y < source.Height; y++)
+                    for (int y = dirty.Top; y < dirty.Bottom; y++)
                     {
-                        Marshal.Copy(data.Scan0 + y * data.Stride, row, 0, rowBytes);
-                        Marshal.Copy(row, 0, fb.Address + y * fb.RowBytes, rowBytes);
+                        Marshal.Copy(data.Scan0 + y * data.Stride + dirty.X * 4, row, 0, rowBytes);
+                        Marshal.Copy(row, 0, fb.Address + y * fb.RowBytes + dirty.X * 4, rowBytes);
                     }
                 }
             }
-            finally { source.UnlockBits(data); }
-            return wb;
+            finally { cache.UnlockBits(data); }
+            if (!ReferenceEquals(MapImage.Source, frameBitmap)) MapImage.Source = frameBitmap;
+            MapImage.InvalidateVisual();
         }
     }
 }
