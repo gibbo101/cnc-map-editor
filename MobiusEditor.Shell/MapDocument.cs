@@ -43,6 +43,7 @@ namespace MobiusEditor.Shell
             LoadNotes = notes;
             undoRedo.Clear();
             ResetStroke();
+            InvalidateRenderCache();
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
@@ -204,8 +205,11 @@ namespace MobiusEditor.Shell
                     }
                     map.Triggers = triggers.Select(t => t.Clone()).ToList();
                     plugin.Dirty = true;
+                    // Cleanup sweeps can drop cell triggers off the grid, which are a rendered layer.
+                    doc.InvalidateRenderCache();
                 }
                 List<Trigger> beforeSnapshot = before;
+                doc.InvalidateRenderCache();
                 doc.undoRedo.Track(_ => Restore(beforeSnapshot, undoRefs), _ => Restore(after, redoRefs), doc);
                 doc.Changed?.Invoke(doc, EventArgs.Empty);
             }
@@ -260,6 +264,8 @@ namespace MobiusEditor.Shell
 
         private void AfterOperation()
         {
+            MarkDirty(templateRedo.Keys);
+            MarkDirty(overlayRedo.Keys);
             if (!inStroke) CommitStroke();
             Changed?.Invoke(this, EventArgs.Empty);
         }
@@ -281,6 +287,8 @@ namespace MobiusEditor.Shell
                 foreach (KeyValuePair<int, Template> kv in t) map.Templates[kv.Key] = kv.Value;
                 foreach (KeyValuePair<int, Overlay> kv in o) map.Overlay[kv.Key] = kv.Value;
                 plugin.Dirty = true;
+                MarkDirty(t.Keys);
+                MarkDirty(o.Keys);
             }
             undoRedo.Track(_ => Replay(tUndo, oUndo), _ => Replay(tRedo, oRedo), this);
             ResetStroke();
@@ -299,18 +307,102 @@ namespace MobiusEditor.Shell
             if (Plugin == null) throw new InvalidOperationException("No map is open.");
         }
 
-        /// <summary>Renders the selected layers of the whole map at the current scale.</summary>
+        private Bitmap renderCache;
+        private double renderCacheScale;
+        private MapLayerFlag renderCacheLayers;
+        private bool renderCacheValid;
+        private readonly HashSet<Point> dirtyCells = new HashSet<Point>();
+
+        /// <summary>
+        /// Renders the selected layers of the whole map at the current scale. A cached bitmap
+        /// is kept up to date by repainting only the cells the operations since the last render
+        /// touched — expanded one cell outward, because the Overlay grid self-heals neighboring
+        /// wall icons and resource density without journaling them. The caller owns the
+        /// returned copy.
+        /// </summary>
         public Bitmap Render()
         {
             if (Plugin == null) throw new InvalidOperationException("No map is open.");
             Size tile = TileSize;
-            Bitmap bm = new Bitmap(Map.Metrics.Width * tile.Width, Map.Metrics.Height * tile.Height, PixelFormat.Format32bppArgb);
-            bm.SetResolution(96, 96);
-            using (Graphics g = Graphics.FromImage(bm))
+            int width = Map.Metrics.Width * tile.Width, height = Map.Metrics.Height * tile.Height;
+            bool reusable = renderCacheValid && renderCache != null && renderCacheScale == Scale && renderCacheLayers == Layers
+                && renderCache.Width == width && renderCache.Height == height;
+            if (!reusable)
             {
-                MapRenderer.Render(Plugin.GameInfo, Map, g, null, Layers, Scale, false, Globals.TheShapeCacheManager);
+                renderCache?.Dispose();
+                renderCache = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+                renderCache.SetResolution(96, 96);
+                using (Graphics g = Graphics.FromImage(renderCache))
+                {
+                    MapRenderer.Render(Plugin.GameInfo, Map, g, null, Layers, Scale, false, Globals.TheShapeCacheManager);
+                }
+                renderCacheScale = Scale;
+                renderCacheLayers = Layers;
+                renderCacheValid = true;
+                dirtyCells.Clear();
             }
-            return bm;
+            else if (dirtyCells.Count > 0)
+            {
+                using (Graphics g = Graphics.FromImage(renderCache))
+                {
+                    MapRenderer.Render(Plugin.GameInfo, Map, g, ExpandedDirtyCells(), Layers, Scale, false, Globals.TheShapeCacheManager);
+                }
+                dirtyCells.Clear();
+            }
+            return CopyBitmap(renderCache);
+        }
+
+        /// <summary>Raw pixel copy — DrawImage would blend, which is not exact for translucent pixels.</summary>
+        private static Bitmap CopyBitmap(Bitmap source)
+        {
+            Bitmap copy = new Bitmap(source.Width, source.Height, PixelFormat.Format32bppArgb);
+            copy.SetResolution(96, 96);
+            Rectangle all = new Rectangle(0, 0, source.Width, source.Height);
+            BitmapData src = source.LockBits(all, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+            BitmapData dst = copy.LockBits(all, ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+            try
+            {
+                byte[] row = new byte[source.Width * 4];
+                for (int y = 0; y < source.Height; y++)
+                {
+                    System.Runtime.InteropServices.Marshal.Copy(src.Scan0 + y * src.Stride, row, 0, row.Length);
+                    System.Runtime.InteropServices.Marshal.Copy(row, 0, dst.Scan0 + y * dst.Stride, row.Length);
+                }
+            }
+            finally
+            {
+                source.UnlockBits(src);
+                copy.UnlockBits(dst);
+            }
+            return copy;
+        }
+
+        /// <summary>Forces the next Render to repaint from scratch.</summary>
+        private void InvalidateRenderCache() => renderCacheValid = false;
+
+        private void MarkDirty(IEnumerable<int> cells)
+        {
+            foreach (int cell in cells)
+            {
+                if (Map.Metrics.GetLocation(cell, out Point location)) dirtyCells.Add(location);
+            }
+        }
+
+        private HashSet<Point> ExpandedDirtyCells()
+        {
+            HashSet<Point> expanded = new HashSet<Point>();
+            foreach (Point p in dirtyCells)
+            {
+                for (int dy = -1; dy <= 1; dy++)
+                {
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        Point n = new Point(p.X + dx, p.Y + dy);
+                        if (n.X >= 0 && n.Y >= 0 && n.X < Map.Metrics.Width && n.Y < Map.Metrics.Height) expanded.Add(n);
+                    }
+                }
+            }
+            return expanded;
         }
 
         /// <summary>The map cell under a pixel of the current render, or null outside the map.</summary>
@@ -345,6 +437,13 @@ namespace MobiusEditor.Shell
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
-        public void Dispose() { Plugin?.Dispose(); Plugin = null; }
+        public void Dispose()
+        {
+            Plugin?.Dispose();
+            Plugin = null;
+            renderCache?.Dispose();
+            renderCache = null;
+            renderCacheValid = false;
+        }
     }
 }
