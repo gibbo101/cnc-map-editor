@@ -5,6 +5,7 @@
         Title="C&amp;C Map Editor" Width="1280" Height="800">
   <DockPanel>
     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="6">
+      <Button Name="NewButton" Content="New…" IsEnabled="False" />
       <Button Name="OpenButton" Content="Open…" />
       <Button Name="SaveAsButton" Content="Save as…" IsEnabled="False" />
       <Separator Width="12" />

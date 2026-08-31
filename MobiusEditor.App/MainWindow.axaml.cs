@@ -20,7 +20,7 @@ namespace MobiusEditor.App
     {
         private EditorSession session;
         private MapDocument document;
-        private string paletteForPath;
+        private object paletteForPlugin;
         private System.Drawing.Point? lastPaintCell;
         private bool painting, erasing;
         private object selectedObject;
@@ -37,6 +37,7 @@ namespace MobiusEditor.App
         public MainWindow(string[] args)
         {
             InitializeComponent();
+            NewButton.Click += (s, e) => OpenNewMapDialog();
             OpenButton.Click += async (s, e) => await OpenAsync();
             SaveAsButton.Click += async (s, e) => await SaveAsAsync();
             ZoomInButton.Click += (s, e) => Zoom(2.0);
@@ -88,6 +89,7 @@ namespace MobiusEditor.App
                 session = new EditorSession(game, mods);
                 document = new MapDocument(session);
                 document.Changed += (s, e) => Refresh();
+                NewButton.IsEnabled = true;
                 StatusLabel.Text = "Game: " + game + (mods.Count == 0 ? "" : "; mods: " + string.Join(", ", mods.Select(Path.GetFileName)));
                 string map = args.FirstOrDefault(a => !a.StartsWith("--") && File.Exists(a));
                 if (map != null) document.Open(map);
@@ -116,7 +118,7 @@ namespace MobiusEditor.App
             IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions { Title = "Save map as", SuggestedFileName = Path.GetFileName(document.Path) });
             string path = file?.TryGetLocalPath();
             if (path == null) return;
-            if (string.Equals(Path.GetFullPath(path), Path.GetFullPath(document.Path), StringComparison.Ordinal)) { StatusLabel.Text = "Refusing to overwrite the open map; choose a new name."; return; }
+            if (document.Path != null && string.Equals(Path.GetFullPath(path), Path.GetFullPath(document.Path), StringComparison.Ordinal)) { StatusLabel.Text = "Refusing to overwrite the open map; choose a new name."; return; }
             try { document.Save(path); StatusLabel.Text = "Saved " + path; }
             catch (Exception ex) { StatusLabel.Text = "Save failed: " + ex.Message; }
         }
@@ -277,6 +279,15 @@ namespace MobiusEditor.App
                 bool rebuild = PropRebuild.IsChecked == true;
                 ApplyProperty(o => { if (o is MobiusEditor.Model.Building b) b.Rebuild = rebuild; });
             };
+        }
+
+        /// <summary>Opens the new-map theater picker; returned for the headless tests.</summary>
+        public NewMapWindow OpenNewMapDialog()
+        {
+            if (document == null) return null;
+            NewMapWindow dialog = new NewMapWindow(document);
+            dialog.Show(this);
+            return dialog;
         }
 
         /// <summary>Opens the trigger dialog over the document's edit session; returned for the headless tests.</summary>
@@ -474,7 +485,7 @@ namespace MobiusEditor.App
             UndoButton.IsEnabled = document.CanUndo;
             RedoButton.IsEnabled = document.CanRedo;
             // Rebuild the palettes only when a different map is open, or per-op refreshes would drop the selection.
-            if (paletteForPath != document.Path)
+            if (!ReferenceEquals(paletteForPlugin, document.Plugin))
             {
                 TemplatePalette.ItemsSource = document.AvailableTemplates();
                 TerrainPalette.ItemsSource = document.AvailableTerrain();
@@ -487,7 +498,7 @@ namespace MobiusEditor.App
                 HouseCombo.ItemsSource = document.Map.HouseTypes.Select(h => h.Name).ToList();
                 HouseCombo.SelectedIndex = 0;
                 HouseCombo.IsEnabled = true;
-                paletteForPath = document.Path;
+                paletteForPlugin = document.Plugin;
             }
             // The eligible cell triggers follow the trigger list; rebuild only when it actually changed.
             List<string> cellTriggers = document.AvailableCellTriggers().ToList();

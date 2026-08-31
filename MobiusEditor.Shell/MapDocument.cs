@@ -25,7 +25,10 @@ namespace MobiusEditor.Shell
         public MapLayerFlag Layers { get; set; } = MapLayerFlag.MapLayers;
         public bool IsOpen => Plugin != null;
         public Map Map => Plugin?.Map;
-        public string Title => Plugin == null ? "No map" : (string.IsNullOrEmpty(Map.BasicSection.Name) ? System.IO.Path.GetFileName(Path) : Map.BasicSection.Name);
+        public string Title => Plugin == null ? "No map"
+            : !string.IsNullOrEmpty(Map.BasicSection.Name) && Map.BasicSection.Name != "<none>" && Map.BasicSection.Name != "None" ? Map.BasicSection.Name
+            : Path != null ? System.IO.Path.GetFileName(Path)
+            : "Untitled";
 
         private double scale = 0.25;
         /// <summary>Render scale as a fraction of the original 128 px tile; clamped to what the renderer handles.</summary>
@@ -40,6 +43,18 @@ namespace MobiusEditor.Shell
         {
             Plugin = Session.Load(path, out string[] notes);
             Path = path;
+            LoadNotes = notes;
+            undoRedo.Clear();
+            ResetStroke();
+            InvalidateRenderCache();
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>Creates a fresh empty map (the game's first theater when none given); it has no file until Save.</summary>
+        public void NewMap(string theater = null)
+        {
+            Plugin = Session.New(theater, out string[] notes);
+            Path = null;
             LoadNotes = notes;
             undoRedo.Clear();
             ResetStroke();
@@ -1134,6 +1149,9 @@ namespace MobiusEditor.Shell
         public void Save(string path)
         {
             if (Plugin == null) throw new InvalidOperationException("No map is open.");
+            // The plugin's Save silently writes nothing when validation fails; surface it instead.
+            string problems = Plugin.Validate(FileType.INI, false, false);
+            if (!string.IsNullOrWhiteSpace(problems)) throw new InvalidOperationException(problems.Trim());
             Plugin.Save(path, FileType.INI);
             Path = path;
             Changed?.Invoke(this, EventArgs.Empty);

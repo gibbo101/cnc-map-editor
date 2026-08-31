@@ -129,6 +129,29 @@ namespace MobiusCli
         }
 
         /// <summary>
+        /// Creates a fresh empty map and writes it to the given path (refusing to overwrite).
+        /// Two player-start waypoints are scaffolded at opposite corners of the bounds so the
+        /// map satisfies the game's save rules immediately; move them in the editor.
+        /// </summary>
+        public static int New(Invocation inv, EditorSession session, TextWriter o)
+        {
+            if (inv.Positional.Count < 1) throw new ArgumentException("new needs an output path: cncmap new <out> [--theater <name>]");
+            string outPath = inv.Positional[0];
+            if (File.Exists(outPath)) throw new ArgumentException("refusing to overwrite existing file " + outPath);
+            IGamePlugin plugin = session.New(inv.Option("theater"), out string[] notes);
+            foreach (string n in notes) o.WriteLine("note: " + n);
+            Map map = plugin.Map;
+            Waypoint[] starts = map.Waypoints.Where(w => w.Flags.HasFlag(WaypointFlag.PlayerStart)).Take(2).ToArray();
+            map.Metrics.GetCell(new Point(map.Bounds.Left + 2, map.Bounds.Top + 2), out int first);
+            map.Metrics.GetCell(new Point(map.Bounds.Right - 2, map.Bounds.Bottom - 2), out int second);
+            starts[0].Cell = first;
+            starts[1].Cell = second;
+            plugin.Save(outPath, FileType.INI);
+            o.WriteLine($"new {plugin.GameInfo.GameType} map, theater {map.Theater.Name}, bounds {map.Bounds.Width}x{map.Bounds.Height}; wrote {outPath}");
+            return 0;
+        }
+
+        /// <summary>
         /// Expands a JSON mission spec (patterns + raw rows) into the map's triggers and
         /// teamtypes, and saves to --out (never the input). Refused entirely — nothing
         /// written — when any pattern fails to build or the expanded triggers fail the

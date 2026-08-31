@@ -45,6 +45,25 @@ namespace MobiusEditor.App.Tests
         }
 
         [AvaloniaFact]
+        public void NewMapDialogCreatesAFreshMapInTheChosenTheater()
+        {
+            MainWindow window = Open();
+            NewMapWindow dialog = window.OpenNewMapDialog();
+            Dispatcher.UIThread.RunJobs();
+            ListBox theaters = dialog.FindControl<ListBox>("TheaterList");
+            theaters.SelectedItem = theaters.Items.Cast<string>().First(t => t == "Snow");
+            dialog.FindControl<Button>("OkButton").RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(window.Document.IsOpen);
+            Assert.Null(window.Document.Path);
+            Assert.Equal("Snow", window.Document.Map.Theater.Name);
+            Assert.Empty(window.Document.Map.Triggers);
+            // The palettes follow the new plugin (snow tiles, not the old map's temperate set).
+            ListBox palette = window.FindControl<ListBox>("TemplatePalette");
+            Assert.NotEmpty(palette.Items.Cast<TemplateType>());
+        }
+
+        [AvaloniaFact]
         public void BrushlessClickSelectsAndEditsAreUndoable()
         {
             MainWindow window = Open();

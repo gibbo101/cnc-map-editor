@@ -93,14 +93,13 @@ namespace MobiusEditor.Headless
             return Directory.EnumerateFiles(dir).FirstOrDefault(f => string.Equals(Path.GetFileNameWithoutExtension(f), stem, StringComparison.OrdinalIgnoreCase) && string.Equals(Path.GetExtension(f), ".bin", StringComparison.OrdinalIgnoreCase));
         }
 
-        /// <summary>Loads a map, pointing the archive and tileset managers at its theater first.</summary>
-        public IGamePlugin Load(string mapPath, out string[] errors)
+        /// <summary>
+        /// Points the process globals and tileset manager at a theater — the loading session
+        /// owns the globals, which a session for the other game may have claimed since this
+        /// session's ctor ran.
+        /// </summary>
+        private void PrepareTheater(TheaterType theater)
         {
-            if (!File.Exists(mapPath)) throw new FileNotFoundException("Map not found: " + mapPath, mapPath);
-            TheaterType theater = PeekTheater(mapPath);
-            // The loading session owns the process globals: theater probes (template tiles,
-            // smudge availability) go through Globals.TheArchiveManager, which a session for
-            // the other game may have claimed since this session's ctor ran.
             Globals.TheArchiveManager = Archives;
             Globals.TheTeamColorManager = teamColors;
             Globals.TheGameTextManager = gameText;
@@ -113,6 +112,25 @@ namespace MobiusEditor.Headless
             }
             Globals.TheTilesetManager = manager;
             foreach (TheaterType t in GameInfo.AllTheaters) t.IsRemasterTilesetFound = manager.TilesetExists(t.MainTileset);
+        }
+
+        /// <summary>Creates a fresh empty map in the given theater (the game's first when null).</summary>
+        public IGamePlugin New(string theaterName, out string[] errors)
+        {
+            TheaterType[] theaters = GameInfo.AllTheaters.ToArray();
+            TheaterType theater = theaters.FirstOrDefault(t => t.Name.Equals(theaterName ?? "", StringComparison.OrdinalIgnoreCase)) ?? theaters[0];
+            PrepareTheater(theater);
+            IGamePlugin plugin = GameInfo.CreatePlugin(false, true);
+            plugin.New(theater.Name);
+            errors = ManifestLoadWarnings.ToArray();
+            return plugin;
+        }
+
+        /// <summary>Loads a map, pointing the archive and tileset managers at its theater first.</summary>
+        public IGamePlugin Load(string mapPath, out string[] errors)
+        {
+            if (!File.Exists(mapPath)) throw new FileNotFoundException("Map not found: " + mapPath, mapPath);
+            PrepareTheater(PeekTheater(mapPath));
             FileType ft = FileType.INI;
             string binPath = GameType == GameType.RedAlert ? null : SiblingBin(mapPath);
             byte[] binContent = binPath == null ? null : File.ReadAllBytes(binPath);
