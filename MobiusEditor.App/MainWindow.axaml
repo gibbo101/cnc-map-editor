@@ -1,8 +1,19 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:model="using:MobiusEditor.Model"
+        xmlns:app="using:MobiusEditor.App"
         x:Class="MobiusEditor.App.MainWindow"
         Title="C&amp;C Map Editor" Width="1280" Height="800">
+  <Window.Resources>
+    <DataTemplate x:Key="PaletteTemplate" x:DataType="app:PaletteEntry">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Border Width="40" Height="40" Background="#20808080">
+          <Image Source="{Binding Image}" Stretch="Uniform" />
+        </Border>
+        <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+      </StackPanel>
+    </DataTemplate>
+  </Window.Resources>
   <DockPanel>
     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="6">
       <Button Name="NewButton" Content="New…" IsEnabled="False" />
@@ -28,67 +39,25 @@
     <TextBlock DockPanel.Dock="Bottom" Name="StatusLabel" Margin="6,3" Text="Open a map to begin." />
     <TabControl DockPanel.Dock="Left" Width="200" Name="ToolTabs">
       <TabItem Header="Tiles">
-        <ListBox Name="TemplatePalette">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="model:TemplateType">
-              <TextBlock Text="{Binding Name}" />
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
+        <ListBox Name="TemplatePalette" ItemTemplate="{StaticResource PaletteTemplate}" />
       </TabItem>
       <TabItem Header="Terrain">
-        <ListBox Name="TerrainPalette">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="model:TerrainType">
-              <TextBlock Text="{Binding Name}" />
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
+        <ListBox Name="TerrainPalette" ItemTemplate="{StaticResource PaletteTemplate}" />
       </TabItem>
       <TabItem Header="Overlay">
-        <ListBox Name="OverlayPalette">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="model:OverlayType">
-              <TextBlock Text="{Binding Name}" />
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
+        <ListBox Name="OverlayPalette" ItemTemplate="{StaticResource PaletteTemplate}" />
       </TabItem>
       <TabItem Header="Buildings">
-        <ListBox Name="BuildingPalette">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="model:BuildingType">
-              <TextBlock Text="{Binding Name}" />
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
+        <ListBox Name="BuildingPalette" ItemTemplate="{StaticResource PaletteTemplate}" />
       </TabItem>
       <TabItem Header="Units">
-        <ListBox Name="UnitPalette">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="model:UnitType">
-              <TextBlock Text="{Binding Name}" />
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
+        <ListBox Name="UnitPalette" ItemTemplate="{StaticResource PaletteTemplate}" />
       </TabItem>
       <TabItem Header="Infantry">
-        <ListBox Name="InfantryPalette">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="model:InfantryType">
-              <TextBlock Text="{Binding Name}" />
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
+        <ListBox Name="InfantryPalette" ItemTemplate="{StaticResource PaletteTemplate}" />
       </TabItem>
       <TabItem Header="Smudge">
-        <ListBox Name="SmudgePalette">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="model:SmudgeType">
-              <TextBlock Text="{Binding Name}" />
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
+        <ListBox Name="SmudgePalette" ItemTemplate="{StaticResource PaletteTemplate}" />
       </TabItem>
       <TabItem Header="Cell trig.">
         <ListBox Name="CellTriggerPalette" />
@@ -124,7 +93,14 @@
       </StackPanel>
     </ScrollViewer>
     <ScrollViewer Name="Scroller" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Background="#202020">
-      <Image Name="MapImage" Stretch="None" HorizontalAlignment="Left" VerticalAlignment="Top" />
+      <Panel HorizontalAlignment="Left" VerticalAlignment="Top">
+        <Image Name="MapImage" Stretch="None" HorizontalAlignment="Left" VerticalAlignment="Top" />
+        <Border Name="GhostBorder" IsHitTestVisible="False" IsVisible="False"
+                BorderBrush="#DDFFDD00" BorderThickness="1" Background="#18FFDD00"
+                HorizontalAlignment="Left" VerticalAlignment="Top">
+          <Image Name="GhostImage" Opacity="0.6" Stretch="Fill" />
+        </Border>
+      </Panel>
     </ScrollViewer>
   </DockPanel>
 </Window>

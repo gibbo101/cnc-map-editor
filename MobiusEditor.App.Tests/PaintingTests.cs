@@ -42,8 +42,9 @@ namespace MobiusEditor.App.Tests
         {
             MainWindow window = OpenTemperate();
             ListBox palette = window.FindControl<ListBox>("TemplatePalette");
-            TemplateType sh1 = palette.Items.Cast<TemplateType>().Single(t => t.Name == "tdsh1");
-            palette.SelectedItem = sh1;
+            PaletteEntry sh1Entry = palette.Items.Cast<PaletteEntry>().Single(p => (p.Type as TemplateType)?.Name == "tdsh1");
+            TemplateType sh1 = (TemplateType)sh1Entry.Type;
+            palette.SelectedItem = sh1Entry;
             Template before = window.Document.Map.Templates[10, 10];
 
             Point click = CellCenter(window, 10, 10);
@@ -62,7 +63,7 @@ namespace MobiusEditor.App.Tests
         {
             MainWindow window = OpenTemperate();
             ListBox palette = window.FindControl<ListBox>("TemplatePalette");
-            palette.SelectedItem = palette.Items.Cast<TemplateType>().Single(t => t.Name == "tdsh1");
+            palette.SelectedItem = palette.Items.Cast<PaletteEntry>().Single(p => (p.Type as TemplateType)?.Name == "tdsh1");
             Point click = CellCenter(window, 20, 20);
             window.MouseDown(click, MouseButton.Left);
             window.MouseUp(click, MouseButton.Left);
@@ -81,8 +82,8 @@ namespace MobiusEditor.App.Tests
             MainWindow window = OpenTemperate();
             ListBox templates = window.FindControl<ListBox>("TemplatePalette");
             ListBox overlays = window.FindControl<ListBox>("OverlayPalette");
-            templates.SelectedItem = templates.Items.Cast<TemplateType>().Single(t => t.Name == "tdsh1");
-            overlays.SelectedItem = overlays.Items.Cast<OverlayType>().Single(t => t.Name == "brik");
+            templates.SelectedItem = templates.Items.Cast<PaletteEntry>().Single(p => (p.Type as TemplateType)?.Name == "tdsh1");
+            overlays.SelectedItem = overlays.Items.Cast<PaletteEntry>().Single(p => (p.Type as OverlayType)?.Name == "brik");
             Assert.Null(templates.SelectedItem);
 
             window.Document.Map.Overlay[15, 15] = null;
@@ -104,7 +105,7 @@ namespace MobiusEditor.App.Tests
         {
             MainWindow window = OpenTemperate();
             ListBox palette = window.FindControl<ListBox>("TemplatePalette");
-            var names = palette.Items.Cast<TemplateType>().Select(t => t.Name).ToList();
+            var names = palette.Items.Cast<PaletteEntry>().Select(p => ((TemplateType)p.Type).Name).ToList();
             Assert.Contains("tdsh1", names);
             // Desert-only tiles live in the Interior slot; a Temperate map must not offer them.
             Assert.DoesNotContain("tdsh51", names);

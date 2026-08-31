@@ -69,7 +69,7 @@ namespace MobiusEditor.App.Tests
 
             // Picking another brush clears this one and drops the indicator layer.
             ListBox templates = window.FindControl<ListBox>("TemplatePalette");
-            templates.SelectedItem = templates.Items.Cast<TemplateType>().First();
+            templates.SelectedItem = templates.Items.Cast<PaletteEntry>().First();
             Dispatcher.UIThread.RunJobs();
             Assert.Null(palette.SelectedItem);
         }
@@ -79,8 +79,9 @@ namespace MobiusEditor.App.Tests
         {
             MainWindow window = Open();
             ListBox palette = window.FindControl<ListBox>("TerrainPalette");
-            TerrainType type = palette.Items.Cast<TerrainType>().First();
-            palette.SelectedItem = type;
+            PaletteEntry entry = palette.Items.Cast<PaletteEntry>().First();
+            TerrainType type = (TerrainType)entry.Type;
+            palette.SelectedItem = entry;
             Dispatcher.UIThread.RunJobs();
 
             Click(window, CellCenter(window, 20, 20), MouseButton.Left);
@@ -106,7 +107,7 @@ namespace MobiusEditor.App.Tests
             house.SelectedItem = house.Items.Cast<string>().First(h => h == "Greece");
             Dispatcher.UIThread.RunJobs();
             ListBox palette = window.FindControl<ListBox>("BuildingPalette");
-            palette.SelectedItem = palette.Items.Cast<BuildingType>().First(b => b.HasBib);
+            palette.SelectedItem = palette.Items.Cast<PaletteEntry>().First(p => (p.Type as BuildingType)?.HasBib == true);
             Dispatcher.UIThread.RunJobs();
 
             Click(window, CellCenter(window, 10, 10), MouseButton.Left);
@@ -126,7 +127,7 @@ namespace MobiusEditor.App.Tests
             Dispatcher.UIThread.RunJobs();
 
             ListBox units = window.FindControl<ListBox>("UnitPalette");
-            units.SelectedItem = units.Items.Cast<UnitType>().First(t => t.IsGroundUnit);
+            units.SelectedItem = units.Items.Cast<PaletteEntry>().First(p => (p.Type as UnitType)?.IsGroundUnit == true);
             Dispatcher.UIThread.RunJobs();
             Click(window, CellCenter(window, 16, 16), MouseButton.Left);
             Unit unit = Assert.IsType<Unit>(window.Document.Map.Technos[new System.Drawing.Point(16, 16)]);
@@ -135,7 +136,7 @@ namespace MobiusEditor.App.Tests
             Assert.Null(window.Document.Map.Technos[new System.Drawing.Point(16, 16)]);
 
             ListBox infantry = window.FindControl<ListBox>("InfantryPalette");
-            infantry.SelectedItem = infantry.Items.Cast<InfantryType>().First();
+            infantry.SelectedItem = infantry.Items.Cast<PaletteEntry>().First(p => p.Type is InfantryType);
             Dispatcher.UIThread.RunJobs();
             Assert.Null(units.SelectedItem);
             Click(window, CellCenter(window, 17, 16), MouseButton.Left);
@@ -143,6 +144,31 @@ namespace MobiusEditor.App.Tests
             Assert.Equal("USSR", group.Infantry.Single(i => i != null).House.Name);
             Click(window, CellCenter(window, 17, 16), MouseButton.Right);
             Assert.Null(window.Document.Map.Technos[new System.Drawing.Point(17, 16)]);
+        }
+
+        [AvaloniaFact]
+        public void PalettesShowThumbnailsAndTheGhostFollowsTheBrush()
+        {
+            MainWindow window = Open();
+            ListBox units = window.FindControl<ListBox>("UnitPalette");
+            PaletteEntry entry = units.Items.Cast<PaletteEntry>().First(p => (p.Type as UnitType)?.IsGroundUnit == true);
+            // Friendly label and a rendered thumbnail, not the bare INI name.
+            Assert.Equal(((UnitType)entry.Type).DisplayName, entry.Label);
+            Assert.NotNull(entry.Image);
+
+            units.SelectedItem = entry;
+            Dispatcher.UIThread.RunJobs();
+            window.MouseMove(CellCenter(window, 10, 10));
+            Dispatcher.UIThread.RunJobs();
+            Border ghost = window.FindControl<Border>("GhostBorder");
+            Assert.True(ghost.IsVisible);
+            Assert.Same(entry.Image, window.FindControl<Image>("GhostImage").Source);
+
+            // No brush, no ghost.
+            units.SelectedItem = null;
+            window.MouseMove(CellCenter(window, 11, 10));
+            Dispatcher.UIThread.RunJobs();
+            Assert.False(ghost.IsVisible);
         }
 
         [AvaloniaFact]

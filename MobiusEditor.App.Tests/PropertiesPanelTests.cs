@@ -53,6 +53,15 @@ namespace MobiusEditor.App.Tests
             ListBox theaters = dialog.FindControl<ListBox>("TheaterList");
             theaters.SelectedItem = theaters.Items.Cast<string>().First(t => t == "Snow");
             dialog.FindControl<Button>("OkButton").RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            // The map creates on a background thread now; pump until the new theater lands
+            // (the old map is still open meanwhile, so the generic readiness pump would
+            // return too early).
+            System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+            while (window.Document.Map?.Theater.Name != "Snow" && sw.ElapsedMilliseconds < 120000)
+            {
+                Dispatcher.UIThread.RunJobs();
+                System.Threading.Thread.Sleep(25);
+            }
             Dispatcher.UIThread.RunJobs();
             Assert.True(window.Document.IsOpen);
             Assert.Null(window.Document.Path);
@@ -60,7 +69,7 @@ namespace MobiusEditor.App.Tests
             Assert.Empty(window.Document.Map.Triggers);
             // The palettes follow the new plugin (snow tiles, not the old map's temperate set).
             ListBox palette = window.FindControl<ListBox>("TemplatePalette");
-            Assert.NotEmpty(palette.Items.Cast<TemplateType>());
+            Assert.NotEmpty(palette.Items.Cast<PaletteEntry>().Select(p => p.Type).OfType<TemplateType>());
         }
 
         [AvaloniaFact]

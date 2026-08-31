@@ -72,6 +72,7 @@ namespace MobiusEditor.App
             MapImage.PointerReleased += OnPointerReleased;
             MapImage.PointerMoved += OnPointerMoved;
             MapImage.PointerWheelChanged += OnWheel;
+            MapImage.PointerExited += (s, e) => GhostBorder.IsVisible = false;
             Opened += (s, e) => StartSession(args);
         }
 
@@ -354,15 +355,44 @@ namespace MobiusEditor.App
             e.Handled = true;
         }
 
-        private MobiusEditor.Model.TemplateType SelectedTemplate => TemplatePalette.SelectedItem as MobiusEditor.Model.TemplateType;
-        private MobiusEditor.Model.OverlayType SelectedOverlay => OverlayPalette.SelectedItem as MobiusEditor.Model.OverlayType;
+        private MobiusEditor.Model.TemplateType SelectedTemplate => (TemplatePalette.SelectedItem as PaletteEntry)?.Type as MobiusEditor.Model.TemplateType;
+        private MobiusEditor.Model.OverlayType SelectedOverlay => (OverlayPalette.SelectedItem as PaletteEntry)?.Type as MobiusEditor.Model.OverlayType;
         private string SelectedCellTrigger => CellTriggerPalette.SelectedItem as string;
         private int SelectedWaypoint => WaypointPalette.SelectedIndex;
-        private MobiusEditor.Model.TerrainType SelectedTerrain => TerrainPalette.SelectedItem as MobiusEditor.Model.TerrainType;
-        private MobiusEditor.Model.BuildingType SelectedBuilding => BuildingPalette.SelectedItem as MobiusEditor.Model.BuildingType;
-        private MobiusEditor.Model.UnitType SelectedUnit => UnitPalette.SelectedItem as MobiusEditor.Model.UnitType;
-        private MobiusEditor.Model.InfantryType SelectedInfantry => InfantryPalette.SelectedItem as MobiusEditor.Model.InfantryType;
-        private MobiusEditor.Model.SmudgeType SelectedSmudge => SmudgePalette.SelectedItem as MobiusEditor.Model.SmudgeType;
+        private MobiusEditor.Model.TerrainType SelectedTerrain => (TerrainPalette.SelectedItem as PaletteEntry)?.Type as MobiusEditor.Model.TerrainType;
+        private MobiusEditor.Model.BuildingType SelectedBuilding => (BuildingPalette.SelectedItem as PaletteEntry)?.Type as MobiusEditor.Model.BuildingType;
+        private MobiusEditor.Model.UnitType SelectedUnit => (UnitPalette.SelectedItem as PaletteEntry)?.Type as MobiusEditor.Model.UnitType;
+        private MobiusEditor.Model.InfantryType SelectedInfantry => (InfantryPalette.SelectedItem as PaletteEntry)?.Type as MobiusEditor.Model.InfantryType;
+        private MobiusEditor.Model.SmudgeType SelectedSmudge => (SmudgePalette.SelectedItem as PaletteEntry)?.Type as MobiusEditor.Model.SmudgeType;
+
+        /// <summary>The active brush's palette entry, whichever palette holds it.</summary>
+        private PaletteEntry ActiveEntry() =>
+            (TemplatePalette.SelectedItem ?? TerrainPalette.SelectedItem ?? OverlayPalette.SelectedItem
+             ?? BuildingPalette.SelectedItem ?? UnitPalette.SelectedItem ?? InfantryPalette.SelectedItem
+             ?? SmudgePalette.SelectedItem) as PaletteEntry;
+
+        /// <summary>
+        /// The placement ghost: the selected type's thumbnail, footprint-sized, snapped to the
+        /// hovered cell — so it is clear what is being placed and where before clicking. The
+        /// cell-trigger and waypoint brushes show the plain highlight box.
+        /// </summary>
+        private void UpdateGhost(System.Drawing.Point? cell)
+        {
+            PaletteEntry entry = ActiveEntry();
+            bool boxOnly = entry == null && (SelectedCellTrigger != null || SelectedWaypoint >= 0);
+            if (document == null || !document.IsOpen || cell == null || (entry == null && !boxOnly))
+            {
+                GhostBorder.IsVisible = false;
+                return;
+            }
+            System.Drawing.Size tile = document.TileSize;
+            System.Drawing.Size footprint = entry?.Item.FootprintCells ?? new System.Drawing.Size(1, 1);
+            GhostBorder.Margin = new Thickness(cell.Value.X * tile.Width, cell.Value.Y * tile.Height, 0, 0);
+            GhostBorder.Width = footprint.Width * tile.Width;
+            GhostBorder.Height = footprint.Height * tile.Height;
+            GhostImage.Source = entry?.Image;
+            GhostBorder.IsVisible = true;
+        }
 
         private void ClearOtherBrushes(ListBox active)
         {
@@ -463,6 +493,7 @@ namespace MobiusEditor.App
                 if (painting) Paint(cell.Value);
                 else if (erasing) EraseAt(cell.Value);
             }
+            UpdateGhost(cell);
             StatusLabel.Text = cell == null ? "" : document.Describe(cell.Value);
         }
 
@@ -544,13 +575,13 @@ namespace MobiusEditor.App
             // Rebuild the palettes only when a different map is open, or per-op refreshes would drop the selection.
             if (!ReferenceEquals(paletteForPlugin, document.Plugin))
             {
-                TemplatePalette.ItemsSource = document.AvailableTemplates();
-                TerrainPalette.ItemsSource = document.AvailableTerrain();
-                OverlayPalette.ItemsSource = document.AvailableOverlays();
-                BuildingPalette.ItemsSource = document.AvailableBuildings();
-                UnitPalette.ItemsSource = document.AvailableUnits();
-                InfantryPalette.ItemsSource = document.AvailableInfantry();
-                SmudgePalette.ItemsSource = document.AvailableSmudge();
+                TemplatePalette.ItemsSource = document.AvailableTemplates().Select(t => new PaletteEntry(MobiusEditor.Shell.PaletteItem.From(t))).ToList();
+                TerrainPalette.ItemsSource = document.AvailableTerrain().Select(t => new PaletteEntry(MobiusEditor.Shell.PaletteItem.From(t))).ToList();
+                OverlayPalette.ItemsSource = document.AvailableOverlays().Select(t => new PaletteEntry(MobiusEditor.Shell.PaletteItem.From(t))).ToList();
+                BuildingPalette.ItemsSource = document.AvailableBuildings().Select(t => new PaletteEntry(MobiusEditor.Shell.PaletteItem.From(t))).ToList();
+                UnitPalette.ItemsSource = document.AvailableUnits().Select(t => new PaletteEntry(MobiusEditor.Shell.PaletteItem.From(t))).ToList();
+                InfantryPalette.ItemsSource = document.AvailableInfantry().Select(t => new PaletteEntry(MobiusEditor.Shell.PaletteItem.From(t))).ToList();
+                SmudgePalette.ItemsSource = document.AvailableSmudge().Select(t => new PaletteEntry(MobiusEditor.Shell.PaletteItem.From(t))).ToList();
                 WaypointPalette.ItemsSource = document.Map.Waypoints.Select((w, i) => i + ": " + w.Name).ToList();
                 HouseCombo.ItemsSource = document.Map.HouseTypes.Select(h => h.Name).ToList();
                 HouseCombo.SelectedIndex = 0;
@@ -566,6 +597,8 @@ namespace MobiusEditor.App
                 if (selected != null) CellTriggerPalette.SelectedItem = cellTriggers.FirstOrDefault(n => n.Equals(selected, StringComparison.OrdinalIgnoreCase));
             }
             PresentFrame();
+            // Zoom or map changes leave the ghost's position stale; it returns on the next pointer move.
+            GhostBorder.IsVisible = false;
             // Undo can retire the selected object; drop the panel when it does.
             if (selectedObject != null && !document.IsObjectOnMap(selectedObject)) RefreshProperties();
             if (document.LoadNotes.Length > 0) StatusLabel.Text = document.LoadNotes.Length + " load note(s): " + document.LoadNotes[0];
