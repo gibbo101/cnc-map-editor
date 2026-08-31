@@ -302,8 +302,16 @@ would only tempt the native editor to slip. Not part of the plan.
    (buttons + Ctrl+wheel), scrollable map canvas, cell status line, save-as that refuses to
    overwrite the open map. Verified with Avalonia headless UI tests (`MobiusEditor.App.Tests`,
    xunit v3): the window opens a map from its arguments and its painted frame matches the CLI
-   render pixel-mean for pixel-mean — never launched on the desktop. Next: docked tool panels,
-   templates/overlay brushes, and the trigger editor with mission-pattern templates.
+   render pixel-mean for pixel-mean — never launched on the desktop. **EDITING CORE STARTED
+   2026-08-31:** `TemplateEdit`/`OverlayEdit` in MobiusCore port the fork's tool semantics
+   headlessly (row-major stamps, masked-icon skip, theater-unavailable all-false-mask no-op,
+   clip at edges, group/random resolution via injected `DeterministicRandom`, wall/resource
+   category guards — the Overlay grid self-heals adjacency icons and resource density on
+   assignment). `MapDocument` gains PlaceTemplate/EraseTemplate/PlaceOverlay/EraseOverlay with
+   per-stroke undo/redo over the already-ported `UndoRedoList` (BeginStroke/EndStroke batches
+   a drag into one step). Invariant pinned: edits + undo leave a save byte-identical.
+   Next: `cncmap edit` mutate commands over the same ops, the first GUI brush (click-to-paint
+   on the canvas), docked tool panels, and the trigger editor with mission-pattern templates.
 
 Open shim gaps to close as they are hit: `RotateFlip` rotations, sub-byte indexed writes,
 text metrics are approximate (annotation layers only), `Region.Exclude` on infinite regions.
