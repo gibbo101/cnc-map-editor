@@ -319,9 +319,14 @@ THREE GREEN on the final pushed state (8dfb694), full hygiene closed.**
   anchor renders a canal.
 - Both ends extend through the border frame to the true map edge (ExtendToEdge gained
   a `within` area) — a stream must never just stop at the playable bounds.
+**CROSSINGS ARE NOW CORPUS-MINED (same night): the miner's family list had excluded
+ford/bridge/falls — extended it and re-mined: 1,028 crossing entries appeared.
+rv06→ford1 @0,2 ×85 confirmed the hand alignment (now deleted); ford→d edges
+(ford1→d02 @-2,1 ×268, ford1→d04 @3,0 ×256) hang the road approaches; the stream's
+crossing code is pure mined lookup. br3a self-chains @-1,1 ×227 = the diagonal wooden
+bridge spans — THE opening for destroyable bridges and island links next.**
 Polish notes: approach roads can gap ~1-2 cells where the footprint guard meets rocky
-bank cells; streams hug one side on some seeds; bridge1/bridge2 alignment (destroyable
-crossings + island links) still to come; EW streams need real corner topology.
+bank cells; streams hug one side on some seeds; EW streams need real corner topology.
 
 **Original design notes (kept for the bridge/EW follow-ups):**
 `--river-width 1` becomes the rv-chain stream (width ≥2 stays the wide sh-banked

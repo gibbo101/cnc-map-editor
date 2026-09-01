@@ -360,43 +360,41 @@ namespace MobiusEditor.Headless
             Dictionary<int, Template> undo = new Dictionary<int, Template>(), redo = new Dictionary<int, Template>();
             CoastWalker.Place(map, chain, catalog, random, undo);
 
-            // Crossings: a ford stamped ON the stream with its watercourse aligned —
-            // ford1 carries an EW road over a one-cell NS stream, ford2 the transpose —
-            // so the river flows through the crossing instead of being cut by it.
-            // Roads then approach the ford from both banks.
-            TemplateType ford = map.TemplateTypes.FirstOrDefault(t =>
-                t.Name.Equals(horizontal ? "ford2" : "ford1", StringComparison.OrdinalIgnoreCase) && t.ExistsInTheater);
+            // Crossings come straight from the corpus now: the official maps chain
+            // fords onto rv pieces (rv06->ford1 @0,2 and kin) and hang their road
+            // approaches off the ford with mined ford->d edges — every offset is an
+            // observed idiom, nothing is hand-aligned.
             int crossings = Math.Max(1, options.Fords ?? 1 + (int)Math.Round((1 - options.Water) * 2));
             int spacing = (runEnd - runStart) / (crossings + 1);
             int placedCrossings = 0, lastAlong = runStart - spacing;
             foreach (CoastWalker.Step step in chain)
             {
-                if (ford == null || placedCrossings >= crossings) break;
+                if (placedCrossings >= crossings) break;
                 int along = horizontal ? step.Origin.X : step.Origin.Y;
                 if (along - lastAlong < spacing) continue;
-                // Only a piece whose course is a single V line can host the ford.
-                LandType[,] grid = ShoreCatalog.LandGrid(step.Piece);
-                var lanes = new HashSet<int>();
-                for (int y = 0; y < step.Piece.IconHeight; y++)
-                    for (int x = 0; x < step.Piece.IconWidth; x++)
-                        if (grid[y, x] == LandType.River) lanes.Add(horizontal ? y : x);
-                if (lanes.Count != 1) continue;
-                int lane = (horizontal ? step.Origin.Y : step.Origin.X) + lanes.First();
-                // Align the ford's own V lane (index 1) onto the stream's lane.
-                Point at = horizontal ? new Point(step.Origin.X, lane - 1) : new Point(lane - 1, step.Origin.Y);
-                if (!map.Bounds.Contains(new Rectangle(at, new Size(ford.IconWidth, ford.IconHeight)))) continue;
-                TemplateEdit.Place(map.TemplateTypes, map.Templates, ford, at, null, random, undo, redo);
-                // The road row of the ford sits on its middle line; run tracks away from
-                // both banks so the crossing belongs to a route, not to nowhere.
-                if (horizontal)
+                PieceTransition fordEdge = graph.From(step.Piece.Name).FirstOrDefault(t =>
+                    t.To.StartsWith("ford", StringComparison.OrdinalIgnoreCase) && Lookup(t.To) != null);
+                if (fordEdge == null) continue;
+                TemplateType fordPiece = Lookup(fordEdge.To);
+                Point at = new Point(step.Origin.X + fordEdge.Offset.X, step.Origin.Y + fordEdge.Offset.Y);
+                if (!map.Bounds.Contains(new Rectangle(at, new Size(fordPiece.IconWidth, fordPiece.IconHeight)))) continue;
+                TemplateEdit.Place(map.TemplateTypes, map.Templates, fordPiece, at, null, random, undo, redo);
+                // Mined road hangs: one d edge to each side of the stream, then the
+                // track continues away from the banks.
+                foreach (bool east in new[] { true, false })
                 {
-                    SettlementBuilder.PlaceRoad(map, new Point(at.X, lane - 10), new Point(at.X, lane - 4), random);
-                    SettlementBuilder.PlaceRoad(map, new Point(at.X, lane + 2), new Point(at.X, lane + 8), random);
-                }
-                else
-                {
-                    SettlementBuilder.PlaceRoad(map, new Point(lane - 10, at.Y), new Point(lane - 4, at.Y), random);
-                    SettlementBuilder.PlaceRoad(map, new Point(lane + 2, at.Y), new Point(lane + 8, at.Y), random);
+                    PieceTransition roadEdge = graph.From(fordPiece.Name).FirstOrDefault(t =>
+                        t.To.Length == 3 && t.To[0] == 'd' && char.IsDigit(t.To[1]) && char.IsDigit(t.To[2])
+                        && Lookup(t.To) != null && (east ? t.Offset.X > 0 : t.Offset.X < 0));
+                    if (roadEdge == null) continue;
+                    TemplateType roadPiece = Lookup(roadEdge.To);
+                    Point roadAt = new Point(at.X + roadEdge.Offset.X, at.Y + roadEdge.Offset.Y);
+                    if (!map.Bounds.Contains(new Rectangle(roadAt, new Size(roadPiece.IconWidth, roadPiece.IconHeight)))) continue;
+                    TemplateEdit.Place(map.TemplateTypes, map.Templates, roadPiece, roadAt, null, random, undo, redo);
+                    int reach = east ? roadAt.X + roadPiece.IconWidth + 7 : roadAt.X - 7;
+                    SettlementBuilder.PlaceRoad(map,
+                        new Point(east ? roadAt.X + roadPiece.IconWidth : reach, roadAt.Y),
+                        new Point(east ? reach : roadAt.X - 1, roadAt.Y), random);
                 }
                 placedCrossings++;
                 lastAlong = along;

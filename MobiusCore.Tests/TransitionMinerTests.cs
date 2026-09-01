@@ -48,8 +48,9 @@ namespace MobiusCore.Tests
                 IGamePlugin plugin = EditorHost.Shared.Load(mapPath, out _);
                 int before = table.Values.Sum(t => t.Count);
                 // Every family the walker will ever draw with: beaches, water cliffs,
-                // rivers, land cliffs (rock faces), roads.
-                TransitionMiner.Mine(plugin.Map, new[] { "sh", "wc", "rv", "rc", "rf", "d" }, table);
+                // rivers, land cliffs (rock faces), roads — and the crossing pieces
+                // (fords, bridges, falls), whose alignments only the corpus knows.
+                TransitionMiner.Mine(plugin.Map, new[] { "sh", "wc", "rv", "rc", "rf", "d", "ford", "bridge", "br", "falls" }, table);
                 if (table.Values.Sum(t => t.Count) > before) mapsWithShores++;
             }
             // Bake the corpus for the generator: mined statistics about piece adjacency
