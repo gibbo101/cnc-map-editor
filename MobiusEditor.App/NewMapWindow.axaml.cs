@@ -76,6 +76,7 @@ namespace MobiusEditor.App
                         Style = System.Enum.TryParse(WaterStyleCombo.SelectedItem as string, out MobiusEditor.Headless.WaterStyle style)
                             ? style : MobiusEditor.Headless.WaterStyle.Lakes,
                         Villages = (int)(VillagesNud.Value ?? 0),
+                        Tiberium = TiberiumSlider.Value,
                         Roads = RoadsCheck.IsChecked == true,
                     };
                     await System.Threading.Tasks.Task.Run(() => document.NewRandomMap(theater, playable, options));

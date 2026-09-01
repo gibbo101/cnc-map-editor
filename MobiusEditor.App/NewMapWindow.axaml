@@ -41,6 +41,10 @@
           <TextBlock Grid.Column="0" Text="Water" VerticalAlignment="Center" />
           <Slider Grid.Column="1" Name="WaterSlider" Minimum="0" Maximum="1" Value="0.5" />
         </Grid>
+        <Grid ColumnDefinitions="70,*">
+          <TextBlock Grid.Column="0" Text="Tiberium" VerticalAlignment="Center" />
+          <Slider Grid.Column="1" Name="TiberiumSlider" Minimum="0" Maximum="1" Value="0" />
+        </Grid>
         <Grid ColumnDefinitions="70,*,12,*">
           <TextBlock Grid.Column="0" Text="Villages" VerticalAlignment="Center" />
           <NumericUpDown Grid.Column="1" Name="VillagesNud" FormatString="0" Minimum="0" Maximum="8" Value="2" />

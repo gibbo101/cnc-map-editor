@@ -55,6 +55,30 @@ namespace MobiusEditor.Headless
             return instances;
         }
 
+        /// <summary>One transition per line — "from to dx dy count" — sorted for a stable bake.</summary>
+        public static string Serialize(IEnumerable<PieceTransition> transitions)
+        {
+            return string.Join("\n", transitions
+                .OrderByDescending(t => t.Count)
+                .ThenBy(t => t.From).ThenBy(t => t.To).ThenBy(t => t.Offset.X).ThenBy(t => t.Offset.Y)
+                .Select(t => $"{t.From} {t.To} {t.Offset.X} {t.Offset.Y} {t.Count}"));
+        }
+
+        /// <summary>Parses a serialized table; malformed lines are skipped.</summary>
+        public static List<PieceTransition> Parse(string text)
+        {
+            List<PieceTransition> transitions = new List<PieceTransition>();
+            foreach (string line in text.Split('\n'))
+            {
+                string[] parts = line.Trim().Split(' ');
+                if (parts.Length != 5) continue;
+                if (!int.TryParse(parts[2], out int dx) || !int.TryParse(parts[3], out int dy)
+                    || !int.TryParse(parts[4], out int count)) continue;
+                transitions.Add(new PieceTransition(parts[0], parts[1], new Point(dx, dy)) { Count = count });
+            }
+            return transitions;
+        }
+
         /// <summary>
         /// All piece-to-piece transitions in a map among templates whose names match the
         /// given family prefixes, keyed From/To/Offset with occurrence counts. Only pieces

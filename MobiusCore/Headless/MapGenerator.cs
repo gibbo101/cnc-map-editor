@@ -45,6 +45,12 @@ namespace MobiusEditor.Headless
         public int? Villages { get; set; }
         /// <summary>Dirt roads linking the villages; unset = yes when there are two or more villages.</summary>
         public bool? Roads { get; set; }
+        /// <summary>
+        /// Share of resource fields that are tiberium instead of ore, 0..1. Needs a mod whose
+        /// manifest declares a tiberium resource flavor (Tiberian Factions does); without one
+        /// the dial warns and does nothing.
+        /// </summary>
+        public double Tiberium { get; set; }
     }
 
     public enum WaterStyle { None, Lakes, River, Ocean, Islands }
@@ -62,7 +68,7 @@ namespace MobiusEditor.Headless
             DeterministicRandom random = new DeterministicRandom(options.Seed);
             PlaceLakes(map, options, random, warnings);
             List<Point> starts = PlaceStarts(map, options, random);
-            List<Point> fieldCenters = PlaceResources(map, options, random, starts, warnings);
+            List<Point> fieldCenters = PlaceResources(plugin, options, random, starts, warnings);
             PlaceVillagesAndRoads(map, options, random, starts);
             PlaceTrees(plugin, options, random, starts, fieldCenters, warnings);
             plugin.Dirty = true;
@@ -304,12 +310,26 @@ namespace MobiusEditor.Headless
             }
         }
 
-        /// <summary>An ore field beside every start; a contested gem patch between neighbouring starts.</summary>
-        private static List<Point> PlaceResources(Map map, MapGeneratorOptions options, DeterministicRandom random,
+        /// <summary>
+        /// A resource field beside every start — ore seeded with an ore mine, or, when the
+        /// active mod declares a tiberium flavor and the tiberium dial asks for it, tiberium
+        /// seeded with the mod's spawner (Tiberian Factions: the blossom tree) — plus a
+        /// contested gem patch between neighbouring starts.
+        /// </summary>
+        private static List<Point> PlaceResources(IGamePlugin plugin, MapGeneratorOptions options, DeterministicRandom random,
             List<Point> starts, List<string> warnings)
         {
+            Map map = plugin.Map;
             List<Point> centers = new List<Point>();
             if (options.Ore <= 0) return centers;
+            ManifestResource tiberium = ResolveFlavor(plugin, "tiberium");
+            OverlayType tiberiumOverlay = tiberium?.Overlays
+                .Select(n => map.OverlayTypes.FirstOrDefault(o => o.Name.Equals(n, StringComparison.OrdinalIgnoreCase) && o.IsResource && o.ExistsInTheater))
+                .FirstOrDefault(o => o != null);
+            if (options.Tiberium > 0 && tiberiumOverlay == null)
+            {
+                warnings.Add("Tiberium requested but no active mod declares a tiberium resource; using ore.");
+            }
             OverlayType ore = map.OverlayTypes.FirstOrDefault(o => o.IsResource && o.Name.StartsWith("gold", StringComparison.OrdinalIgnoreCase))
                 ?? map.OverlayTypes.FirstOrDefault(o => o.IsResource);
             OverlayType gems = map.OverlayTypes.FirstOrDefault(o => o.IsResource && o.Name.StartsWith("gem", StringComparison.OrdinalIgnoreCase)) ?? ore;
@@ -325,7 +345,9 @@ namespace MobiusEditor.Headless
                 Point center = Clamp(map.Bounds, new Point(
                     start.X + (int)Math.Round(Math.Cos(angle) * (StartClearRadius - 1)),
                     start.Y + (int)Math.Round(Math.Sin(angle) * (StartClearRadius - 1))));
-                PlacePatch(map, ore, center, radius);
+                bool tiberiumField = tiberiumOverlay != null && random.Next(1000) < options.Tiberium * 1000;
+                PlaceSpawner(map, tiberiumField ? tiberium : null, center, random);
+                PlacePatch(map, tiberiumField ? tiberiumOverlay : ore, center, radius);
                 centers.Add(center);
             }
             for (int i = 0; i < starts.Count; i++)
@@ -340,6 +362,56 @@ namespace MobiusEditor.Headless
             return centers;
         }
 
+        /// <summary>The mod-declared resource flavor for the plugin's game, or null.</summary>
+        private static ManifestResource ResolveFlavor(IGamePlugin plugin, string flavor)
+        {
+            string key = plugin.GameInfo.GameType == GameType.TiberianDawn ? "TD" : "RA";
+            if (!MobiusEditor.Globals.TheModManifests.TryGetValue(key, out IReadOnlyList<ModManifest> manifests)) return null;
+            return manifests
+                .SelectMany(m => m.Resources)
+                .FirstOrDefault(r => r.Flavor.Equals(flavor, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>
+        /// The living seed of a resource field: the ore mine for ore, or the flavor's
+        /// declared spawner (building or terrain) for a modded resource.
+        /// </summary>
+        private static void PlaceSpawner(Map map, ManifestResource flavor, Point center, DeterministicRandom random)
+        {
+            if (!map.Bounds.Contains(center) || !IsClearGround(map, center)) return;
+            if (flavor == null)
+            {
+                TerrainType mine = map.TerrainTypes.FirstOrDefault(t =>
+                    t.Name.Equals("mine", StringComparison.OrdinalIgnoreCase) && t.ExistsInTheater);
+                if (mine != null) map.Technos.Add(center, new Terrain { Type = mine });
+                return;
+            }
+            if (!string.IsNullOrEmpty(flavor.SpawnerBuilding))
+            {
+                BuildingType building = map.BuildingTypes.FirstOrDefault(t =>
+                    t.Name.Equals(flavor.SpawnerBuilding, StringComparison.OrdinalIgnoreCase) && t.ExistsInTheater);
+                HouseType neutral = map.HouseTypes.FirstOrDefault(h => h.Name.Equals("Neutral", StringComparison.OrdinalIgnoreCase))
+                    ?? map.HouseTypes.First();
+                if (building != null)
+                {
+                    map.Buildings.Add(center, new Building
+                    {
+                        Type = building,
+                        House = neutral,
+                        Strength = 256,
+                        IsPrebuilt = true,
+                        Direction = map.BuildingDirectionTypes.First(d => d.Facing == FacingType.North),
+                    });
+                }
+            }
+            else if (!string.IsNullOrEmpty(flavor.SpawnerTerrain))
+            {
+                TerrainType terrain = map.TerrainTypes.FirstOrDefault(t =>
+                    t.Name.Equals(flavor.SpawnerTerrain, StringComparison.OrdinalIgnoreCase) && t.ExistsInTheater);
+                if (terrain != null) map.Technos.Add(center, new Terrain { Type = terrain });
+            }
+        }
+
         private static void PlacePatch(Map map, OverlayType resource, Point center, int radius)
         {
             Dictionary<int, Overlay> undo = new Dictionary<int, Overlay>(), redo = new Dictionary<int, Overlay>();
@@ -349,7 +421,7 @@ namespace MobiusEditor.Headless
                 {
                     if (dx * dx + dy * dy > radius * radius) continue;
                     Point p = new Point(center.X + dx, center.Y + dy);
-                    if (!map.Bounds.Contains(p) || map.Technos[p] != null || !IsClearGround(map, p)) continue;
+                    if (!map.Bounds.Contains(p) || map.Technos[p] != null || map.Buildings[p] != null || !IsClearGround(map, p)) continue;
                     OverlayEdit.Place(map, resource, p, undo, redo);
                 }
             }

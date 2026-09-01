@@ -15,7 +15,8 @@ skip surfaces as a load warning (`cncmap validate`, `EditorSession.ManifestLoadW
 
 ```json
 { "format": 1, "game_type": "RA",
-  "buildings": [ ... ], "units": [ ... ], "infantry": [ ... ], "templates": [ ... ] }
+  "buildings": [ ... ], "units": [ ... ], "infantry": [ ... ], "templates": [ ... ],
+  "resources": [ ... ] }
 ```
 
 - `format` — integer, must be `1`. Anything else skips the file (with a warning).
@@ -30,6 +31,21 @@ case-insensitive name collision the first-loaded type wins and the dropped entry
 warning; vanilla always beats a manifest, an earlier mod beats a later one. The editor's
 `Globals` filters apply to manifest types exactly as to vanilla ones (wall buildings,
 disabled air units).
+
+## `resources`
+
+Harvestable resource flavors the mod supports beyond the game's ore/gems, used by the
+random map generator (the Tiberium dial):
+
+```json
+{ "flavor": "tiberium", "overlays": ["tib01"], "spawner_building": "tdblossom" }
+```
+
+- `flavor` — the flavor name the generator looks up (`"tiberium"` today).
+- `overlays` — resource overlay names, tried in order until one has art in the theater.
+- `spawner_building` / `spawner_terrain` — optional living seed the generator plants at a
+  field's center (Tiberian Factions: the blossom tree building; ore fields get the ore
+  mine terrain automatically).
 
 ## `buildings`
 

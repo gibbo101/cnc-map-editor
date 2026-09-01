@@ -47,14 +47,33 @@ namespace MobiusCore.Tests
             {
                 IGamePlugin plugin = EditorHost.Shared.Load(mapPath, out _);
                 int before = table.Values.Sum(t => t.Count);
-                TransitionMiner.Mine(plugin.Map, new[] { "sh", "wc" }, table);
+                // Every family the walker will ever draw with: beaches, water cliffs,
+                // rivers, land cliffs (rock faces), roads.
+                TransitionMiner.Mine(plugin.Map, new[] { "sh", "wc", "rv", "rc", "rf", "d" }, table);
                 if (table.Values.Sum(t => t.Count) > before) mapsWithShores++;
             }
+            // Bake the corpus for the generator: mined statistics about piece adjacency
+            // (names, offsets, counts) — analytical metadata, not map content.
+            string bakedPath = TestPaths.Output("mined-transitions.txt");
+            File.WriteAllText(bakedPath, TransitionMiner.Serialize(table.Values));
+            output.WriteLine("baked: " + bakedPath);
             output.WriteLine($"maps contributing shore transitions: {mapsWithShores}");
             output.WriteLine($"distinct transitions: {table.Count}");
             foreach (PieceTransition t in table.Values.OrderByDescending(t => t.Count).Take(40))
             {
                 output.WriteLine(t.ToString());
+            }
+            // The cliff-to-beach splices: how official maps interrupt a wc cliff coast with
+            // sh landing beaches (the amphibious-landing idiom the walker must reproduce).
+            var crossFamily = table.Values
+                .Where(t => t.From.StartsWith("wc") != t.To.StartsWith("wc"))
+                .OrderByDescending(t => t.Count)
+                .Take(25)
+                .ToList();
+            output.WriteLine($"cross-family (cliff<->beach) transitions: {table.Values.Count(t => t.From.StartsWith("wc") != t.To.StartsWith("wc"))}");
+            foreach (PieceTransition t in crossFamily)
+            {
+                output.WriteLine("splice: " + t);
             }
             // The corpus must be rich enough to walk from: hundreds of distinct idioms.
             Assert.True(table.Count > 200, "corpus too thin: " + table.Count);

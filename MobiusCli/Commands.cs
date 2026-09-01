@@ -182,6 +182,7 @@ namespace MobiusCli
                 Causeways = OptBool(inv, "causeways"),
                 Villages = OptInt(inv, "villages"),
                 Roads = OptBool(inv, "roads"),
+                Tiberium = double.Parse(inv.Option("tiberium", "0"), System.Globalization.CultureInfo.InvariantCulture),
             };
             IGamePlugin plugin = session.New(inv.Option("theater"), out string[] notes);
             foreach (string n in notes) o.WriteLine("note: " + n);

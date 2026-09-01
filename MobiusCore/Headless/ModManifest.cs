@@ -81,6 +81,17 @@ namespace MobiusEditor.Headless
         public string Mask { get; set; }
     }
 
+    /// <summary>A harvestable resource flavor a mod supports: its overlay names and the
+    /// living spawner the generator seeds fields with (a building like a blossom tree, or a
+    /// terrain object like the ore mine).</summary>
+    public sealed class ManifestResource
+    {
+        public string Flavor { get; set; }
+        public List<string> Overlays { get; set; } = new List<string>();
+        public string SpawnerBuilding { get; set; }
+        public string SpawnerTerrain { get; set; }
+    }
+
     public sealed class ModManifest
     {
         public const string FileName = "mapeditor.json";
@@ -92,6 +103,7 @@ namespace MobiusEditor.Headless
         public List<ManifestUnit> Units { get; } = new List<ManifestUnit>();
         public List<ManifestInfantry> Infantry { get; } = new List<ManifestInfantry>();
         public List<ManifestTemplate> Templates { get; } = new List<ManifestTemplate>();
+        public List<ManifestResource> Resources { get; } = new List<ManifestResource>();
 
         /// <summary>Reads a manifest file; null (with a warning) when it cannot be used at all.</summary>
         public static ModManifest Load(string path, string modName, List<string> warnings)
@@ -123,7 +135,26 @@ namespace MobiusEditor.Headless
             ParseEntries(root["units"], "unit", modName, warnings, ParseUnit, manifest.Units);
             ParseEntries(root["infantry"], "infantry", modName, warnings, ParseInfantry, manifest.Infantry);
             ParseEntries(root["templates"], "template", modName, warnings, ParseTemplate, manifest.Templates);
+            ParseEntries(root["resources"], "resource", modName, warnings, ParseResource, manifest.Resources);
             return manifest;
+        }
+
+        private static ManifestResource ParseResource(Newtonsoft.Json.Linq.JObject o)
+        {
+            var overlays = (o["overlays"] as Newtonsoft.Json.Linq.JArray)?.Select(t => (string)t)
+                .Where(n => !string.IsNullOrWhiteSpace(n)).ToList() ?? new List<string>();
+            string flavor = (string)o["flavor"];
+            if (string.IsNullOrWhiteSpace(flavor) || overlays.Count == 0)
+            {
+                throw new ArgumentException("resource entries need a flavor and at least one overlay");
+            }
+            return new ManifestResource
+            {
+                Flavor = flavor,
+                Overlays = overlays,
+                SpawnerBuilding = (string)o["spawner_building"],
+                SpawnerTerrain = (string)o["spawner_terrain"],
+            };
         }
 
         private static void ParseEntries<T>(JToken array, string category, string modName, List<string> warnings, Func<JObject, T> parse, List<T> into)

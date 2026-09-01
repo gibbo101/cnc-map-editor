@@ -144,6 +144,18 @@ namespace MobiusCore.Tests
         }
 
         [Fact]
+        public void TiberiumDialSwitchesFieldsAndSpawnersViaTheModManifest()
+        {
+            IGamePlugin tib = Generate(new MapGeneratorOptions { Seed = 9, Players = 4, Tiberium = 1 });
+            Assert.Contains(tib.Map.Overlay, c => c.Value?.Type.Name == "tib01");
+            Assert.Contains(tib.Map.Buildings.Occupiers.OfType<Building>(), b => b.Type.Name == "tdblossom");
+
+            IGamePlugin ore = Generate(new MapGeneratorOptions { Seed = 9, Players = 4, Tiberium = 0 });
+            Assert.DoesNotContain(ore.Map.Overlay, c => c.Value?.Type.Name == "tib01");
+            Assert.Contains(ore.Map.Technos.Occupiers.OfType<Terrain>(), t => t.Type.Name == "mine");
+        }
+
+        [Fact]
         public void TiberianDawnMapsGenerateToo()
         {
             IGamePlugin plugin = EditorHost.SharedFor(GameType.TiberianDawn).New(null, out _);
