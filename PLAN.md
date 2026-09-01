@@ -279,7 +279,12 @@ meandering). Ground truth from scm03ea shows hand maps chain the LARGER diagonal
 cell offsets (sh52→sh03→sh49 etc.). `TransitionMiner` (shipped) reconstructs piece
 instances from any map's template grid and accumulates (from,to,offset,count) transitions;
 `TransitionMinerTests.MinesShoreIdiomsFromTheOfficialCorpus` (oracle-tier) mines all 230
-official maps. BUILD NEXT: a coast walker that plans closed loops/paths through the mined
+official maps. **FIRST CORPUS RUN (2026-09-01): 214/230 maps contribute, 8,404 distinct
+transitions.** KEY FINDING: official shores are dominated by the `wc` WATER-CLIFF family
+(rocky coastlines — top idiom wc02→wc03 @2,1 ×149; dense 2-cell chains), not the sandy
+`sh` beaches (which chain too: sh53→sh54 @0,3 ×89 vertical runs). The walker should learn
+per-family sub-graphs (wc coasts, sh beaches, rv rivers, d roads) and offer coast
+flavor (cliff vs beach) as a tunable. BUILD NEXT: a coast walker that plans closed loops/paths through the mined
 transition graph (A* over piece+position states) → organic lakes, meandering rivers,
 proper island corners, and then the cliffs setting Luke asked for (rf rock-face family,
 same mined-transition treatment) plus richer road curves.
