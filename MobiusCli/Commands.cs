@@ -152,6 +152,35 @@ namespace MobiusCli
         }
 
         /// <summary>
+        /// Generates a random skirmish map: spaced player starts, tree cover, ore by every
+        /// start and gems between them. Deterministic — the same seed and dials always
+        /// produce the same map.
+        /// </summary>
+        public static int Generate(Invocation inv, EditorSession session, TextWriter o)
+        {
+            if (inv.Positional.Count < 1) throw new ArgumentException("generate needs an output path: cncmap generate <out> [--theater <name>] [--seed <n>] [--players <n>] [--trees 0..1] [--ore 0..1]");
+            string outPath = inv.Positional[0];
+            if (File.Exists(outPath)) throw new ArgumentException("refusing to overwrite existing file " + outPath);
+            MapGeneratorOptions options = new MapGeneratorOptions
+            {
+                Seed = int.Parse(inv.Option("seed", "1")),
+                Players = int.Parse(inv.Option("players", "4")),
+                Trees = double.Parse(inv.Option("trees", "0.5"), System.Globalization.CultureInfo.InvariantCulture),
+                Ore = double.Parse(inv.Option("ore", "0.5"), System.Globalization.CultureInfo.InvariantCulture),
+            };
+            IGamePlugin plugin = session.New(inv.Option("theater"), out string[] notes);
+            foreach (string n in notes) o.WriteLine("note: " + n);
+            foreach (string w in MapGenerator.Generate(plugin, options)) o.WriteLine("note: " + w);
+            string invalid = plugin.Validate(FileType.INI, false, false);
+            if (invalid != null) throw new InvalidOperationException("generated map failed validation: " + invalid);
+            plugin.Save(outPath, FileType.INI);
+            Map generated = plugin.Map;
+            int starts = generated.Waypoints.Count(w => w.Flags.HasFlag(WaypointFlag.PlayerStart) && w.Cell.HasValue);
+            o.WriteLine($"generated {plugin.GameInfo.GameType} map, theater {generated.Theater.Name}, seed {options.Seed}, {starts} starts; wrote {outPath}");
+            return 0;
+        }
+
+        /// <summary>
         /// Expands a JSON mission spec (patterns + raw rows) into the map's triggers and
         /// teamtypes, and saves to --out (never the input). Refused entirely — nothing
         /// written — when any pattern fails to build or the expanded triggers fail the
