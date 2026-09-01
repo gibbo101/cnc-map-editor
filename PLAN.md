@@ -288,10 +288,50 @@ stage — gold04/gem04 hearts thinning to 01 rims like hand-placed fields.** Bri
 over pinched rv channels are the answer for island links (Luke asked bridges-or-fords;
 fords are 1-cell-stream art with zero mined edges) — rides on the rv-stream arc.
 
-**NEXT:** rv-stream rivers (see previous block), the miner-art waterness scoring,
-remaining offshore stubs (diagonally coast-linked or larger than six cells), GUI
-coast-flavor control, thread the placement-exact composite through the river banks
-and ocean, and landing-beach flavors for cliff oceans/lakes.
+**RV-STREAM RIVER — SHIPPED (2026-09-02, Luke steering live):** `--river-width 1`
+(and the default at low water) is now the rv-chain stream. What the iteration taught:
+- The mined rv↔d idioms are roads BESIDE streams — stamping one CUTS the river (Luke:
+  "should be a ford or a bridge"). Crossings are ford1 stamped ON the stream with its
+  V lane aligned (water flows through the ford art), plus SettlementBuilder road
+  approaches abutting both banks.
+- `LandType.River` IS the engine's encoding of self-banked water — the audit and
+  composite checks exempt it (official maps run rv streams through open meadow).
+- Streams chain only THROUGH-pieces (CourseExits == 2) — springs/fork blobs dangle
+  arms that "abruptly begin" mid-map (Luke caught one). NOTE: the perimeter-cluster
+  metric misreads the 2x2 EW corner pieces (wrap-around clusters), which is fine while
+  streams are NS-only — the rv set has no EW straight, so streams run north-south and
+  the meander gives the EW character.
+- Watercourse continuity at bends: orthogonal water touch (corner-touch renders
+  broken) + a successor may not BURY the predecessor's course under land (pair rule in
+  WatersTouch AND protectCourse in CompositeSeals for the composite).
+- Shape control: a ±12 corridor around one base line, sparse jogs (a jog at every
+  anchor renders a mechanical sawtooth), and every THIRD anchor exact-goal-pins the
+  chain back onto rv06 — free walks sawtooth through corner idioms, pinning every
+  anchor renders a canal.
+- Both ends extend through the border frame to the true map edge (ExtendToEdge gained
+  a `within` area) — a stream must never just stop at the playable bounds.
+Polish notes: approach roads can gap ~1-2 cells where the footprint guard meets rocky
+bank cells; streams hug one side on some seeds; bridge1/bridge2 alignment (destroyable
+crossings + island links) still to come; EW streams need real corner topology.
+
+**Original design notes (kept for the bridge/EW follow-ups):**
+`--river-width 1` becomes the rv-chain stream (width ≥2 stays the wide sh-banked
+river). Corpus facts that shape it (probed from mined-transitions.txt):
+- rv-rv chains run BOTH orientations (rv08–rv11 2x2 corners chain EW: rv10→rv03 @2,0
+  ×226, rv04→rv11 @4,0 ×180; NS via rv05/06/07 @0,2..3) — no orientation limit.
+- **Crossings are mined road idioms** — rv↔d is the largest splice family (1,493
+  counts: rv06→d04 @3,2 ×47, d02→rv06 @2,2 ×42, rv05→d04 @3,3 ×41...). Stamp 1–2 of
+  these as the `--fords` equivalent; ALSO the basis for island bridges later.
+- Mouths into sea/shore are mined (sh30→rv05 ×32, rv05→sh09 ×28, rv01/02→sh39).
+Build: meander-curve anchors edge to edge, PlanPath segments with desiredSide=-1
+(rv is side-unclassified; the side/seam prunes are gated off), preferPrefix "rv",
+self-separation forbidden ON, and the placement-exact composite accumulated per
+segment (PlanRing-style). No flood, no banks — the art is complete. Expected: the
+first fully audit-clean river; pin audit==0 in its test.
+
+**THEN:** miner-art waterness scoring, remaining offshore stubs, GUI coast-flavor
+control, composite for the wide-river banks and ocean, landing-beach flavors for
+cliff oceans/lakes, island bridges over pinched rv channels.
 
 ## Previous block (2026-09-02 early — THE SHORE RULE, islands, cliffs; Luke steering live)
 

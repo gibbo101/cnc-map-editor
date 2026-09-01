@@ -124,12 +124,15 @@ namespace MobiusEditor.Headless
                     }
                     break;
                 case WaterStyle.River:
-                    // Walked meandering banks are the real thing; the straight block
-                    // corridor stays as the fallback.
+                    // A width-1 river is an rv-family stream — the corpus's own river
+                    // idiom, banks drawn inside the art. Wider rivers get the walked
+                    // sh banks; the straight block corridor stays as the last fallback.
+                    int riverWidth = options.RiverWidth ?? 1 + (int)Math.Round(options.Water);
+                    if (riverWidth <= 1 && PlaceStreamRiver(map, options, random)) break;
                     if (!PlaceWalkedRiver(map, options, random))
                     {
                         LakeBuilder.PlaceRiver(map, random.Next(2) == 0,
-                            options.RiverWidth ?? 1 + (int)Math.Round(options.Water),
+                            riverWidth,
                             options.Fords ?? 1 + (int)Math.Round((1 - options.Water) * 2), random, catalog);
                     }
                     break;
@@ -254,6 +257,159 @@ namespace MobiusEditor.Headless
 
         private static string BestStraightPiece(TransitionGraph graph, Dictionary<string, ShorePiece> catalog, int side)
             => StraightPieces(graph, catalog, side).FirstOrDefault();
+
+        /// <summary>
+        /// A stream: one meandering rv river-course chain from map edge to map edge —
+        /// the corpus's own river idiom, with both banks drawn inside the art, so it
+        /// needs no flood, no bank walks and no seam patching. Ground forces cross on
+        /// mined road-over-stream idioms stamped along it. False falls back to the
+        /// wide walked river.
+        /// </summary>
+        private static bool PlaceStreamRiver(Map map, MapGeneratorOptions options, DeterministicRandom random)
+        {
+            TransitionGraph graph = TransitionGraph.Baked;
+            Dictionary<string, ShorePiece> catalog = WalkerCatalog(map);
+            TemplateType Lookup(string name) => map.TemplateTypes.FirstOrDefault(t =>
+                t.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && t.ExistsInTheater);
+            // Streams chain only through-pieces: a course with exactly two exits.
+            // Springs and fork blobs dangle arms that abruptly begin or end mid-map.
+            bool IsThroughPiece(string name) => name.StartsWith("rv", StringComparison.OrdinalIgnoreCase)
+                && Lookup(name) is TemplateType t && CoastWalker.CourseExits(t) == 2;
+            string start = graph.Pieces
+                .Where(IsThroughPiece)
+                .OrderByDescending(p => graph.From(p).Sum(t => t.Count))
+                .ThenBy(p => p, StringComparer.Ordinal)
+                .FirstOrDefault();
+            if (start == null) return false;
+            // The straight piece every anchor pins the chain back onto: segments may
+            // bend between anchors, but the stream re-straightens at each one instead
+            // of sawtoothing through corner idioms.
+            string straight = new[] { "rv06", "rv07" }.FirstOrDefault(n => Lookup(n) != null && graph.From(n).Count > 0);
+            if (straight == null) return false;
+            // The rv set has NS straights (rv06/rv07/rv14) but no EW straight — the 2x2
+            // corner pieces carry all EW motion — so streams run north-south; the
+            // meander provides the east-west character.
+            bool horizontal = false;
+            Rectangle b = map.Bounds;
+            Point At(int along, int across) => horizontal ? new Point(along, across) : new Point(across, along);
+            int runStart = horizontal ? b.Left : b.Top, runEnd = horizontal ? b.Right : b.Bottom;
+            int acrossMin = (horizontal ? b.Top : b.Left) + 8, acrossMax = (horizontal ? b.Bottom : b.Right) - 8;
+            if (acrossMax - acrossMin < 12) return false;
+
+            // The meander lives in a bounded corridor around one base line: without the
+            // clamp the seam-tight diagonal idioms switchback across half the map.
+            int baseAcross = acrossMin + random.Next(acrossMax - acrossMin);
+            int corridorMin = Math.Max(acrossMin, baseAcross - 12), corridorMax = Math.Min(acrossMax, baseAcross + 12);
+            int cursor = baseAcross;
+            var chain = new List<CoastWalker.Step>();
+            var composite = new Dictionary<Point, LandType>();
+            int recorded = 0;
+            void RecordUpTo(int end)
+            {
+                for (; recorded < end; recorded++)
+                {
+                    CoastWalker.Step st = chain[recorded];
+                    LandType[,] grid = ShoreCatalog.LandGrid(st.Piece);
+                    for (int y = 0; y < st.Piece.IconHeight; y++)
+                        for (int x = 0; x < st.Piece.IconWidth; x++)
+                            if (grid[y, x] != LandType.None)
+                                composite[new Point(st.Origin.X + x, st.Origin.Y + y)] = grid[y, x];
+                }
+            }
+            string piece = start;
+            Point origin = At(runStart, cursor);
+            int anchorIndex = 0;
+            for (int along = runStart + 8; along < runEnd - 6; along += 9)
+            {
+                anchorIndex++;
+                // Rivers run straight and jog occasionally — a jog at every anchor
+                // renders as a mechanical sawtooth.
+                if (random.Next(3) == 0)
+                {
+                    cursor = Math.Clamp(cursor + (random.Next(2) == 0 ? -3 : 3), corridorMin, corridorMax);
+                }
+                List<Rectangle> forbidden = new List<Rectangle>();
+                for (int i = 0; i < chain.Count - 4; i++)
+                {
+                    forbidden.Add(new Rectangle(chain[i].Origin, new Size(chain[i].Piece.IconWidth, chain[i].Piece.IconHeight)));
+                }
+                RecordUpTo(Math.Max(0, chain.Count - 4));
+                // Every third anchor pins the chain back onto a straight; the two in
+                // between are free — organic bends without the sawtooth or the canal.
+                bool pin = anchorIndex % 3 == 0;
+                List<CoastWalker.Step> segment = CoastWalker.PlanPath(map, graph, catalog,
+                    piece, origin, At(along, cursor - (pin ? 1 : 0)), 40, -1, pin ? straight : null,
+                    forbidden.Count > 0 ? forbidden : null, "rv",
+                    composite.Count > 0 ? composite : null, IsThroughPiece);
+                if (segment == null) return false;
+                if (chain.Count > 0) segment.RemoveAt(0);
+                chain.AddRange(segment);
+                if (chain.Count == 0) return false;
+                piece = chain[^1].Piece.Name;
+                origin = chain[^1].Origin;
+            }
+            CoastWalker.ExtendToEdge(map, graph, catalog, chain, horizontal ? 2 : 1, -1, null, IsThroughPiece);
+            // The river does not stop at the playable bounds: both ends continue through
+            // the border frame to the true map edge, so it reads as entering and leaving
+            // the world instead of being cut off.
+            Rectangle world = new Rectangle(0, 0, map.Metrics.Width, map.Metrics.Height);
+            CoastWalker.ExtendToEdge(map, graph, catalog, chain, horizontal ? 2 : 1, -1, world, IsThroughPiece);
+            chain.Reverse();
+            CoastWalker.ExtendToEdge(map, graph, catalog, chain, horizontal ? 3 : 0, -1, world, IsThroughPiece);
+            chain.Reverse();
+            Dictionary<int, Template> undo = new Dictionary<int, Template>(), redo = new Dictionary<int, Template>();
+            CoastWalker.Place(map, chain, catalog, random, undo);
+
+            // Crossings: a ford stamped ON the stream with its watercourse aligned —
+            // ford1 carries an EW road over a one-cell NS stream, ford2 the transpose —
+            // so the river flows through the crossing instead of being cut by it.
+            // Roads then approach the ford from both banks.
+            TemplateType ford = map.TemplateTypes.FirstOrDefault(t =>
+                t.Name.Equals(horizontal ? "ford2" : "ford1", StringComparison.OrdinalIgnoreCase) && t.ExistsInTheater);
+            int crossings = Math.Max(1, options.Fords ?? 1 + (int)Math.Round((1 - options.Water) * 2));
+            int spacing = (runEnd - runStart) / (crossings + 1);
+            int placedCrossings = 0, lastAlong = runStart - spacing;
+            foreach (CoastWalker.Step step in chain)
+            {
+                if (ford == null || placedCrossings >= crossings) break;
+                int along = horizontal ? step.Origin.X : step.Origin.Y;
+                if (along - lastAlong < spacing) continue;
+                // Only a piece whose course is a single V line can host the ford.
+                LandType[,] grid = ShoreCatalog.LandGrid(step.Piece);
+                var lanes = new HashSet<int>();
+                for (int y = 0; y < step.Piece.IconHeight; y++)
+                    for (int x = 0; x < step.Piece.IconWidth; x++)
+                        if (grid[y, x] == LandType.River) lanes.Add(horizontal ? y : x);
+                if (lanes.Count != 1) continue;
+                int lane = (horizontal ? step.Origin.Y : step.Origin.X) + lanes.First();
+                // Align the ford's own V lane (index 1) onto the stream's lane.
+                Point at = horizontal ? new Point(step.Origin.X, lane - 1) : new Point(lane - 1, step.Origin.Y);
+                if (!map.Bounds.Contains(new Rectangle(at, new Size(ford.IconWidth, ford.IconHeight)))) continue;
+                TemplateEdit.Place(map.TemplateTypes, map.Templates, ford, at, null, random, undo, redo);
+                // The road row of the ford sits on its middle line; run tracks away from
+                // both banks so the crossing belongs to a route, not to nowhere.
+                if (horizontal)
+                {
+                    SettlementBuilder.PlaceRoad(map, new Point(at.X, lane - 10), new Point(at.X, lane - 4), random);
+                    SettlementBuilder.PlaceRoad(map, new Point(at.X, lane + 2), new Point(at.X, lane + 8), random);
+                }
+                else
+                {
+                    SettlementBuilder.PlaceRoad(map, new Point(lane - 10, at.Y), new Point(lane - 4, at.Y), random);
+                    SettlementBuilder.PlaceRoad(map, new Point(lane + 2, at.Y), new Point(lane + 8, at.Y), random);
+                }
+                placedCrossings++;
+                lastAlong = along;
+            }
+            if (placedCrossings == 0)
+            {
+                // A stream nobody can cross is a wall, not a river: take it all back
+                // so the wide walked river gets a clean map.
+                foreach (KeyValuePair<int, Template> cell in undo) map.Templates[cell.Key] = cell.Value;
+                return false;
+            }
+            return true;
+        }
 
         private static bool PlaceWalkedRiver(Map map, MapGeneratorOptions options, DeterministicRandom random)
         {

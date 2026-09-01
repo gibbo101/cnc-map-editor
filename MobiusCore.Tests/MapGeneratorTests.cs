@@ -297,6 +297,42 @@ namespace MobiusCore.Tests
         }
 
         [Fact]
+        public void StreamRiverIsAnRvChainWithMinedCrossingsAndACleanAudit()
+        {
+            MapGeneratorOptions options = new MapGeneratorOptions
+            { Seed = 29, Players = 4, Style = WaterStyle.River, RiverWidth = 1, Water = 0.5 };
+            byte[] first = SaveBytes(Generate(options), "stream-a.mpr");
+            byte[] second = SaveBytes(Generate(options), "stream-b.mpr");
+            Assert.Equal(first, second);
+
+            IGamePlugin plugin = Generate(options);
+            Map map = plugin.Map;
+            // The stream is drawn from the rv river-course family, edge to edge.
+            Assert.Contains(EnumerateTemplateNames(map), n => n.StartsWith("rv", StringComparison.OrdinalIgnoreCase));
+            var riverCells = new System.Collections.Generic.List<System.Drawing.Point>();
+            for (int y = map.Bounds.Top; y < map.Bounds.Bottom; y++)
+                for (int x = map.Bounds.Left; x < map.Bounds.Right; x++)
+                    if (map.Templates[y, x]?.Type?.Name.StartsWith("rv", StringComparison.OrdinalIgnoreCase) == true)
+                        riverCells.Add(new System.Drawing.Point(x, y));
+            int alongSpan = Math.Max(
+                riverCells.Max(p => p.X) - riverCells.Min(p => p.X),
+                riverCells.Max(p => p.Y) - riverCells.Min(p => p.Y));
+            Assert.True(alongSpan >= map.Bounds.Width * 3 / 4, "stream does not span the map: " + alongSpan);
+            // A mined road-crossing idiom gives ground forces a way over: only the
+            // crossing stamps put road cells against the stream — village roads are
+            // footprint-guarded away from water.
+            bool crossing = riverCells.Any(p => new[]
+            {
+                new System.Drawing.Point(p.X + 1, p.Y), new System.Drawing.Point(p.X - 1, p.Y),
+                new System.Drawing.Point(p.X, p.Y + 1), new System.Drawing.Point(p.X, p.Y - 1),
+            }.Any(n => map.Bounds.Contains(n) && LakeBuilder.LandAt(map, n) == LandType.Road));
+            Assert.True(crossing, "no road crossing touches the stream");
+            // The rv art carries both banks inside itself: the stream is the first
+            // fully audit-clean river.
+            Assert.Empty(CoastWalker.AuditShoreRule(map));
+        }
+
+        [Fact]
         public void WalkedIslandWorldConnectsAllStartsOverLand()
         {
             MapGeneratorOptions options = new MapGeneratorOptions

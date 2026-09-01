@@ -97,7 +97,7 @@ namespace MobiusEditor.Headless
             IReadOnlyDictionary<string, ShorePiece> catalog,
             string startPiece, Point startOrigin, Point goal, int maxPieces, int desiredSide = -1,
             string goalPiece = null, IReadOnlyList<Rectangle> forbidden = null, string preferPrefix = null,
-            IReadOnlyDictionary<Point, LandType> placed = null)
+            IReadOnlyDictionary<Point, LandType> placed = null, Func<string, bool> pieceFilter = null)
         {
             TemplateType Lookup(string name) => map.TemplateTypes.FirstOrDefault(t =>
                 t.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && t.ExistsInTheater);
@@ -130,6 +130,7 @@ namespace MobiusEditor.Headless
                 {
                     TemplateType next = Lookup(t.To);
                     if (next == null) continue;
+                    if (pieceFilter != null && !pieceFilter(t.To)) continue;
                     Point nextOrigin = new Point(origin.X + t.Offset.X, origin.Y + t.Offset.Y);
                     Rectangle box = new Rectangle(nextOrigin, new Size(next.IconWidth, next.IconHeight));
                     if (!map.Bounds.Contains(box)) continue;
@@ -159,10 +160,14 @@ namespace MobiusEditor.Headless
                     Rectangle boxA = new Rectangle(origin, new Size(current.IconWidth, current.IconHeight));
                     if (!SealedAdjacency(boxA, box)) continue;
                     if (desiredSide >= 0 && !SeamSealed(current, origin, next, nextOrigin)) continue;
+                    // A side-less walk (an rv stream) still needs its watercourse to
+                    // continue across the seam — the rest of the seam rule would wrongly
+                    // reject rv's self-banked water-against-clear pairs.
+                    if (desiredSide < 0 && !WatersTouch(current, origin, next, nextOrigin)) continue;
                     // Placement-exact: the candidate must not create a cross-stamp
                     // water-clear junction against ANYTHING already laid — pair checks
                     // cannot see a third stamp's overwrite, this can.
-                    if (placed != null && !CompositeSeals(next, nextOrigin, placed)) continue;
+                    if (placed != null && !CompositeSeals(next, nextOrigin, placed, desiredSide < 0)) continue;
                     double stepCost = 1.0 + 4.0 / (t.Count + 1);
                     // Coast flavor: the off-family pieces stay reachable (the mined
                     // wc-sh splices are how a cliff coast carries a landing beach), but
@@ -425,9 +430,13 @@ namespace MobiusEditor.Headless
         /// idioms that advance toward the edge without turning the water side.
         /// </summary>
         /// <param name="edge">0 north, 1 south, 2 east, 3 west — the bounds edge to reach.</param>
+        /// <param name="within">Placement area; defaults to the playable bounds. Pass the
+        /// full metrics rectangle to run a stream off through the border frame.</param>
         public static void ExtendToEdge(Map map, TransitionGraph graph,
-            IReadOnlyDictionary<string, ShorePiece> catalog, List<Step> path, int edge, int desiredSide)
+            IReadOnlyDictionary<string, ShorePiece> catalog, List<Step> path, int edge, int desiredSide,
+            Rectangle? within = null, Func<string, bool> pieceFilter = null)
         {
+            Rectangle area = within ?? map.Bounds;
             TemplateType Lookup(string name) => map.TemplateTypes.FirstOrDefault(t =>
                 t.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && t.ExistsInTheater);
             for (int guard = 0; guard < 40; guard++)
@@ -436,16 +445,17 @@ namespace MobiusEditor.Headless
                 Rectangle lastBox = new Rectangle(last.Origin, new Size(last.Piece.IconWidth, last.Piece.IconHeight));
                 bool flush = edge switch
                 {
-                    0 => lastBox.Top <= map.Bounds.Top,
-                    1 => lastBox.Bottom >= map.Bounds.Bottom,
-                    2 => lastBox.Right >= map.Bounds.Right,
-                    _ => lastBox.Left <= map.Bounds.Left,
+                    0 => lastBox.Top <= area.Top,
+                    1 => lastBox.Bottom >= area.Bottom,
+                    2 => lastBox.Right >= area.Right,
+                    _ => lastBox.Left <= area.Left,
                 };
                 if (flush) return;
                 PieceTransition chosen = null;
                 TemplateType chosenType = null;
                 foreach (PieceTransition t in graph.From(last.Piece.Name))
                 {
+                    if (pieceFilter != null && !pieceFilter(t.To)) continue;
                     bool advances = edge switch
                     {
                         0 => t.Offset.Y < 0,
@@ -458,11 +468,12 @@ namespace MobiusEditor.Headless
                     if (next == null) continue;
                     Point origin = new Point(last.Origin.X + t.Offset.X, last.Origin.Y + t.Offset.Y);
                     Rectangle box = new Rectangle(origin, new Size(next.IconWidth, next.IconHeight));
-                    if (!map.Bounds.Contains(box)) continue;
+                    if (!area.Contains(box)) continue;
                     int side = SideIndex(catalog, t.To);
                     if (desiredSide >= 0 && (side < 0 || TurnDistance(side, desiredSide) > 1)) continue;
                     if (!SealedAdjacency(lastBox, box)) continue;
                     if (desiredSide >= 0 && !SeamSealed(last.Piece, last.Origin, next, origin)) continue;
+                    if (desiredSide < 0 && !WatersTouch(last.Piece, last.Origin, next, origin)) continue;
                     chosen = t;
                     chosenType = next;
                     break;
@@ -659,7 +670,11 @@ namespace MobiusEditor.Headless
                 if (ta?.Type == null || tb?.Type == null || ta.Type != tb.Type) return false;
                 return tb.Icon - ta.Icon == (b.Y - a.Y) * ta.Type.IconWidth + (b.X - a.X);
             }
-            static bool IsWater(LandType l) => l == LandType.Water || l == LandType.River;
+            // River-typed cells are self-banked water: the rv/ford art draws its own
+            // banks inside the tile (that is what LandType.River encodes — official
+            // maps run rv streams straight through open meadow). Only bare Water needs
+            // a drawn shore.
+            static bool IsWater(LandType l) => l == LandType.Water;
             for (int y = map.Bounds.Top; y < map.Bounds.Bottom; y++)
             {
                 for (int x = map.Bounds.Left; x < map.Bounds.Right; x++)
@@ -686,10 +701,13 @@ namespace MobiusEditor.Headless
         /// no cross-stamp water-against-clear junction: each painted cell is checked
         /// against the surviving neighbours it does not itself overwrite.
         /// </summary>
-        private static bool CompositeSeals(TemplateType piece, Point at, IReadOnlyDictionary<Point, LandType> placed)
+        private static bool CompositeSeals(TemplateType piece, Point at, IReadOnlyDictionary<Point, LandType> placed,
+            bool protectCourse = false)
         {
             LandType[,] grid = ShoreCatalog.LandGrid(piece);
-            static bool IsWater(LandType l) => l == LandType.Water || l == LandType.River;
+            // River-typed cells are self-banked (see AuditShoreRule).
+            static bool IsWater(LandType l) => l == LandType.Water;
+            static bool IsCourse(LandType l) => l == LandType.Water || l == LandType.River;
             bool Paints(Point p) => p.X >= at.X && p.X < at.X + piece.IconWidth
                 && p.Y >= at.Y && p.Y < at.Y + piece.IconHeight
                 && grid[p.Y - at.Y, p.X - at.X] != LandType.None;
@@ -700,6 +718,10 @@ namespace MobiusEditor.Headless
                     if (grid[y, x] == LandType.None) continue;
                     LandType mine = grid[y, x];
                     Point world = new Point(at.X + x, at.Y + y);
+                    // A stream walk must not bury laid watercourse under land: that is
+                    // what chops the river at overlapping bends.
+                    if (protectCourse && !IsCourse(mine)
+                        && placed.TryGetValue(world, out LandType beneath) && IsCourse(beneath)) return false;
                     foreach (Point n in new[]
                     {
                         new Point(world.X + 1, world.Y), new Point(world.X - 1, world.Y),
@@ -713,6 +735,77 @@ namespace MobiusEditor.Headless
                 }
             }
             return true;
+        }
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<(string, string, Point), bool> waterTouch =
+            new System.Collections.Concurrent.ConcurrentDictionary<(string, string, Point), bool>();
+
+        /// <summary>
+        /// How many separate course arms leave this piece: clusters of River-typed cells
+        /// along the box perimeter, circular. A through-piece has two; a spring has one,
+        /// a fork three — chained single-strand, anything but two dangles an arm that
+        /// abruptly begins or ends mid-map. An all-water perimeter counts as a through.
+        /// </summary>
+        public static int CourseExits(TemplateType piece)
+        {
+            LandType[,] grid = ShoreCatalog.LandGrid(piece);
+            int w = piece.IconWidth, h = piece.IconHeight;
+            var ring = new List<bool>();
+            for (int x = 0; x < w; x++) ring.Add(grid[0, x] == LandType.River);
+            for (int y = 1; y < h; y++) ring.Add(grid[y, w - 1] == LandType.River);
+            if (h > 1) for (int x = w - 2; x >= 0; x--) ring.Add(grid[h - 1, x] == LandType.River);
+            if (w > 1) for (int y = h - 2; y >= 1; y--) ring.Add(grid[y, 0] == LandType.River);
+            if (ring.All(v => v)) return 2;
+            int clusters = 0;
+            for (int i = 0; i < ring.Count; i++)
+            {
+                if (ring[i] && !ring[(i + ring.Count - 1) % ring.Count]) clusters++;
+            }
+            return clusters;
+        }
+
+        /// <summary>Whether the two pieces' painted water cells touch (8-way) at this offset — watercourse continuity; true when either piece is dry.</summary>
+        private static bool WatersTouch(TemplateType a, Point ao, TemplateType b, Point bo)
+        {
+            (string, string, Point) key = (a.Name, b.Name, new Point(bo.X - ao.X, bo.Y - ao.Y));
+            if (waterTouch.TryGetValue(key, out bool cached)) return cached;
+            static bool IsWater(LandType l) => l == LandType.Water || l == LandType.River;
+            List<Point> Cells(TemplateType t, Point at)
+            {
+                LandType[,] grid = ShoreCatalog.LandGrid(t);
+                List<Point> cells = new List<Point>();
+                for (int y = 0; y < t.IconHeight; y++)
+                    for (int x = 0; x < t.IconWidth; x++)
+                        if (grid[y, x] != LandType.None && IsWater(grid[y, x])) cells.Add(new Point(at.X + x, at.Y + y));
+                return cells;
+            }
+            List<Point> wa = Cells(a, ao), wb = Cells(b, bo);
+            bool touch = wa.Count == 0 || wb.Count == 0;
+            foreach (Point p in wa)
+            {
+                foreach (Point q in wb)
+                {
+                    // Orthogonal or overlapping: a corner-only water touch renders as a
+                    // broken bend — water only reads as flowing across a shared edge.
+                    if (Math.Abs(p.X - q.X) + Math.Abs(p.Y - q.Y) <= 1) { touch = true; break; }
+                }
+                if (touch) break;
+            }
+            if (touch)
+            {
+                // The successor must not bury the predecessor's course under its own
+                // land cells — the other way bends get chopped where stamps overlap.
+                LandType[,] gb = ShoreCatalog.LandGrid(b);
+                foreach (Point p in wa)
+                {
+                    int lx = p.X - bo.X, ly = p.Y - bo.Y;
+                    if (lx < 0 || ly < 0 || lx >= b.IconWidth || ly >= b.IconHeight) continue;
+                    LandType over = gb[ly, lx];
+                    if (over != LandType.None && !IsWater(over)) { touch = false; break; }
+                }
+            }
+            waterTouch[key] = touch;
+            return touch;
         }
 
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<(string, string, Point), bool> landTouch =
