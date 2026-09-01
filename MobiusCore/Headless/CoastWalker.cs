@@ -135,8 +135,10 @@ namespace MobiusEditor.Headless
                     int toSide = SideIndex(catalog, t.To);
                     if (fromSide >= 0 && toSide >= 0 && TurnDistance(fromSide, toSide) > 2) continue;
                     // The whole segment keeps its water on the commanded side (within 45°),
-                    // or the coast slowly rotates and the flood side leaks.
-                    if (desiredSide >= 0 && toSide >= 0 && TurnDistance(toSide, desiredSide) > 1) continue;
+                    // or the coast slowly rotates and the flood side leaks. Unclassified
+                    // pieces (river courses, falls) cannot prove their side, and they are
+                    // porous — a bank built from them leaks the flood through itself.
+                    if (desiredSide >= 0 && (toSide < 0 || TurnDistance(toSide, desiredSide) > 1)) continue;
                     // Consecutive pieces must share an edge, not merely touch corners —
                     // corner-only contact leaves a diagonal gap the water pours through.
                     TemplateType current = Lookup(piece);
@@ -274,14 +276,16 @@ namespace MobiusEditor.Headless
         /// coast (or map content) already claims. Aborts and undoes nothing beyond maxCells —
         /// the caller treats a burst flood as a failed coast and falls back.
         /// </summary>
-        public static bool FloodWater(Map map, Point seed, int maxCells, MobiusEditor.Utility.DeterministicRandom random)
+        public static bool FloodWater(Map map, Point seed, int maxCells, MobiusEditor.Utility.DeterministicRandom random,
+            IDictionary<int, Template> undo = null)
         {
             TemplateType water = map.TemplateTypes.FirstOrDefault(t =>
                 (t.Flags & TemplateTypeFlag.DefaultFill) == TemplateTypeFlag.DefaultFill && t.ExistsInTheater
                 && t.LandTypes != null && t.LandTypes.Length > 0 && t.LandTypes[0] == LandType.Water);
             TemplateType patch = map.TemplateTypes.FirstOrDefault(t => t.Name == "w2" && t.ExistsInTheater);
             if (water == null) return false;
-            Dictionary<int, Template> undo = new Dictionary<int, Template>(), redo = new Dictionary<int, Template>();
+            undo ??= new Dictionary<int, Template>();
+            Dictionary<int, Template> redo = new Dictionary<int, Template>();
             Queue<Point> frontier = new Queue<Point>();
             HashSet<Point> seen = new HashSet<Point>();
             frontier.Enqueue(seed);
@@ -350,7 +354,7 @@ namespace MobiusEditor.Headless
                     Rectangle box = new Rectangle(origin, new Size(next.IconWidth, next.IconHeight));
                     if (!map.Bounds.Contains(box)) continue;
                     int side = SideIndex(catalog, t.To);
-                    if (desiredSide >= 0 && side >= 0 && TurnDistance(side, desiredSide) > 1) continue;
+                    if (desiredSide >= 0 && (side < 0 || TurnDistance(side, desiredSide) > 1)) continue;
                     if (!SealedAdjacency(lastBox, box)) continue;
                     chosen = t;
                     chosenType = next;

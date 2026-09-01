@@ -120,9 +120,14 @@ namespace MobiusEditor.Headless
                     }
                     break;
                 case WaterStyle.River:
-                    LakeBuilder.PlaceRiver(map, random.Next(2) == 0,
-                        options.RiverWidth ?? 1 + (int)Math.Round(options.Water),
-                        options.Fords ?? 1 + (int)Math.Round((1 - options.Water) * 2), random, catalog);
+                    // Walked meandering banks are the real thing; the straight block
+                    // corridor stays as the fallback.
+                    if (!PlaceWalkedRiver(map, options, random))
+                    {
+                        LakeBuilder.PlaceRiver(map, random.Next(2) == 0,
+                            options.RiverWidth ?? 1 + (int)Math.Round(options.Water),
+                            options.Fords ?? 1 + (int)Math.Round((1 - options.Water) * 2), random, catalog);
+                    }
                     break;
                 case WaterStyle.Islands:
                     PlaceIslands(map, options, random, catalog);
@@ -202,6 +207,182 @@ namespace MobiusEditor.Headless
             CoastWalker.ExtendWaterIntoBorder(map, random);
             return true;
         }
+
+        /// <summary>
+        /// A river with corpus-walked meandering banks, ford-first: ford sites are pinned
+        /// as block assemblies (a straight bank piece each side of stamped ford blocks),
+        /// and each bank walks mined idioms between them, required to enter every
+        /// assembly's bank piece at its exact origin via the walker's exact-goal mode —
+        /// so the crossing always lines up. Water floods each inter-ford basin. Any
+        /// failed segment plans nothing; a flood that escapes reverts every stamped cell.
+        /// False falls back to the straight block corridor.
+        /// </summary>
+        private static bool PlaceWalkedRiver(Map map, MapGeneratorOptions options, DeterministicRandom random)
+        {
+            TransitionGraph graph = TransitionGraph.Baked;
+            Dictionary<string, ShorePiece> catalog = ShoreCatalog.Build(map.TemplateTypes)
+                .Concat(ShoreCatalog.Build(map.TemplateTypes, "wc"))
+                .GroupBy(p => p.Template.Name, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+            int block = LakeBuilder.Block;
+            bool horizontal = random.Next(2) == 0;
+            // The fords are orientation-specific: ford1 carries an east-west road over a
+            // north-south stream, ford2 the transpose. The wrong one runs the road along
+            // the river instead of across it.
+            TemplateType ford = map.TemplateTypes.FirstOrDefault(t =>
+                t.Name.Equals(horizontal ? "ford2" : "ford1", StringComparison.OrdinalIgnoreCase)
+                && t.ExistsInTheater && t.IconWidth == block && t.IconHeight == block);
+            if (ford == null) return false;
+            Rectangle b = map.Bounds;
+            Point At(int along, int across) => horizontal ? new Point(along, across) : new Point(across, along);
+            int runStart = horizontal ? b.Left : b.Top, runEnd = horizontal ? b.Right : b.Bottom;
+            int acrossMin = horizontal ? b.Top : b.Left, acrossMax = horizontal ? b.Bottom : b.Right;
+            // Two blocks minimum: each bank wanders a few cells around its anchors, and a
+            // one-block corridor would pinch shut.
+            int width = Math.Clamp(options.RiverWidth ?? 1 + (int)Math.Round(options.Water), 2, 3);
+            int widthCells = width * block;
+            if (acrossMax - acrossMin < widthCells + 26) return false;
+            int fords = Math.Max(1, options.Fords ?? 1 + (int)Math.Round((1 - options.Water) * 2));
+
+            // One shared meander curve keeps the banks parallel: a bounded random walk
+            // sampled every dozen cells, with each ford site pinned onto it. Both banks
+            // anchor to this curve, so they cannot drift into each other.
+            int curveMin = acrossMin + 10, curveMax = acrossMax - widthCells - 10;
+            if (curveMax <= curveMin) return false;
+            var anchors = new List<(int Along, int Across, bool Ford)>();
+            int cursor = curveMin + random.Next(curveMax - curveMin);
+            for (int along = runStart + 6; along < runEnd - 6; along += 12)
+            {
+                cursor = Math.Clamp(cursor + (random.Next(3) - 1) * block, curveMin, curveMax);
+                anchors.Add((along, cursor, false));
+            }
+            if (anchors.Count == 0) return false;
+            // Each ford snaps onto its nearest anchor, so no spacing arithmetic can drop
+            // one; two fords landing on the same anchor collapse into one crossing.
+            for (int i = 0; i < fords; i++)
+            {
+                int along = runStart + (runEnd - runStart) * (i + 1) / (fords + 1) / block * block;
+                int nearest = 0;
+                for (int a = 1; a < anchors.Count; a++)
+                {
+                    if (Math.Abs(anchors[a].Along - along) < Math.Abs(anchors[nearest].Along - along)) nearest = a;
+                }
+                anchors[nearest] = (along, anchors[nearest].Across, true);
+            }
+            if (anchors.Count(a => a.Ford) == 0) return false;
+            var sites = anchors.Where(a => a.Ford).Select(a => (a.Along, a.Across)).ToList();
+
+            // The most idiom-rich straight 3x3 piece per bank side, so the walker's graph
+            // is guaranteed to know ways into and out of every assembly.
+            int nearSide = horizontal ? 4 : 2, farSide = horizontal ? 0 : 6;
+            string BestStraight(int side) => catalog.Values
+                .Where(p => p.Kind == ShoreKind.Straight && p.Template.ExistsInTheater
+                    && p.Template.IconWidth == block && p.Template.IconHeight == block
+                    && SideIndexOf(p.WaterSide) == side)
+                .OrderByDescending(p => graph.From(p.Template.Name).Sum(t => t.Count))
+                .ThenBy(p => p.Template.Name, StringComparer.Ordinal)
+                .Select(p => p.Template.Name)
+                .FirstOrDefault();
+            string nearName = BestStraight(nearSide), farName = BestStraight(farSide);
+            if (nearName == null || farName == null) return false;
+            if (graph.From(nearName).Count == 0 || graph.From(farName).Count == 0) return false;
+
+            // Walk one bank along the shared curve: vicinity goals at plain anchors keep
+            // the meander, exact-goal entries at ford anchors pin the crossings.
+            List<CoastWalker.Step> WalkBank(string pieceName, int acrossOffset, int side, int edge)
+            {
+                var bank = new List<CoastWalker.Step>();
+                string piece = pieceName;
+                Point origin = At(runStart, anchors[0].Across + acrossOffset);
+                foreach ((int along, int across, bool ford) in anchors)
+                {
+                    List<CoastWalker.Step> segment = CoastWalker.PlanPath(map, graph, catalog,
+                        piece, origin, At(along, across + acrossOffset), 40, side, ford ? pieceName : null);
+                    if (segment == null) return null;
+                    if (bank.Count > 0) segment.RemoveAt(0);
+                    bank.AddRange(segment);
+                    piece = bank[^1].Piece.Name;
+                    origin = bank[^1].Origin;
+                }
+                List<CoastWalker.Step> tail = CoastWalker.PlanPath(map, graph, catalog,
+                    piece, origin, At(runEnd - 3, anchors[^1].Across + acrossOffset), 40, side);
+                if (tail == null) return null;
+                tail.RemoveAt(0);
+                bank.AddRange(tail);
+                CoastWalker.ExtendToEdge(map, graph, catalog, bank, edge, side);
+                return bank;
+            }
+            int farEdge = horizontal ? 2 : 1;
+            List<CoastWalker.Step> near = WalkBank(nearName, -block, nearSide, farEdge);
+            if (near == null) return false;
+            List<CoastWalker.Step> far = WalkBank(farName, widthCells, farSide, farEdge);
+            if (far == null) return false;
+
+            Dictionary<int, Template> undo = new Dictionary<int, Template>(), redo = new Dictionary<int, Template>();
+            CoastWalker.Place(map, near, catalog, random, undo);
+            CoastWalker.Place(map, far, catalog, random, undo);
+            // The strip covers the corridor AND both pinned bank blocks: the straight
+            // bank pieces put their water column exactly where the road needs to land,
+            // so the crossing must own the banks to reach grass on both sides.
+            foreach ((int along, int across) in sites)
+            {
+                for (int w = -1; w <= width; w++)
+                {
+                    TemplateEdit.Place(map.TemplateTypes, map.Templates,
+                        ford, At(along, across + w * block), null, random, undo, redo);
+                }
+            }
+
+            // Flood each basin between consecutive crossings (and the two end stretches),
+            // seeded midway between the banks' actual walked positions there.
+            var boundaries = new List<int> { runStart };
+            boundaries.AddRange(sites.Select(s => s.Along));
+            boundaries.Add(runEnd);
+            int AlongOf(Point p) => horizontal ? p.X : p.Y;
+            int AcrossOf(Point p) => horizontal ? p.Y : p.X;
+            int AcrossExtent(TemplateType t) => horizontal ? t.IconHeight : t.IconWidth;
+            int maxCells = (runEnd - runStart) * (widthCells + 16);
+            // Bank bulges split a basin into sub-pockets, so one seed per basin is not
+            // enough: seed every few cells along it, first empty cell between the banks.
+            // Re-flooding an already-wet pocket is a cheap no-op.
+            bool FloodRegion(int from, int to)
+            {
+                for (int along = from + 2; along < to - 1; along += 4)
+                {
+                    CoastWalker.Step nearStep = near.OrderBy(s => Math.Abs(AlongOf(s.Origin) - along)).First();
+                    CoastWalker.Step farStep = far.OrderBy(s => Math.Abs(AlongOf(s.Origin) - along)).First();
+                    int top = AcrossOf(nearStep.Origin) + AcrossExtent(nearStep.Piece);
+                    int bottom = AcrossOf(farStep.Origin);
+                    for (int across = top; across < bottom; across++)
+                    {
+                        Point seed = At(along, across);
+                        if (!map.Bounds.Contains(seed) || map.Templates[seed.Y, seed.X]?.Type != null) continue;
+                        if (!CoastWalker.FloodWater(map, seed, maxCells, random, undo)) return false;
+                        break;
+                    }
+                }
+                return true;
+            }
+            for (int i = 0; i + 1 < boundaries.Count; i++)
+            {
+                if (!FloodRegion(boundaries[i], boundaries[i + 1]))
+                {
+                    foreach (KeyValuePair<int, Template> cell in undo) map.Templates[cell.Key] = cell.Value;
+                    return false;
+                }
+            }
+            CoastWalker.ExtendWaterIntoBorder(map, random);
+            return true;
+        }
+
+        private static int SideIndexOf(ShoreSide side) => side switch
+        {
+            ShoreSide.North => 0,
+            ShoreSide.East => 2,
+            ShoreSide.South => 4,
+            ShoreSide.West => 6,
+            _ => -1,
+        };
 
         /// <summary>Lakes scaled by the water dial, spaced apart inside the playable bounds.</summary>
         private static void PlaceScatteredLakes(Map map, MapGeneratorOptions options, DeterministicRandom random, IReadOnlyList<ShorePiece> catalog)

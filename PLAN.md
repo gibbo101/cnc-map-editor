@@ -248,7 +248,44 @@ Wine.** It would not inform the native build at all, nothing is blocked today th
 would unblock (campaign authoring is deferred behind the AI milestone), and a working stopgap
 would only tempt the native editor to slip. Not part of the plan.
 
-## RESUME HERE (2026-09-01 night — closed-loop walked lakes SHIPPED)
+## RESUME HERE (2026-09-01 night — walked lakes AND meandering rivers SHIPPED)
+
+**MEANDERING WALKED RIVERS (after the lakes commit):** the River style now walks both
+banks through mined idioms, ford-first — `PlaceWalkedRiver`:
+- **One shared meander curve** (bounded random walk sampled every 12 cells) anchors BOTH
+  banks, so they stay parallel; independent walks crossed each other and pinched the
+  corridor into pockets (seen, fixed).
+- **Ford sites snap onto their nearest curve anchor** (window-matching had an off-by-one
+  dead zone that silently dropped a ford) and become pinned assemblies: each bank's walk
+  must enter the most idiom-rich straight 3x3 bank piece at its exact origin (the
+  exact-goal mode from the lakes commit).
+- **Luke's mid-session catch: the crossing must be continuous grass-to-grass.** The
+  pinned straight banks put their WATER column exactly where the road lands (sh16 =
+  "WBC" rows), so the ford strip now stamps OVER both pinned bank blocks (width+2
+  blocks), and the ford template is orientation-matched — ford1 = EW road over NS
+  stream, ford2 the transpose; the wrong one runs the road along the river. Continuity
+  is pinned by test: every crossing-row cell from grass to grass must be passable land.
+- **Walks with a commanded water side now exclude side-unclassified pieces** (rv river
+  courses, falls) in PlanPath AND ExtendToEdge — an rv piece is porous as a bank; the
+  flood leaked through and PatchBareContacts salted sh55 staircases along the leak line.
+- **FloodWater takes the shared undo** — a mid-river revert used to leave earlier
+  basins' orphan water behind, then stamp the block fallback on top of it.
+- Basins flood per inter-ford region, seeded every 4 cells (bank bulges split a basin
+  into sub-pockets; one seed silently missed some), scanning strictly between the banks.
+
+Verified by render, seed 17 vertical river: continuous meandering banks edge to edge,
+two grass-to-grass ford crossings with shallow-rock fringes, roads stopping at the
+banks. `--river-width` clamps to 2..3 for walked rivers (a 1-block corridor pinches
+shut); width 1 requests still fall back to the block corridor, as does TD.
+
+**WALKER NEXT (updated):** island coasts (walked loop inverted — land inside), landing-
+beach splices on cliff coasts (Luke's amphibious rule; 2,119 mined wc↔sh splices),
+cliff-vs-beach coast flavor tunable, the rf land-cliff family (cliffs setting), mined
+road curves, and the land-column-art polish item from the lakes block (now also visible
+as the slightly tiled ford band and regular sh55 fringe rows — same root: single-strand
+walks expose art the corpus covered with second pieces).
+
+## Previous block (2026-09-01 night — closed-loop walked lakes SHIPPED)
 
 **CLOSED-LOOP LAKES (this session):** the Lakes style now places one corpus-walked
 centerpiece lake — `CoastWalker.PlanLoop` rings 8 ellipse anchors (water inside, water

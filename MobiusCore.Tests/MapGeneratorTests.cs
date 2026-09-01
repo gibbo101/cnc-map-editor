@@ -219,6 +219,102 @@ namespace MobiusCore.Tests
             Assert.True(clearAgainstWater == 0, string.Join("; ", contacts));
         }
 
+        [Fact]
+        public void WalkedRiverMeandersCarriesFordsAndSeals()
+        {
+            MapGeneratorOptions options = new MapGeneratorOptions
+            { Seed = 17, Players = 4, Style = WaterStyle.River, Water = 0.6 };
+            byte[] first = SaveBytes(Generate(options), "walked-river-a.mpr");
+            byte[] second = SaveBytes(Generate(options), "walked-river-b.mpr");
+            Assert.Equal(first, second);
+
+            IGamePlugin plugin = Generate(options);
+            Map map = plugin.Map;
+            // A ford assembly is stamped across the corridor so ground forces can cross —
+            // and the crossing row must be passable ground the whole way, from the grass
+            // on one side to the grass on the other, with no water cell breaking it.
+            var fordOrigins = new System.Collections.Generic.List<System.Drawing.Point>();
+            for (int y = map.Bounds.Top; y < map.Bounds.Bottom; y++)
+                for (int x = map.Bounds.Left; x < map.Bounds.Right; x++)
+                    if (map.Templates[y, x]?.Type?.Name.StartsWith("ford", StringComparison.OrdinalIgnoreCase) == true
+                        && map.Templates[y, x].Icon == 0)
+                        fordOrigins.Add(new System.Drawing.Point(x, y));
+            Assert.True(fordOrigins.Count > 0, "no ford stamped");
+            // A crossing's blocks stack side by side across the corridor: same Y and
+            // 3-apart X means the river runs vertically.
+            bool riverVertical = fordOrigins.Any(a => fordOrigins.Any(b => a.Y == b.Y && a.X == b.X + 3));
+            foreach (var crossing in fordOrigins.GroupBy(p => riverVertical ? p.Y : p.X))
+            {
+                int row = crossing.Key + 1;
+                int lo = crossing.Min(p => riverVertical ? p.X : p.Y) - 1;
+                int hi = crossing.Max(p => riverVertical ? p.X : p.Y) + 3;
+                for (int i = lo; i <= hi; i++)
+                {
+                    System.Drawing.Point cell = riverVertical ? new System.Drawing.Point(i, row) : new System.Drawing.Point(row, i);
+                    if (!map.Bounds.Contains(cell)) continue;
+                    LandType land = LakeBuilder.LandAt(map, cell);
+                    Assert.True(land == LandType.Clear || land == LandType.Beach || land == LandType.Road || land == LandType.Rough,
+                        $"crossing at {cell} is {land}, not passable ground");
+                }
+            }
+            // The river meanders: the waterline's cross-axis position varies along the
+            // run — the straight block fallback would put every span at one position.
+            bool horizontal = true;
+            var firstWater = new System.Collections.Generic.List<int>();
+            for (int along = map.Bounds.Left; along < map.Bounds.Right; along++)
+            {
+                int? water = null;
+                for (int across = map.Bounds.Top; across < map.Bounds.Bottom; across++)
+                {
+                    LandType land = LakeBuilder.LandAt(map, new System.Drawing.Point(along, across));
+                    if (land == LandType.Water || land == LandType.River) { water = across; break; }
+                }
+                if (water.HasValue) firstWater.Add(water.Value);
+            }
+            if (firstWater.Count < map.Bounds.Width * 3 / 4)
+            {
+                // Vertical river: redo the scan transposed.
+                horizontal = false;
+                firstWater.Clear();
+                for (int along = map.Bounds.Top; along < map.Bounds.Bottom; along++)
+                {
+                    int? water = null;
+                    for (int across = map.Bounds.Left; across < map.Bounds.Right; across++)
+                    {
+                        LandType land = LakeBuilder.LandAt(map, new System.Drawing.Point(across, along));
+                        if (land == LandType.Water || land == LandType.River) { water = across; break; }
+                    }
+                    if (water.HasValue) firstWater.Add(water.Value);
+                }
+            }
+            Assert.True(firstWater.Count >= (horizontal ? map.Bounds.Width : map.Bounds.Height) * 3 / 4,
+                "river does not span the map: " + firstWater.Count + " columns with water");
+            Assert.True(firstWater.Distinct().Count() >= 4,
+                "river is straight: waterline positions " + string.Join(",", firstWater.Distinct()));
+
+            int clearAgainstWater = 0;
+            for (int y = map.Bounds.Top; y < map.Bounds.Bottom; y++)
+            {
+                for (int x = map.Bounds.Left; x < map.Bounds.Right; x++)
+                {
+                    Template fill = map.Templates[y, x];
+                    if (fill?.Type == null || (fill.Type.Name != "w1" && fill.Type.Name != "w2")) continue;
+                    foreach (System.Drawing.Point n in new[] { new System.Drawing.Point(x + 1, y), new System.Drawing.Point(x - 1, y), new System.Drawing.Point(x, y + 1), new System.Drawing.Point(x, y - 1) })
+                    {
+                        if (map.Bounds.Contains(n) && LakeBuilder.LandAt(map, n) == LandType.Clear) clearAgainstWater++;
+                    }
+                }
+            }
+            Assert.Equal(0, clearAgainstWater);
+        }
+
+        private static System.Collections.Generic.IEnumerable<string> EnumerateTemplateNames(Map map)
+        {
+            for (int y = map.Bounds.Top; y < map.Bounds.Bottom; y++)
+                for (int x = map.Bounds.Left; x < map.Bounds.Right; x++)
+                    if (map.Templates[y, x]?.Type is TemplateType t) yield return t.Name;
+        }
+
         private static int LargestWaterBody(Map map)
         {
             bool IsWater(System.Drawing.Point p) => map.Bounds.Contains(p)
