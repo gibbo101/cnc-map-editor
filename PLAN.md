@@ -248,7 +248,47 @@ Wine.** It would not inform the native build at all, nothing is blocked today th
 would unblock (campaign authoring is deferred behind the AI milestone), and a working stopgap
 would only tempt the native editor to slip. Not part of the plan.
 
-## RESUME HERE (2026-09-01, overnight session)
+## RESUME HERE (2026-09-01, daytime session — the generator terrain arc)
+
+**TERRAIN SUITE SHIPPED (b871bd2, pushed):** the generator grew real water, villages and
+roads, all seeded/deterministic/tunable (CLI flags + New-dialog controls):
+- **Shore machinery:** `ShoreCatalog` classifies RA's 58 sh pieces from their per-icon
+  LandTypes (quadrant dominance → Straight/Diagonal per water side; the game's own
+  equivalence groups override ragged variants; Rock counts as land). `LakeBuilder` draws
+  with 3x3 blocks: straights on edges, land-dominant (convex) diagonals as lake corner
+  cuts, water-dominant (concave) as island corners; w2 patches scattered through w1 fill
+  (official-map idiom), pure-water variants preferred near open sea.
+- **Styles:** lakes (showcase-quality: beach ring, ragged waterline, rock outcrops, no
+  seams), river (straight strait + ford crossings — fords are `ford1/2` templates whose
+  road strip crosses the waterline), ocean (edge band + continuous shoreline), islands
+  (BETA: flood bounds, carve same-sized islands in a grid, serpentine chain of
+  punched-doorway causeways; small corner blemishes remain).
+- **Villages + roads:** `SettlementBuilder` — neutral `vNN` building clusters; roads as
+  d07/d08 + d11/d12 runs with REAL tileset bends (d14/d16/d22/d31) stamped over elbows.
+  Junction render verified — the track curves continuously.
+- **Tunables:** water dial + `--water-style none|lakes|river|ocean|islands`, plus
+  `--lakes --islands --causeways --river-width --fords --ocean-depth --ocean-edge
+  --villages --roads`; GUI has style combo + water slider + villages/roads.
+- Land-awareness everywhere: starts/ore/trees/villages sit on Clear ground only; starts
+  fall back to the nearest buildable cell (islands maps).
+
+**⭐ NEXT ARC — THE TRANSITION-MINED COAST WALKER (Luke's "train on existing maps" idea):**
+the 3x3 block approach cannot do watery quarter-turns (the sh set lacks them in 2 of 4
+quadrants — root cause of the island corner blemishes and why the river is straight, not
+meandering). Ground truth from scm03ea shows hand maps chain the LARGER diagonal pieces at
+cell offsets (sh52→sh03→sh49 etc.). `TransitionMiner` (shipped) reconstructs piece
+instances from any map's template grid and accumulates (from,to,offset,count) transitions;
+`TransitionMinerTests.MinesShoreIdiomsFromTheOfficialCorpus` (oracle-tier) mines all 230
+official maps. BUILD NEXT: a coast walker that plans closed loops/paths through the mined
+transition graph (A* over piece+position states) → organic lakes, meandering rivers,
+proper island corners, and then the cliffs setting Luke asked for (rf rock-face family,
+same mined-transition treatment) plus richer road curves.
+
+**Deck deployed this morning** (08:26, retry loop over hotspot; smoke-tested incl.
+`generate` on-Deck). The terrain suite is NOT yet deployed to the Deck — redeploy
+(`DECK_HOST=deck@<deck-ip> ./deploy-deck.sh`) when Luke wants it there.
+
+## Previous resume block (2026-09-01, overnight session)
 
 **WALKER CHANGE FULLY VERIFIED:** the b8dbe89 walk_frames change is green on every tier —
 CLI 23, App, Shell, fast Core 108, full oracle 372/372 (16 min). The pending-verification
