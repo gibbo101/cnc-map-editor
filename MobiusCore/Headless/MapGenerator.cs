@@ -618,10 +618,20 @@ namespace MobiusEditor.Headless
                         ring[i].Anchor.X + outward[ring[i].Side].X * j,
                         ring[i].Anchor.Y + outward[ring[i].Side].Y * j), ring[i].Side);
                 }
+                // A cliff coast still carries sandy landing beaches for amphibious
+                // assaults: every fourth segment of a wc ring prefers the sh family,
+                // and the mined wc-sh splices draw the changeovers.
+                string flavor = FlavorPrefix(options.Coast, random);
+                List<string> segmentFlavors = null;
+                if (flavor == "wc")
+                {
+                    segmentFlavors = new List<string>();
+                    for (int i = 0; i < ring.Count; i++) segmentFlavors.Add(i % 4 == 3 ? "sh" : "wc");
+                }
                 List<CoastWalker.Step> coast =
                     CoastWalker.PlanRing(map, graph, catalog, ring,
                         avoid: claimed.Count > 0 ? claimed : null,
-                        flavorPrefix: FlavorPrefix(options.Coast, random))
+                        flavorPrefix: flavor, segmentFlavors: segmentFlavors)
                     ?? CoastWalker.PlanRing(map, graph, catalog, ring,
                         avoid: claimed.Count > 0 ? claimed : null);
                 if (coast == null) return false;
@@ -935,24 +945,37 @@ namespace MobiusEditor.Headless
             {
                 warnings.Add("Tiberium requested but no active mod declares a tiberium resource; using ore.");
             }
-            OverlayType ore = map.OverlayTypes.FirstOrDefault(o => o.IsResource && o.Name.StartsWith("gold", StringComparison.OrdinalIgnoreCase))
-                ?? map.OverlayTypes.FirstOrDefault(o => o.IsResource);
-            OverlayType gems = map.OverlayTypes.FirstOrDefault(o => o.IsResource && o.Name.StartsWith("gem", StringComparison.OrdinalIgnoreCase)) ?? ore;
-            if (ore == null)
+            // Resource overlays come in value stages (gold01..gold04, gem01..gem04);
+            // a field is graded like a hand-placed one — densest at the heart, thinning
+            // to the rim — never a puddle of the cheapest stage.
+            List<OverlayType> Stages(string prefix) => map.OverlayTypes
+                .Where(o => o.IsResource && o.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && o.ExistsInTheater)
+                .OrderBy(o => o.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            List<OverlayType> oreStages = Stages("gold");
+            if (oreStages.Count == 0)
             {
-                warnings.Add("No vanilla resource overlay in this game; no fields generated.");
-                return centers;
+                OverlayType any = map.OverlayTypes.FirstOrDefault(o => o.IsResource);
+                if (any == null)
+                {
+                    warnings.Add("No vanilla resource overlay in this game; no fields generated.");
+                    return centers;
+                }
+                oreStages = new List<OverlayType> { any };
             }
-            int radius = 2 + (int)Math.Round(2 * options.Ore);
+            List<OverlayType> gemStages = Stages("gem");
+            if (gemStages.Count == 0) gemStages = oreStages;
+            List<OverlayType> tiberiumStages = tiberiumOverlay == null ? null : new List<OverlayType> { tiberiumOverlay };
+            int radius = 3 + (int)Math.Round(4 * options.Ore);
             foreach (Point start in starts)
             {
                 double angle = random.Next(360) * Math.PI / 180;
                 Point center = Clamp(map.Bounds, new Point(
-                    start.X + (int)Math.Round(Math.Cos(angle) * (StartClearRadius - 1)),
-                    start.Y + (int)Math.Round(Math.Sin(angle) * (StartClearRadius - 1))));
+                    start.X + (int)Math.Round(Math.Cos(angle) * (StartClearRadius + 1)),
+                    start.Y + (int)Math.Round(Math.Sin(angle) * (StartClearRadius + 1))));
                 bool tiberiumField = tiberiumOverlay != null && random.Next(1000) < options.Tiberium * 1000;
                 PlaceSpawner(map, tiberiumField ? tiberium : null, center, random);
-                PlacePatch(map, tiberiumField ? tiberiumOverlay : ore, center, radius);
+                PlacePatch(map, tiberiumField ? tiberiumStages : oreStages, center, radius);
                 centers.Add(center);
             }
             for (int i = 0; i < starts.Count; i++)
@@ -961,7 +984,7 @@ namespace MobiusEditor.Headless
                 Point mid = Clamp(map.Bounds, new Point(
                     (a.X + b.X) / 2 + random.Next(5) - 2,
                     (a.Y + b.Y) / 2 + random.Next(5) - 2));
-                PlacePatch(map, gems, mid, Math.Max(2, radius - 1));
+                PlacePatch(map, gemStages, mid, Math.Max(3, radius - 2));
                 centers.Add(mid);
             }
             return centers;
@@ -1017,8 +1040,9 @@ namespace MobiusEditor.Headless
             }
         }
 
-        private static void PlacePatch(Map map, OverlayType resource, Point center, int radius)
+        private static void PlacePatch(Map map, IReadOnlyList<OverlayType> stages, Point center, int radius)
         {
+            if (stages == null || stages.Count == 0) return;
             Dictionary<int, Overlay> undo = new Dictionary<int, Overlay>(), redo = new Dictionary<int, Overlay>();
             for (int dy = -radius; dy <= radius; dy++)
             {
@@ -1027,7 +1051,11 @@ namespace MobiusEditor.Headless
                     if (dx * dx + dy * dy > radius * radius) continue;
                     Point p = new Point(center.X + dx, center.Y + dy);
                     if (!map.Bounds.Contains(p) || map.Technos[p] != null || map.Buildings[p] != null || !IsClearGround(map, p)) continue;
-                    OverlayEdit.Place(map, resource, p, undo, redo);
+                    // Dense heart, thinning rim: the last stage is the richest.
+                    double frac = Math.Sqrt(dx * dx + dy * dy) / Math.Max(1, radius);
+                    int fromDensest = frac < 0.55 ? 0 : frac < 0.75 ? 1 : frac < 0.9 ? 2 : 3;
+                    OverlayType stage = stages[Math.Max(0, stages.Count - 1 - fromDensest)];
+                    OverlayEdit.Place(map, stage, p, undo, redo);
                 }
             }
         }

@@ -278,10 +278,20 @@ by scoring edge-column waterness from the tile art (the miner-art arc) — plus 
 local tangles and small offshore stubs the orphan sweep misses (4+ cells or
 diagonally coast-linked).
 
-**NEXT:** rv-stream rivers (unchanged, see previous block), the miner-art waterness
-scoring, landing-beach splices on cliff coasts (amphibious rule — Luke flagged the
-all-cliff right island), stub sweep for 4-6-cell offshore fragments, GUI coast-flavor
-control, and thread the placement-exact composite through the river banks and ocean.
+**Also landed:** landing beaches on cliff coasts (Luke's amphibious rule — every
+fourth segment of a wc ring prefers sh, spliced by the mined wc-sh idioms; per-segment
+flavors are a PlanRing parameter), the orphan-islet drown threshold raised to six
+cells, and **the resource formula rebuilt after Luke called the old fields "a pitiful
+amount": fields were radius 2-4 of the CHEAPEST stage (gold01/gem01, Icon 0). Now
+radius 3+round(4·Ore) (≈11 tiles across at the default dial) and graded by value
+stage — gold04/gem04 hearts thinning to 01 rims like hand-placed fields.** Bridges
+over pinched rv channels are the answer for island links (Luke asked bridges-or-fords;
+fords are 1-cell-stream art with zero mined edges) — rides on the rv-stream arc.
+
+**NEXT:** rv-stream rivers (see previous block), the miner-art waterness scoring,
+remaining offshore stubs (diagonally coast-linked or larger than six cells), GUI
+coast-flavor control, thread the placement-exact composite through the river banks
+and ocean, and landing-beach flavors for cliff oceans/lakes.
 
 ## Previous block (2026-09-02 early — THE SHORE RULE, islands, cliffs; Luke steering live)
 

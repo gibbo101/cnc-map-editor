@@ -244,10 +244,12 @@ namespace MobiusEditor.Headless
             IReadOnlyDictionary<string, ShorePiece> catalog,
             IReadOnlyList<(Point Anchor, int Side)> ring,
             IReadOnlyDictionary<int, IReadOnlyList<(string Piece, Point Origin)>> pins = null,
-            IReadOnlyCollection<Rectangle> avoid = null, string flavorPrefix = null)
+            IReadOnlyCollection<Rectangle> avoid = null, string flavorPrefix = null,
+            IReadOnlyList<string> segmentFlavors = null)
         {
             if (ring == null || ring.Count < 3) return null;
             int count = ring.Count;
+            string FlavorAt(int k) => segmentFlavors != null ? segmentFlavors[k % count] : flavorPrefix;
             TemplateType Lookup(string name) => map.TemplateTypes.FirstOrDefault(t =>
                 t.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && t.ExistsInTheater);
             IReadOnlyList<(string Piece, Point Origin)> Strip(int k) =>
@@ -267,7 +269,7 @@ namespace MobiusEditor.Headless
             }
             IReadOnlyList<(string Piece, Point Origin)> startStrip = Strip(0);
             string start = startStrip?[0].Piece
-                ?? BestStartPiece(map, graph, catalog, SideAt(0), flavorPrefix)
+                ?? BestStartPiece(map, graph, catalog, SideAt(0), FlavorAt(0))
                 ?? BestStartPiece(map, graph, catalog, SideAt(0));
             if (start == null) return null;
             List<Step> all = new List<Step>();
@@ -305,7 +307,7 @@ namespace MobiusEditor.Headless
                 RecordUpTo(Math.Max(0, all.Count - 4));
                 List<Step> segment = PlanPath(map, graph, catalog, piece, origin,
                     closing ? AnchorAt(0) : AnchorAt(k), 40, SideAt(k), closing ? start : strip?[0].Piece,
-                    forbidden.Count > 0 ? forbidden : null, flavorPrefix,
+                    forbidden.Count > 0 ? forbidden : null, FlavorAt(k),
                     composite.Count > 0 ? composite : null);
                 if (segment == null) return null;
                 if (all.Count > 0) segment.RemoveAt(0);
@@ -547,7 +549,7 @@ namespace MobiusEditor.Headless
         }
 
         /// <summary>
-        /// Drowns orphan islets: a tiny scrap of land (three cells or fewer, stray beach
+        /// Drowns orphan islets: a tiny scrap of land (six cells or fewer, stray beach
         /// nubs and eroded grass holes included) completely surrounded by water becomes
         /// water — nothing that small is a real island, and it reads as debris.
         /// </summary>
@@ -591,7 +593,7 @@ namespace MobiusEditor.Headless
                                 if (!seen.Add(n)) { small = false; break; }
                                 component.Add(n);
                                 frontier.Enqueue(n);
-                                if (component.Count > 3) { small = false; break; }
+                                if (component.Count > 6) { small = false; break; }
                             }
                         }
                     }
