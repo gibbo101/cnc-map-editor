@@ -47,6 +47,18 @@ Tests read the game from `~/.steam/steam/steamapps/common/CnCRemastered` and the
 `CNC_TF_MOD_DIR`, see `TestPaths.cs`). Always run with `DISPLAY` unset: nothing here needs a
 display and anything that tries to open one is a bug.
 
+- **Background `dotnet test` runs get killed on this machine** (observed 3/3 on 2026-09-02;
+  cause unknown). Run tiers in the foreground in <10-minute pieces. The oracle tier splits by
+  class: `OfficialMapsTests|TransitionMinerTests` (~9 min), `SaveRoundTripTests` (~14 min —
+  the one chunk that must go long), `MapRenderOracleTests` (~1 min).
+- **Never run two `dotnet test` invocations of the same project concurrently** — they race on
+  build outputs and `artifacts/test-output/`, producing phantom failures that vanish on rerun.
+- The mined corpus (`MobiusCore/Resources/mined-transitions.txt`) regenerates via the
+  oracle-tier miner test, then copy `artifacts/test-output/mined-transitions.txt` over the
+  resource, keeping the 3-line header. Its family list lives in `TransitionMinerTests` — a
+  family missing there (how fords/bridges went unmined until 2026-09-02) silently reads as
+  "the corpus has none".
+
 ## Rules
 
 - **TDD, red before green.** Write the failing test, watch it fail, then the smallest change.

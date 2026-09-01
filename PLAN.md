@@ -248,7 +248,32 @@ Wine.** It would not inform the native build at all, nothing is blocked today th
 would unblock (campaign authoring is deferred behind the AI milestone), and a working stopgap
 would only tempt the native editor to slip. Not part of the plan.
 
-## RESUME HERE (2026-09-02 — ISLANDS AS ONE WALKED LANDMASS + placement-exact walks)
+## RESUME HERE (2026-09-02 session end — Luke playtests the Deck build; findings next session)
+
+**STATE: everything pushed and green at `f031cf6`; Deck deployed + smoke-verified (a
+stream-river map generated ON the Deck).** All four fast tiers + full oracle (chunked)
+green. Luke tests at home through the New dialog and will bring findings next session
+— START THERE: his findings first, then the design-locked bridge arc below.
+
+**What Luke is testing (tonight's full delivery, ten commits `259b728..f031cf6`):**
+- Lakes: walked centerpiece (audit-clean) + block ponds; mixed beach/cliff shores.
+- River — Wide (2-3): meandering sh banks, grass-to-grass ford strips (braided —
+  known compromise, superseded by Stream for authentic crossings).
+- River — Stream (width 1 / Auto at low water): rv chain, NS, corpus-mined fords the
+  water flows through, road approaches, runs off both map edges.
+- Islands: ONE walked landmass (causeways = natural isthmuses), ~30-tile base-sized
+  lobes, cliff islands carry landing beaches; `--causeways off` = separate islands.
+- Ocean: walked coast, flavor-rolled.
+- Resources: big graded fields (gold04→01), gem chokepoints, tiberium via TF manifest
+  (Deck manifest re-synced — it was stale with NO resources section).
+- New dialog: Coast (Mixed/Beach/Cliff) + River (Auto/Stream/Wide/Broad) combos.
+
+**Known residue (told to Luke, don't re-discover):** islands audit 32 (flood-exposure
+art → waterness arc), small offshore stubs, village roads stop short of rocky stream
+banks (correct but visible), wide-river ford braid, streams NS-only, ocean band can
+run thin, sh55 legacy speckles GONE by design.
+
+## Previous block (2026-09-02 — ISLANDS AS ONE WALKED LANDMASS + placement-exact walks)
 
 **THE ISLAND REWORK (after the shore-rule commit; Luke: junctions/size/J-shapes all
 needed real work):** the island world is no longer rings + causeway surgery. The
