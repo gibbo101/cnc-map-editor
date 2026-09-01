@@ -126,9 +126,23 @@ namespace MobiusEditor.Headless
             TheaterType theater = theaters.FirstOrDefault(t => t.Name.Equals(theaterName ?? "", StringComparison.OrdinalIgnoreCase)) ?? theaters[0];
             PrepareTheater(theater);
             IGamePlugin plugin = GameInfo.CreatePlugin(false, true);
+            IEnumerable<string> initErrors = InitializePlugin(plugin);
             plugin.New(theater.Name);
-            errors = ManifestLoadWarnings.ToArray();
+            errors = ManifestLoadWarnings.Concat(initErrors).ToArray();
             return plugin;
+        }
+
+        /// <summary>
+        /// The GUI editor's LoadNewPlugin sequence between plugin creation and map load:
+        /// Initialize reads the game's base rules layers and the team-color set — without it
+        /// every unit and building renders unremapped and rule-derived stats stay at their
+        /// table defaults. Flag colors resolve against the loaded team colors.
+        /// </summary>
+        private static IEnumerable<string> InitializePlugin(IGamePlugin plugin)
+        {
+            List<string> errors = plugin.Initialize().ToList();
+            plugin.Map.FlagColors = plugin.GetFlagColors();
+            return errors;
         }
 
         /// <summary>Loads a map, pointing the archive and tileset managers at its theater first.</summary>
@@ -142,7 +156,9 @@ namespace MobiusEditor.Headless
             // Classic TD terrain is 64x64 (8 KiB of cells); the editor's 128x128 "megamap" .bin is four times that.
             bool megaMap = GameType == GameType.RedAlert || (binContent != null && binContent.Length >= 128 * 128 * 2);
             IGamePlugin plugin = GameInfo.CreatePlugin(false, megaMap);
-            errors = ManifestLoadWarnings.Concat(plugin.Load(mapPath, mapPath, File.ReadAllBytes(mapPath), binPath, binContent, ref ft)).ToArray();
+            IEnumerable<string> initErrors = InitializePlugin(plugin);
+            errors = ManifestLoadWarnings.Concat(initErrors)
+                .Concat(plugin.Load(mapPath, mapPath, File.ReadAllBytes(mapPath), binPath, binContent, ref ft)).ToArray();
             return plugin;
         }
     }
