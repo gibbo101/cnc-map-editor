@@ -183,6 +183,8 @@ namespace MobiusCli
                 Villages = OptInt(inv, "villages"),
                 Roads = OptBool(inv, "roads"),
                 Tiberium = double.Parse(inv.Option("tiberium", "0"), System.Globalization.CultureInfo.InvariantCulture),
+                Coast = Enum.TryParse(inv.Option("coast", "mixed"), true, out CoastFlavor coast) ? coast
+                    : throw new ArgumentException("unknown --coast (mixed|beach|cliff)"),
             };
             IGamePlugin plugin = session.New(inv.Option("theater"), out string[] notes);
             foreach (string n in notes) o.WriteLine("note: " + n);

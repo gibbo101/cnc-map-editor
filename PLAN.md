@@ -248,7 +248,62 @@ Wine.** It would not inform the native build at all, nothing is blocked today th
 would unblock (campaign authoring is deferred behind the AI milestone), and a working stopgap
 would only tempt the native editor to slip. Not part of the plan.
 
-## RESUME HERE (2026-09-01 night — walked lakes AND meandering rivers SHIPPED)
+## RESUME HERE (2026-09-02 early — THE SHORE RULE, islands, cliffs; Luke steering live)
+
+**LUKE'S DESIGN LAW (2026-09-02, verbatim intent): "between water and land tiles should
+always be a cliff or a beach, no exceptions."** Formalized: authored pieces carry the
+transition INSIDE a stamp (16 sh + wc14 + all rv/ford pieces have internal W|C cell
+contacts — the art paints the beach within the tile), so the mechanical rule is: a
+water cell may touch a clear cell only when both belong to the SAME stamp. Everything
+below serves that rule.
+
+**Shipped this stretch (uncommitted until tiers pass):**
+- **`CoastWalker.AuditShoreRule(map)`** — the rule as code (cross-stamp W|C detection by
+  template + icon arithmetic). THE quality gauge for all water work from now on.
+- **Seam sealing in the walker:** chain transitions must have land bands touching
+  (8-way; blocks 4-way flood), waterlines touching, AND no cross-stamp W|C contact in
+  the post-overwrite pair union. This killed the leak channels (a walk that came near
+  itself left 1-2 row water channels through the coast — found via a flooded island
+  interior) together with **self-separation**: planned geometry is forbidden (1-cell
+  moat) to later segments/rings, joints exempt.
+- **`EnforceShoreRule`** (replaces PatchBareContacts + its sh55 speckles, which
+  themselves broke the rule — sh55 is River-typed): drains small enclosed fill pockets,
+  erodes isolated junction cells with a non-shrinking cutoff (structural fronts stop —
+  open water cannot be receded, it just marches a bare line), erases 1-wet piece pokes.
+- **`DrownOrphanIslets`** — Luke's "random beach tiles in water": ≤3-cell land scraps
+  (8-connected — shore art chains land diagonally; 4-way drowned REAL shore nubs, and
+  an aborted-scan `seen` bug faked orphans) fully surrounded by water become water.
+- **Coast flavor** `--coast mixed|beach|cliff` (GUI pending): per-feature family pick +
+  A* cost bias + flavored start piece; unbiased retry when a flavor cannot close a
+  ring. Luke's "where are the cliffs" — wc cliff islands/coasts now appear.
+- **Trees:** full footprint must stand on Clear (origin-only check planted canopies in
+  the water — Luke caught it in-render).
+- **Islands rework** (Luke: junctions bad, too small, causeways dominated): tight
+  centered archipelago (3-block straits, islands ~30 cells = base-sized — "how are you
+  meant to build a base on that?"), gate STRIPS (3 straight self-run pieces) at
+  causeway exits, doorway punched only through the middle, concave corner shores
+  where ring coast turns into causeway flanks.
+
+**SCOREBOARD (AuditShoreRule, pinned in tests):** Lakes 0 ✅ · Ocean ≤2 (coast-terminus
+at map frame) · River = crossings only + ≤2 stragglers · Islands ~60 (junction class).
+
+**NEXT ARCS (designed, in order):**
+1. **rv-stream rivers**: fords have ZERO mined transitions; ford1 = EW road over a
+   1-CELL NS stream ("CVC RHR CHR" — v column x=1), i.e. fords belong ON rv river
+   courses. rv is the corpus's true river idiom (rv05: 325 transition kinds incl.
+   sh30 splices ×32 and d04 road crossings ×41 — art-contained rocky banks, zero seam
+   liability). Build: PlanPath through the rv family (desiredSide=-1), ford1 stamped
+   over an rv06/rv07 NS segment (V columns align at same x); note the rv set has no
+   compact EW straight (rv06/rv07 are the NS pair) — EW rivers need a solution or
+   NS-only stream rivers. Kills the river's crossing-residue class.
+2. **Placement-exact walks**: validate each candidate piece against the placed-so-far
+   cell state instead of pair-wise (triple-overwrite artifacts are the remaining
+   violation source — pair checks cannot see a third stamp's overwrite). Kills the
+   island junction class and the ≤2 stragglers.
+3. Landing-beach splices on cliff coasts (amphibious rule), rf land-cliff family,
+   mined road curves, GUI coast-flavor control + `mapeditor.json`/Shell parity check.
+
+## Previous block (2026-09-01 night — walked lakes AND meandering rivers SHIPPED)
 
 **MEANDERING WALKED RIVERS (after the lakes commit):** the River style now walks both
 banks through mined idioms, ford-first — `PlaceWalkedRiver`:

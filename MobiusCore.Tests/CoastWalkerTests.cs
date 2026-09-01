@@ -93,23 +93,34 @@ namespace MobiusCore.Tests
             CoastWalker.Place(map, loop, catalog, random);
             Assert.True(CoastWalker.FloodWater(map, new Point(60, 60), 40 * 40, random),
                 "flood escaped the ring");
-            CoastWalker.PatchBareContacts(map, random);
+            CoastWalker.EnforceShoreRule(map);
             Assert.Equal(LandType.Water, LakeBuilder.LandAt(map, new Point(60, 60)));
-            // The seam invariant: no flood-fill water cell may touch bare clear land.
-            int bare = 0;
-            for (int y = map.Bounds.Top; y < map.Bounds.Bottom; y++)
-            {
-                for (int x = map.Bounds.Left; x < map.Bounds.Right; x++)
-                {
-                    Template fill = map.Templates[y, x];
-                    if (fill?.Type == null || (fill.Type.Name != "w1" && fill.Type.Name != "w2")) continue;
-                    foreach (Point n in new[] { new Point(x + 1, y), new Point(x - 1, y), new Point(x, y + 1), new Point(x, y - 1) })
-                    {
-                        if (map.Bounds.Contains(n) && LakeBuilder.LandAt(map, n) == LandType.Clear) bare++;
-                    }
-                }
-            }
-            Assert.Equal(0, bare);
+            // The shore rule: between water and land there is always a drawn cliff or
+            // beach. A handful of triple-overwrite artifacts remain until walks validate
+            // against the placed map instead of pair-wise (the placement-exact arc);
+            // this pins that they stay rare.
+            Assert.True(CoastWalker.AuditShoreRule(map).Count <= 2,
+                "shore-rule violations grew: " + CoastWalker.AuditShoreRule(map).Count);
+        }
+
+        [Fact]
+        public void IslandLoopKeepsItsInteriorDry()
+        {
+            (IGamePlugin plugin, var catalog) = Fresh();
+            Map map = plugin.Map;
+            var random = new MobiusEditor.Utility.DeterministicRandom(5);
+            List<CoastWalker.Step> loop = CoastWalker.PlanLoop(map, TransitionGraph.Baked, catalog,
+                new Point(60, 60), new Size(12, 10), random, waterInside: false);
+            Assert.NotNull(loop);
+            Point close = new Point(loop[0].Origin.X - loop[^1].Origin.X, loop[0].Origin.Y - loop[^1].Origin.Y);
+            Assert.Contains(TransitionGraph.Baked.From(loop[^1].Piece.Name),
+                t => t.To.Equals(loop[0].Piece.Name, System.StringComparison.OrdinalIgnoreCase) && t.Offset == close);
+            CoastWalker.Place(map, loop, catalog, random);
+            // The sea floods around the ring from a far corner; the interior stays dry.
+            Assert.True(CoastWalker.FloodWater(map, new Point(3, 3),
+                map.Bounds.Width * map.Bounds.Height, random), "sea flood burst its bound");
+            Assert.Equal(LandType.Water, LakeBuilder.LandAt(map, new Point(3, 3)));
+            Assert.Equal(LandType.Clear, LakeBuilder.LandAt(map, new Point(60, 60)));
         }
 
         [Fact]

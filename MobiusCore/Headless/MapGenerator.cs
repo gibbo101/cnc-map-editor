@@ -51,7 +51,11 @@ namespace MobiusEditor.Headless
         /// the dial warns and does nothing.
         /// </summary>
         public double Tiberium { get; set; }
+        /// <summary>Coastline character for walked coasts: rocky cliffs, sandy beaches, or a seeded mix per water feature.</summary>
+        public CoastFlavor Coast { get; set; } = CoastFlavor.Mixed;
     }
+
+    public enum CoastFlavor { Mixed, Beach, Cliff }
 
     public enum WaterStyle { None, Lakes, River, Ocean, Islands }
 
@@ -114,7 +118,7 @@ namespace MobiusEditor.Headless
                     int depth = options.OceanDepth ?? 1 + (int)Math.Round(options.Water * 2);
                     // The corpus-walked coast is the real thing; the straight block
                     // shoreline stays as the fallback for games the corpus does not cover.
-                    if (!PlaceWalkedOcean(map, edge, depth, random, catalog))
+                    if (!PlaceWalkedOcean(map, edge, depth, random, catalog, FlavorPrefix(options.Coast, random)))
                     {
                         LakeBuilder.PlaceOcean(map, edge, depth, random, catalog);
                     }
@@ -136,9 +140,11 @@ namespace MobiusEditor.Headless
                     PlaceScatteredLakes(map, options, random, catalog);
                     break;
             }
-            // Every style honours the seam invariant: no fill-water cell may touch bare
-            // clear land. The 1x1 shallow tile is the corpus's own patch for the rare gap.
-            CoastWalker.PatchBareContacts(map, random);
+            // Every style honours the shore rule: between water and land there is always
+            // a drawn cliff or beach — junction water with no transition recedes, and
+            // stranded land scraps drown.
+            CoastWalker.EnforceShoreRule(map);
+            CoastWalker.DrownOrphanIslets(map, random);
         }
 
         /// <summary>
@@ -148,7 +154,7 @@ namespace MobiusEditor.Headless
         /// planning fails and the caller should fall back.
         /// </summary>
         private static bool PlaceWalkedOcean(Map map, int edge, int depthBlocks,
-            DeterministicRandom random, IReadOnlyList<ShorePiece> shoreCatalog)
+            DeterministicRandom random, IReadOnlyList<ShorePiece> shoreCatalog, string flavor = null)
         {
             TransitionGraph graph = TransitionGraph.Baked;
             Dictionary<string, ShorePiece> catalog = ShoreCatalog.Build(map.TemplateTypes)
@@ -156,7 +162,8 @@ namespace MobiusEditor.Headless
                 .GroupBy(p => p.Template.Name, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
             int desiredSide = edge switch { 0 => 0, 1 => 4, 2 => 2, _ => 6 };
-            string start = CoastWalker.BestStartPiece(map, graph, catalog, desiredSide);
+            string start = CoastWalker.BestStartPiece(map, graph, catalog, desiredSide, flavor)
+                ?? CoastWalker.BestStartPiece(map, graph, catalog, desiredSide);
             if (start == null) return false;
             Rectangle b = map.Bounds;
             int depth = Math.Max(2, depthBlocks) * LakeBuilder.Block;
@@ -178,7 +185,7 @@ namespace MobiusEditor.Headless
                 int along = runStart + (runEnd - runStart) * i / anchorCount - (i == anchorCount ? 3 : 0);
                 int across = coastLine + landward * random.Next(9);
                 List<CoastWalker.Step> segment = CoastWalker.PlanPath(map, graph, catalog,
-                    piece, origin, At(along, across), 70, desiredSide);
+                    piece, origin, At(along, across), 70, desiredSide, preferPrefix: flavor);
                 if (segment == null) return false;
                 if (all.Count > 0) segment.RemoveAt(0);
                 all.AddRange(segment);
@@ -203,7 +210,6 @@ namespace MobiusEditor.Headless
             {
                 CoastWalker.FloodWater(map, seed, maxCells, random);
             }
-            CoastWalker.PatchBareContacts(map, random);
             CoastWalker.ExtendWaterIntoBorder(map, random);
             return true;
         }
@@ -217,13 +223,42 @@ namespace MobiusEditor.Headless
         /// failed segment plans nothing; a flood that escapes reverts every stamped cell.
         /// False falls back to the straight block corridor.
         /// </summary>
+        /// <summary>The piece-name family for a coast: cliff and beach as asked, mixed rolls per feature.</summary>
+        private static string FlavorPrefix(CoastFlavor coast, DeterministicRandom random) => coast switch
+        {
+            CoastFlavor.Cliff => "wc",
+            CoastFlavor.Beach => "sh",
+            _ => random.Next(2) == 0 ? "wc" : "sh",
+        };
+
+        /// <summary>The side-classified sh + wc pieces the walker orients by.</summary>
+        private static Dictionary<string, ShorePiece> WalkerCatalog(Map map) => ShoreCatalog.Build(map.TemplateTypes)
+            .Concat(ShoreCatalog.Build(map.TemplateTypes, "wc"))
+            .GroupBy(p => p.Template.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Straight 3x3 pieces with the given water side, most idiom-rich first — pinned
+        /// pieces walks must enter exactly, so the graph must know ways into and out.
+        /// </summary>
+        private static IEnumerable<string> StraightPieces(TransitionGraph graph, Dictionary<string, ShorePiece> catalog, int side)
+        {
+            return catalog.Values
+                .Where(p => p.Kind == ShoreKind.Straight && p.Template.ExistsInTheater
+                    && p.Template.IconWidth == LakeBuilder.Block && p.Template.IconHeight == LakeBuilder.Block
+                    && SideIndexOf(p.WaterSide) == side)
+                .OrderByDescending(p => graph.From(p.Template.Name).Sum(t => t.Count))
+                .ThenBy(p => p.Template.Name, StringComparer.Ordinal)
+                .Select(p => p.Template.Name);
+        }
+
+        private static string BestStraightPiece(TransitionGraph graph, Dictionary<string, ShorePiece> catalog, int side)
+            => StraightPieces(graph, catalog, side).FirstOrDefault();
+
         private static bool PlaceWalkedRiver(Map map, MapGeneratorOptions options, DeterministicRandom random)
         {
             TransitionGraph graph = TransitionGraph.Baked;
-            Dictionary<string, ShorePiece> catalog = ShoreCatalog.Build(map.TemplateTypes)
-                .Concat(ShoreCatalog.Build(map.TemplateTypes, "wc"))
-                .GroupBy(p => p.Template.Name, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, ShorePiece> catalog = WalkerCatalog(map);
             int block = LakeBuilder.Block;
             bool horizontal = random.Next(2) == 0;
             // The fords are orientation-specific: ford1 carries an east-west road over a
@@ -272,18 +307,8 @@ namespace MobiusEditor.Headless
             if (anchors.Count(a => a.Ford) == 0) return false;
             var sites = anchors.Where(a => a.Ford).Select(a => (a.Along, a.Across)).ToList();
 
-            // The most idiom-rich straight 3x3 piece per bank side, so the walker's graph
-            // is guaranteed to know ways into and out of every assembly.
             int nearSide = horizontal ? 4 : 2, farSide = horizontal ? 0 : 6;
-            string BestStraight(int side) => catalog.Values
-                .Where(p => p.Kind == ShoreKind.Straight && p.Template.ExistsInTheater
-                    && p.Template.IconWidth == block && p.Template.IconHeight == block
-                    && SideIndexOf(p.WaterSide) == side)
-                .OrderByDescending(p => graph.From(p.Template.Name).Sum(t => t.Count))
-                .ThenBy(p => p.Template.Name, StringComparer.Ordinal)
-                .Select(p => p.Template.Name)
-                .FirstOrDefault();
-            string nearName = BestStraight(nearSide), farName = BestStraight(farSide);
+            string nearName = BestStraightPiece(graph, catalog, nearSide), farName = BestStraightPiece(graph, catalog, farSide);
             if (nearName == null || farName == null) return false;
             if (graph.From(nearName).Count == 0 || graph.From(farName).Count == 0) return false;
 
@@ -323,7 +348,9 @@ namespace MobiusEditor.Headless
             CoastWalker.Place(map, far, catalog, random, undo);
             // The strip covers the corridor AND both pinned bank blocks: the straight
             // bank pieces put their water column exactly where the road needs to land,
-            // so the crossing must own the banks to reach grass on both sides.
+            // so the crossing must own the banks to reach grass on both sides. (The ford
+            // art is really drawn for a one-cell rv stream — the braid across a wide
+            // corridor is the standing compromise until rivers grow an rv-stream kind.)
             foreach ((int along, int across) in sites)
             {
                 for (int w = -1; w <= width; w++)
@@ -426,7 +453,7 @@ namespace MobiusEditor.Headless
                 Point center = new Point(
                     b.Left + margin + random.Next(b.Width - margin * 2),
                     b.Top + margin + random.Next(b.Height - margin * 2));
-                if (TryWalkedLake(map, center, radius, random))
+                if (TryWalkedLake(map, center, radius, random, FlavorPrefix(options.Coast, random)))
                 {
                     placed.Add(new Rectangle(center.X - radius.Width - 6, center.Y - radius.Height - 6,
                         radius.Width * 2 + 12, radius.Height * 2 + 12));
@@ -442,14 +469,12 @@ namespace MobiusEditor.Headless
         /// escapes the ring reverts every stamped cell and reports false, so the caller
         /// falls back to the block-built lake with the map unmarked.
         /// </summary>
-        private static bool TryWalkedLake(Map map, Point center, Size radius, DeterministicRandom random)
+        private static bool TryWalkedLake(Map map, Point center, Size radius, DeterministicRandom random, string flavor = null)
         {
             TransitionGraph graph = TransitionGraph.Baked;
-            Dictionary<string, ShorePiece> catalog = ShoreCatalog.Build(map.TemplateTypes)
-                .Concat(ShoreCatalog.Build(map.TemplateTypes, "wc"))
-                .GroupBy(p => p.Template.Name, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
-            List<CoastWalker.Step> loop = CoastWalker.PlanLoop(map, graph, catalog, center, radius, random);
+            Dictionary<string, ShorePiece> catalog = WalkerCatalog(map);
+            List<CoastWalker.Step> loop = CoastWalker.PlanLoop(map, graph, catalog, center, radius, random,
+                flavorPrefix: flavor);
             if (loop == null) return false;
             Dictionary<int, Template> undo = new Dictionary<int, Template>();
             CoastWalker.Place(map, loop, catalog, random, undo);
@@ -471,6 +496,241 @@ namespace MobiusEditor.Headless
         /// Starts land on the islands by the buildable-ground scoring.
         /// </summary>
         private static void PlaceIslands(Map map, MapGeneratorOptions options, DeterministicRandom random, IReadOnlyList<ShorePiece> catalog)
+        {
+            // Corpus-walked island coastlines are the real thing; the carved block grid
+            // stays as the fallback.
+            if (PlaceWalkedIslandWorld(map, options, random)) return;
+            PlaceBlockIslandWorld(map, options, random, catalog);
+        }
+
+        /// <summary>
+        /// An island world with corpus-walked coastlines: same grid layout and serpentine
+        /// causeway chain as the block builder, but each island is a walked closed loop
+        /// (water outside) with block-aligned straight pieces pinned at its causeway
+        /// exits — so the punch-a-doorway-and-bridge machinery meets the exact geometry
+        /// it was built for. Loops are all planned before anything is placed; the sea is
+        /// flooded from the map edges afterwards, and a wet island interior (a leaked
+        /// ring) reverts everything so the caller falls back to the block grid.
+        /// </summary>
+        private static bool PlaceWalkedIslandWorld(Map map, MapGeneratorOptions options, DeterministicRandom random)
+        {
+            TransitionGraph graph = TransitionGraph.Baked;
+            Dictionary<string, ShorePiece> catalog = WalkerCatalog(map);
+            int block = LakeBuilder.Block;
+            int players = Math.Clamp(options.Players, 2, 8);
+            int islands = Math.Clamp(options.Islands ?? players + 1, 2, 12);
+            int rows = Math.Max(1, (int)Math.Round(Math.Sqrt(islands)));
+            int cols = (islands + rows - 1) / rows;
+            // A tight archipelago in the middle of open sea: big islands, short straits.
+            // Scattering islands to the map corners makes the causeways the map.
+            // An island must host a full base: aim for ~30 cells across (interior ~20
+            // after the ring), shrinking only under grid pressure.
+            int strait = 3 * block;
+            int blocksWide = Math.Clamp(12 - (int)Math.Round(options.Water * 4), 8, 11);
+            while (blocksWide > 6
+                && (cols * blocksWide * block + (cols - 1) * strait > map.Bounds.Width - 8
+                    || rows * blocksWide * block + (rows - 1) * strait > map.Bounds.Height - 8))
+            {
+                blocksWide--;
+            }
+            int islandW = blocksWide * block, islandH = blocksWide * block;
+            int totalW = cols * islandW + (cols - 1) * strait, totalH = rows * islandH + (rows - 1) * strait;
+            if (totalW > map.Bounds.Width - 8 || totalH > map.Bounds.Height - 8) return false;
+            int offsetX = map.Bounds.Left + (map.Bounds.Width - totalW) / 2 / block * block;
+            int offsetY = map.Bounds.Top + (map.Bounds.Height - totalH) / 2 / block * block;
+            var areas = new Rectangle[islands];
+            for (int i = 0; i < islands; i++)
+            {
+                int row = i / cols, col = i % cols;
+                areas[i] = new Rectangle(
+                    offsetX + col * (islandW + strait), offsetY + row * (islandH + strait), islandW, islandH);
+            }
+            Point CenterBlock(Rectangle area) => new Point(
+                area.X + (blocksWide / 2) * block, area.Y + (blocksWide / 2) * block);
+
+            // The serpentine chain, computed up front: it decides both which gate pieces
+            // each ring must pin and where the doorways get punched afterwards.
+            var order = new List<int>();
+            for (int row = 0; row < rows; row++)
+            {
+                for (int c = 0; c < cols; c++)
+                {
+                    int col = row % 2 == 0 ? c : cols - 1 - c;
+                    int idx = row * cols + col;
+                    if (idx < islands) order.Add(idx);
+                }
+            }
+            bool causeways = options.Causeways ?? true;
+            var pins = new Dictionary<int, IReadOnlyList<(string Piece, Point Origin)>>[islands];
+            for (int i = 0; i < islands; i++) pins[i] = new Dictionary<int, IReadOnlyList<(string, Point)>>();
+            var punches = new List<Point>();
+            var bridges = new List<(Point From, Point To)>();
+            Point GateOrigin(Rectangle area, int side) => side switch
+            {
+                0 => new Point(CenterBlock(area).X, area.Top),
+                2 => new Point(area.Right - block, CenterBlock(area).Y),
+                4 => new Point(CenterBlock(area).X, area.Bottom - block),
+                _ => new Point(area.Left, CenterBlock(area).Y),
+            };
+            // A gate is a straight three-block strip centered on the doorway, so the
+            // punch and the causeway flanks only ever meet straight-piece geometry —
+            // never a cut organic piece. The strip's own run must be a mined idiom;
+            // clockwise tangents order it along the walk.
+            bool Pin(int island, int side)
+            {
+                Point g = GateOrigin(areas[island], side);
+                Point tangent = side switch
+                {
+                    0 => new Point(block, 0),
+                    2 => new Point(0, block),
+                    4 => new Point(-block, 0),
+                    _ => new Point(0, -block),
+                };
+                foreach (string piece in StraightPieces(graph, catalog, side).Take(4))
+                {
+                    if (!graph.From(piece).Any(t =>
+                        t.To.Equals(piece, StringComparison.OrdinalIgnoreCase)
+                        && t.Offset == tangent)) continue;
+                    pins[island][side] = new[]
+                    {
+                        (piece, new Point(g.X - tangent.X, g.Y - tangent.Y)),
+                        (piece, g),
+                        (piece, new Point(g.X + tangent.X, g.Y + tangent.Y)),
+                    };
+                    return true;
+                }
+                string single = BestStraightPiece(graph, catalog, side);
+                if (single == null) return false;
+                pins[island][side] = new[] { (single, g) };
+                return true;
+            }
+            if (causeways)
+            {
+                for (int i = 0; i + 1 < order.Count; i++)
+                {
+                    Rectangle a = areas[order[i]], b = areas[order[i + 1]];
+                    if (a.Y == b.Y && Math.Max(b.Left - a.Right, a.Left - b.Right) >= block)
+                    {
+                        Rectangle west = a.X < b.X ? a : b, east = a.X < b.X ? b : a;
+                        int y = CenterBlock(a).Y;
+                        if (!Pin(order[i], a.X < b.X ? 2 : 6) || !Pin(order[i + 1], a.X < b.X ? 6 : 2)) return false;
+                        punches.Add(new Point(west.Right - block, y));
+                        punches.Add(new Point(east.Left, y));
+                        bridges.Add((new Point(west.Right, y), new Point(east.Left - block, y)));
+                    }
+                    else if (a.X == b.X && b.Top - a.Bottom >= block)
+                    {
+                        int x = CenterBlock(a).X;
+                        if (!Pin(order[i], 4) || !Pin(order[i + 1], 0)) return false;
+                        punches.Add(new Point(x, a.Bottom - block));
+                        punches.Add(new Point(x, b.Top));
+                        bridges.Add((new Point(x, a.Bottom), new Point(x, b.Top - block)));
+                    }
+                    else
+                    {
+                        // Row transition onto a different column: an L through open sea.
+                        int elbowX = CenterBlock(b).X;
+                        int y = CenterBlock(a).Y;
+                        bool eastward = elbowX > a.Right;
+                        if (!Pin(order[i], eastward ? 2 : 6) || !Pin(order[i + 1], 0)) return false;
+                        punches.Add(eastward ? new Point(a.Right - block, y) : new Point(a.Left, y));
+                        bridges.Add((eastward ? new Point(a.Right, y) : new Point(a.Left - block, y), new Point(elbowX, y)));
+                        bridges.Add((new Point(elbowX, y + block), new Point(elbowX, b.Top - block)));
+                        punches.Add(new Point(elbowX, b.Top));
+                    }
+                }
+            }
+
+            // Plan every ring before placing anything; each ring keeps a moat's distance
+            // from the ones already planned.
+            var loops = new List<CoastWalker.Step>[islands];
+            var claimed = new List<Rectangle>();
+            for (int i = 0; i < islands; i++)
+            {
+                Rectangle area = areas[i];
+                Point center = new Point(area.X + islandW / 2, area.Y + islandH / 2);
+                Size radius = new Size(islandW / 2 - 2, islandH / 2 - 2);
+                // A flavor that cannot close this ring (a cliff family fighting sandy
+                // gate strips, say) falls back to an unbiased walk before the whole
+                // style gives up.
+                loops[i] = CoastWalker.PlanLoop(map, graph, catalog, center, radius, random,
+                    waterInside: false, pins: pins[i].Count > 0 ? pins[i] : null,
+                    avoid: claimed.Count > 0 ? claimed : null,
+                    flavorPrefix: FlavorPrefix(options.Coast, random))
+                    ?? CoastWalker.PlanLoop(map, graph, catalog, center, radius, random,
+                        waterInside: false, pins: pins[i].Count > 0 ? pins[i] : null,
+                        avoid: claimed.Count > 0 ? claimed : null);
+                if (loops[i] == null) return false;
+                claimed.AddRange(loops[i].Select(s => new Rectangle(s.Origin, new Size(s.Piece.IconWidth, s.Piece.IconHeight))));
+            }
+            Dictionary<int, Template> undo = new Dictionary<int, Template>();
+            foreach (List<CoastWalker.Step> loop in loops)
+            {
+                CoastWalker.Place(map, loop, catalog, random, undo);
+            }
+            Rectangle bounds = map.Bounds;
+            Point[] seeds =
+            {
+                new Point(bounds.Left + 1, bounds.Top + 1), new Point(bounds.Right - 2, bounds.Top + 1),
+                new Point(bounds.Left + 1, bounds.Bottom - 2), new Point(bounds.Right - 2, bounds.Bottom - 2),
+                new Point(bounds.Left + bounds.Width / 2, bounds.Top + 1), new Point(bounds.Left + bounds.Width / 2, bounds.Bottom - 2),
+                new Point(bounds.Left + 1, bounds.Top + bounds.Height / 2), new Point(bounds.Right - 2, bounds.Top + bounds.Height / 2),
+            };
+            bool Revert()
+            {
+                foreach (KeyValuePair<int, Template> cell in undo) map.Templates[cell.Key] = cell.Value;
+                return false;
+            }
+            foreach (Point seed in seeds)
+            {
+                if (!CoastWalker.FloodWater(map, seed, bounds.Width * bounds.Height, random, undo)) return Revert();
+            }
+            // A wet interior means a ring leaked and the island drowned.
+            foreach (Rectangle area in areas)
+            {
+                LandType land = LakeBuilder.LandAt(map, new Point(area.X + islandW / 2, area.Y + islandH / 2));
+                if (land == LandType.Water || land == LandType.River) return Revert();
+            }
+            CoastWalker.ExtendWaterIntoBorder(map, random);
+            // The doorway junction is drawn, not abrupt: the gate strip's outer pieces
+            // become concave corner shores, so the ring coast turns into the causeway's
+            // flank shoreline instead of stopping dead at punched grass.
+            TemplateType Corner(int side8)
+            {
+                ShoreSide want = side8 switch { 1 => ShoreSide.NorthEast, 3 => ShoreSide.SouthEast, 5 => ShoreSide.SouthWest, _ => ShoreSide.NorthWest };
+                int WaterCells(TemplateType t)
+                {
+                    int n = 0;
+                    foreach (LandType land in ShoreCatalog.LandGrid(t))
+                        if (land == LandType.Water || land == LandType.River) n++;
+                    return n;
+                }
+                return catalog.Values
+                    .Where(p => p.Kind == ShoreKind.Diagonal && p.WaterSide == want && p.Template.ExistsInTheater
+                        && p.Template.IconWidth == block && p.Template.IconHeight == block)
+                    .OrderByDescending(p => WaterCells(p.Template))
+                    .ThenBy(p => p.Template.Name, StringComparer.Ordinal)
+                    .Select(p => p.Template)
+                    .FirstOrDefault();
+            }
+            Dictionary<int, Template> surgery = new Dictionary<int, Template>(), surgeryRedo = new Dictionary<int, Template>();
+            for (int i = 0; i < islands; i++)
+            {
+                foreach (KeyValuePair<int, IReadOnlyList<(string Piece, Point Origin)>> gate in pins[i])
+                {
+                    if (gate.Value.Count != 3) continue;
+                    TemplateType minus = Corner((gate.Key + 7) % 8), plus = Corner((gate.Key + 1) % 8);
+                    if (minus != null) TemplateEdit.Place(map.TemplateTypes, map.Templates, minus, gate.Value[0].Origin, null, random, surgery, surgeryRedo);
+                    if (plus != null) TemplateEdit.Place(map.TemplateTypes, map.Templates, plus, gate.Value[2].Origin, null, random, surgery, surgeryRedo);
+                }
+            }
+            IReadOnlyList<ShorePiece> blockCatalog = ShoreCatalog.Build(map.TemplateTypes);
+            foreach (Point punch in punches) LakeBuilder.PunchBlock(map, punch);
+            foreach ((Point from, Point to) in bridges) LakeBuilder.PlaceCauseway(map, from, to, random, blockCatalog);
+            return true;
+        }
+
+        private static void PlaceBlockIslandWorld(Map map, MapGeneratorOptions options, DeterministicRandom random, IReadOnlyList<ShorePiece> catalog)
         {
             if (!LakeBuilder.FloodBounds(map, random, catalog)) return;
             int players = Math.Clamp(options.Players, 2, 8);
@@ -789,10 +1049,26 @@ namespace MobiusEditor.Headless
             candidates = candidates.OrderByDescending(p => Noise(lattice, bounds, p)).ToList();
             int budget = Math.Max(1, (int)(plugin.GameInfo.MaxTerrain * 0.85 * options.Trees));
             int placed = 0;
+            // A tree's whole footprint must stand on clear ground — the origin check
+            // alone plants trees whose occupied cells hang into the water.
+            bool Fits(TerrainType type, Point p)
+            {
+                for (int y = 0; y < type.OccupyMask.GetLength(0); y++)
+                {
+                    for (int x = 0; x < type.OccupyMask.GetLength(1); x++)
+                    {
+                        if (!type.OccupyMask[y, x]) continue;
+                        Point cell = new Point(p.X + x, p.Y + y);
+                        if (!bounds.Contains(cell) || !IsClearGround(map, cell)) return false;
+                    }
+                }
+                return true;
+            }
             foreach (Point p in candidates)
             {
                 if (placed >= budget) break;
                 TerrainType type = pool[random.Next(pool.Count)];
+                if (!Fits(type, p)) continue;
                 if (map.Technos.Add(p, new Terrain { Type = type })) placed++;
             }
         }

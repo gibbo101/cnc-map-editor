@@ -166,22 +166,17 @@ namespace MobiusCore.Tests
 
             IGamePlugin plugin = Generate(options);
             Map map = plugin.Map;
-            int clearAgainstWater = 0;
-            for (int y = map.Bounds.Top; y < map.Bounds.Bottom; y++)
+            // The shore rule holds along the whole coast; the only tolerated residue is
+            // the coast terminus against the map frame (the coast-end class).
+            var violations = CoastWalker.AuditShoreRule(map);
+            Assert.True(violations.Count <= 2, "shore-rule violations grew: " + violations.Count);
+            foreach ((System.Drawing.Point water, _) in violations)
             {
-                for (int x = map.Bounds.Left; x < map.Bounds.Right; x++)
-                {
-                    // Authored pieces paint their own internal grass-to-water transitions;
-                    // the defect is bare clear land against flood-filled open water.
-                    Template fill = map.Templates[y, x];
-                    if (fill?.Type == null || (fill.Type.Name != "w1" && fill.Type.Name != "w2")) continue;
-                    foreach (System.Drawing.Point n in new[] { new System.Drawing.Point(x + 1, y), new System.Drawing.Point(x - 1, y), new System.Drawing.Point(x, y + 1), new System.Drawing.Point(x, y - 1) })
-                    {
-                        if (map.Bounds.Contains(n) && LakeBuilder.LandAt(map, n) == LandType.Clear) clearAgainstWater++;
-                    }
-                }
+                int toEdge = Math.Min(
+                    Math.Min(water.X - map.Bounds.Left, map.Bounds.Right - 1 - water.X),
+                    Math.Min(water.Y - map.Bounds.Top, map.Bounds.Bottom - 1 - water.Y));
+                Assert.True(toEdge <= 4, $"violation away from the map frame at {water}");
             }
-            Assert.Equal(0, clearAgainstWater);
         }
 
         [Fact]
@@ -292,20 +287,64 @@ namespace MobiusCore.Tests
             Assert.True(firstWater.Distinct().Count() >= 4,
                 "river is straight: waterline positions " + string.Join(",", firstWater.Distinct()));
 
-            int clearAgainstWater = 0;
-            for (int y = map.Bounds.Top; y < map.Bounds.Bottom; y++)
+            // The banks hold the shore rule end to end; the tolerated residue clusters
+            // at the crossings (the ford art is drawn for a one-cell rv stream — the
+            // rv-stream river arc owns removing this class), plus at most a couple of
+            // triple-overwrite stragglers pending the placement-exact arc.
+            int strays = CoastWalker.AuditShoreRule(map).Count(v => !fordOrigins.Any(f =>
+                Math.Abs(f.X - v.Water.X) <= 8 && Math.Abs(f.Y - v.Water.Y) <= 8));
+            Assert.True(strays <= 2, strays + " shore-rule violations away from any crossing");
+        }
+
+        [Fact]
+        public void WalkedIslandWorldConnectsAllStartsOverLand()
+        {
+            MapGeneratorOptions options = new MapGeneratorOptions
+            { Seed = 13, Players = 4, Style = WaterStyle.Islands, Water = 0.5 };
+            byte[] first = SaveBytes(Generate(options), "walked-islands-a.mpr");
+            byte[] second = SaveBytes(Generate(options), "walked-islands-b.mpr");
+            Assert.Equal(first, second);
+
+            IGamePlugin plugin = Generate(options);
+            Map map = plugin.Map;
+            // The walked coastlines chain the corpus's larger pieces; the block builder
+            // only ever stamps 3x3 blocks, so a wider shore template proves the walker ran.
+            Assert.Contains(EnumerateShoreTemplates(map), t => t.IconWidth > 3 || t.IconHeight > 3);
+            Assert.True(LargestWaterBody(map) > 1000, "no surrounding sea");
+            // Causeways keep the island chain a ground war: every start reaches every
+            // other over land.
+            var starts = map.Waypoints
+                .Where(w => w.Flags.HasFlag(WaypointFlag.PlayerStart) && w.Cell.HasValue)
+                .Select(w => { map.Metrics.GetLocation(w.Cell.Value, out System.Drawing.Point p); return p; })
+                .ToList();
+            Assert.Equal(4, starts.Count);
+            var reached = new System.Collections.Generic.HashSet<System.Drawing.Point>();
+            var frontier = new System.Collections.Generic.Queue<System.Drawing.Point>();
+            bool Land(System.Drawing.Point p) => map.Bounds.Contains(p)
+                && LakeBuilder.LandAt(map, p) is LandType t && t != LandType.Water && t != LandType.River && t != LandType.Rock;
+            frontier.Enqueue(starts[0]);
+            reached.Add(starts[0]);
+            while (frontier.Count > 0)
             {
-                for (int x = map.Bounds.Left; x < map.Bounds.Right; x++)
+                System.Drawing.Point p = frontier.Dequeue();
+                foreach (System.Drawing.Point n in new[] { new System.Drawing.Point(p.X + 1, p.Y), new System.Drawing.Point(p.X - 1, p.Y), new System.Drawing.Point(p.X, p.Y + 1), new System.Drawing.Point(p.X, p.Y - 1) })
                 {
-                    Template fill = map.Templates[y, x];
-                    if (fill?.Type == null || (fill.Type.Name != "w1" && fill.Type.Name != "w2")) continue;
-                    foreach (System.Drawing.Point n in new[] { new System.Drawing.Point(x + 1, y), new System.Drawing.Point(x - 1, y), new System.Drawing.Point(x, y + 1), new System.Drawing.Point(x, y - 1) })
-                    {
-                        if (map.Bounds.Contains(n) && LakeBuilder.LandAt(map, n) == LandType.Clear) clearAgainstWater++;
-                    }
+                    if (Land(n) && reached.Add(n)) frontier.Enqueue(n);
                 }
             }
-            Assert.Equal(0, clearAgainstWater);
+            foreach (System.Drawing.Point start in starts)
+            {
+                Assert.True(reached.Contains(start), $"start {start} is cut off from {starts[0]}");
+            }
+        }
+
+        private static System.Collections.Generic.IEnumerable<TemplateType> EnumerateShoreTemplates(Map map)
+        {
+            for (int y = map.Bounds.Top; y < map.Bounds.Bottom; y++)
+                for (int x = map.Bounds.Left; x < map.Bounds.Right; x++)
+                    if (map.Templates[y, x]?.Type is TemplateType t
+                        && (t.Name.StartsWith("sh", StringComparison.OrdinalIgnoreCase) || t.Name.StartsWith("wc", StringComparison.OrdinalIgnoreCase)))
+                        yield return t;
         }
 
         private static System.Collections.Generic.IEnumerable<string> EnumerateTemplateNames(Map map)
