@@ -273,10 +273,16 @@ UNREMAPPED (no house colors) on desktop and Deck since day one. The oracle never
 because our own probes (RenderProbe/RoundTripProbe/ObjectProbe in the fork's tools/probes)
 skip Initialize the same way. Fix: `EditorSession.New/Load` now run Initialize (+
 `Map.FlagColors = GetFlagColors()`, fork order) and surface its errors; all three probes
-patched to match; oracle fixtures REGENERATED (renders + saves + saves-official). Found
-via TDD on the ghost preview: `BrushPreviewTests.UnitPreviewRemapsToThePlacementHouse`
-(Greece vs USSR pixels) was the red test. Fast Core 108, Shell 83, App 30, CLI 23 all
-green with the fix; full oracle rerun pending the regen.
+patched to match; oracle fixtures REGENERATED (renders + saves + saves-official; the
+fork sweep round-trips all 31 shipped maps byte-exact WITH Initialize, and our 261-map
+save oracle stays byte-identical). Found via TDD on the ghost preview:
+`BrushPreviewTests.UnitPreviewRemapsToThePlacementHouse` (Greece vs USSR pixels) was the
+red test. Render-oracle blend bound widened 3→5 (team-color remap adds a truncating
+premultiply pass on the mono side; the strict outside-partial-alpha invariant still
+exact). **SESSION-END: EVERY tier green on the committed tree — Core+oracle 378/378,
+Shell 83, App 31, CLI 24.** Commits: 8c8be06 search+tabs, c9cc6a9 Initialize, 22ed7cd
+generator, 2fb2e97 ghost+dialog; fork repo 77fc58a probes. main is 56 ahead of origin —
+pushing has not been part of this repo's flow, left for Luke.
 
 **GHOST POLISH SHIPPED:** the placement ghost is now a live render —
 `MapDocument.RenderBrushPreview(type)` renders the brush type at the current tile size
