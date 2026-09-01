@@ -186,7 +186,22 @@ namespace MobiusEditor.App.Tests
             Dispatcher.UIThread.RunJobs();
             Border ghost = window.FindControl<Border>("GhostBorder");
             Assert.True(ghost.IsVisible);
-            Assert.Same(entry.Image, window.FindControl<Image>("GhostImage").Source);
+            // Object brushes get a live preview render, not the stretched palette thumbnail.
+            Image ghostImage = window.FindControl<Image>("GhostImage");
+            Assert.NotNull(ghostImage.Source);
+            Assert.NotSame(entry.Image, ghostImage.Source);
+            Assert.Equal(1.0, ghostImage.Opacity);
+
+            // Template brushes keep their pixel-exact thumbnails.
+            ListBox templates = window.FindControl<ListBox>("TemplatePalette");
+            PaletteEntry template = templates.Items.OfType<PaletteEntry>().First();
+            templates.SelectedItem = template;
+            Dispatcher.UIThread.RunJobs();
+            window.MouseMove(CellCenter(window, 10, 10));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Same(template.Image, ghostImage.Source);
+            units.SelectedItem = null;
+            templates.SelectedItem = null;
 
             // No brush, no ghost.
             units.SelectedItem = null;

@@ -248,7 +248,66 @@ Wine.** It would not inform the native build at all, nothing is blocked today th
 would unblock (campaign authoring is deferred behind the AI milestone), and a working stopgap
 would only tempt the native editor to slip. Not part of the plan.
 
-## RESUME HERE (2026-08-31, end of the trigger-arc session)
+## RESUME HERE (2026-09-01, overnight session)
+
+**WALKER CHANGE FULLY VERIFIED:** the b8dbe89 walk_frames change is green on every tier —
+CLI 23, App, Shell, fast Core 108, full oracle 372/372 (16 min). The pending-verification
+note from the previous session-end is closed.
+
+**LUKE'S UI FEEDBACK ROUND (before bed) — SHIPPED (8c8be06):**
+- **Palette search box** (`PaletteSearch` above the tool tabs): narrows every palette at
+  once, matching display name OR INI name (`PaletteFilter` in Shell — headless-tested;
+  `PaletteItem` grew `IniName`). Group headers survive only with entries; a surviving
+  selection keeps its brush. TRAP FIXED with it: `SelectedWaypoint` was the ListBox
+  index — filtered lists broke the mapping; it now parses the row's leading number.
+- **Scrollable top tab strip**: the nine tool tabs sit in one horizontally scrollable
+  strip (TabControl retemplated: ScrollViewer + horizontal StackPanel items panel,
+  compact TabItem style) instead of wrapping into a block in the 220px sidebar.
+- Luke also 100%-approved the interaction scheme (right-click deselect / eraser toggle /
+  wheel zoom / WASD pan) — treat it as settled, extend rather than rework.
+
+**⭐ REAL BUG FOUND: `plugin.Initialize()` was never called.** The fork's LoadNewPlugin
+calls it between CreatePlugin and map load; our EditorSession skipped it, so the base
+RULES.INI stat layers and the team-color XML never loaded — every unit/building rendered
+UNREMAPPED (no house colors) on desktop and Deck since day one. The oracle never caught it
+because our own probes (RenderProbe/RoundTripProbe/ObjectProbe in the fork's tools/probes)
+skip Initialize the same way. Fix: `EditorSession.New/Load` now run Initialize (+
+`Map.FlagColors = GetFlagColors()`, fork order) and surface its errors; all three probes
+patched to match; oracle fixtures REGENERATED (renders + saves + saves-official). Found
+via TDD on the ghost preview: `BrushPreviewTests.UnitPreviewRemapsToThePlacementHouse`
+(Greece vs USSR pixels) was the red test. Fast Core 108, Shell 83, App 30, CLI 23 all
+green with the fix; full oracle rerun pending the regen.
+
+**GHOST POLISH SHIPPED:** the placement ghost is now a live render —
+`MapDocument.RenderBrushPreview(type)` renders the brush type at the current tile size
+through the renderer's own preview path (`IsPreview` alpha, placement-house remap;
+buildings/units/infantry/terrain/overlay/smudge; templates return null — their thumbnails
+are already exact). The App caches one preview per (type, house, scale); thumbnail
+fallback keeps the old dimmed-stretch look. `BrushPreviewTests` + updated ghost UI test.
+
+**RANDOM MAP GENERATOR SHIPPED (Luke's stretch-goal request):**
+`Headless/MapGenerator.cs` — deterministic skirmish synthesis: best-candidate-spaced
+player starts, value-noise tree cover (budgeted under `GameInfo.MaxTerrain`, clump cores
+fill first so capped budgets give solid forests), an ore field beside every start, gem
+patches between neighbours; vanilla types only, placed through the brush guard paths.
+`cncmap generate <out> [--theater] [--seed] [--players] [--trees 0..1] [--ore 0..1]`;
+GUI: New… dialog "Random skirmish fill" checkbox (seed/players/trees/ore) →
+`MapDocument.NewRandomMap` (fill is starting state — undo history empty).
+`MapGeneratorTests` (5: byte-identical same seed, spacing/bounds, density dials, validate+
+save+reload, player clamp) + CLI + headless dialog tests. Verified visually by rendering a
+generated map. NOT YET: water/lakes (needs the shore-tile matching problem — deliberate
+v1 cut), TD generate (RA-shaped resource names work, TD untested).
+
+**Deck is STALE tonight by Luke's instruction** ("overnight, work on linux; tomorrow
+morning I'll wake deck again for the latest build") — when the Deck is up in the morning:
+md5-check the adjacent DLL, push `build/remaster/Vanilla_RA/mapeditor.json` if the mod
+session's manifest drifted, and `DECK_HOST=deck@<deck-ip> ./deploy-deck.sh`.
+
+Blossom-tree mature-frame thumbnail: WON'T DO — `FrameOffset` drives map rendering too,
+and frame 0 (young tree) is what the game shows on placement; a thumbnail-only frame
+would need a new manifest field for a cosmetic nicety.
+
+## Previous resume block (2026-08-31, end of the trigger-arc session)
 
 **The trigger arc SHIPPED steps 1–3 (2026-08-31 overnight, all committed on main):**
 1. ~~The structured event/action parameter-type table~~ DONE: `TriggerArgType` enum

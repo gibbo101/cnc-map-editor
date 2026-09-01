@@ -74,6 +74,18 @@ namespace MobiusEditor.Shell
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
+        /// <summary>A fresh map filled by the random skirmish generator; the fill is the map's starting state, not an undoable edit.</summary>
+        public void NewRandomMap(string theater, Size? playableSize, MapGeneratorOptions options)
+        {
+            NewMap(theater, playableSize);
+            string[] warnings = MapGenerator.Generate(Plugin, options).ToArray();
+            LoadNotes = LoadNotes.Concat(warnings).ToArray();
+            undoRedo.Clear();
+            ResetStroke();
+            InvalidateRenderCache();
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
         private sealed class UndoRedoArgs : EventArgs, IUndoRedoEventArgs<MapDocument>
         {
             public bool Cancelled { get; set; }
@@ -1094,6 +1106,84 @@ namespace MobiusEditor.Shell
         private MapLayerFlag renderCacheLayers;
         private bool renderCacheValid;
         private readonly HashSet<Point> dirtyCells = new HashSet<Point>();
+
+        /// <summary>
+        /// The placement ghost, fork-style: the type rendered live at the current tile size
+        /// through the renderer's preview path — semi-transparent, remapped to the placement
+        /// house. Templates return null; their palette thumbnails are already pixel-exact.
+        /// The caller owns the bitmap.
+        /// </summary>
+        public Bitmap RenderBrushPreview(object type)
+        {
+            RequireOpen();
+            Size tile = TileSize;
+            Size footprint = PaletteItem.From(type).FootprintCells;
+            Bitmap preview = new Bitmap(footprint.Width * tile.Width, footprint.Height * tile.Height, PixelFormat.Format32bppArgb);
+            preview.SetResolution(96, 96);
+            using (Graphics g = Graphics.FromImage(preview))
+            {
+                DirectionType north = Map.UnitDirectionTypes.First(d => d.Facing == FacingType.North);
+                switch (type)
+                {
+                    case BuildingType buildingType:
+                        Building building = new Building
+                        {
+                            Type = buildingType,
+                            House = PlacementHouse,
+                            Strength = 256,
+                            Direction = Map.BuildingDirectionTypes.First(d => d.Facing == FacingType.North),
+                            IsPreview = true,
+                        };
+                        MapRenderer.RenderBuilding(Plugin.GameInfo, Map, Point.Empty, tile, Scale, building, false).RenderAction(g);
+                        break;
+                    case UnitType unitType:
+                        Unit unit = new Unit
+                        {
+                            Type = unitType,
+                            House = PlacementHouse,
+                            Strength = 256,
+                            Direction = north,
+                            Mission = Map.GetDefaultMission(unitType),
+                            IsPreview = true,
+                        };
+                        MapRenderer.RenderUnit(Plugin.GameInfo, Map, Point.Empty, tile, unit, false).RenderAction(g);
+                        break;
+                    case InfantryType infantryType:
+                        Infantry man = new Infantry(new InfantryGroup())
+                        {
+                            Type = infantryType,
+                            House = PlacementHouse,
+                            Strength = 256,
+                            Direction = north,
+                            Mission = Map.GetDefaultMission(infantryType),
+                            IsPreview = true,
+                        };
+                        MapRenderer.RenderInfantry(Map, Point.Empty, tile, man, InfantryStoppingType.Center, false).RenderAction(g);
+                        break;
+                    case TerrainType terrainType:
+                        MapRenderer.RenderTerrain(Point.Empty, tile, Scale, new Terrain { Type = terrainType, IsPreview = true }, false).RenderAction(g);
+                        break;
+                    case OverlayType overlayType:
+                        MapRenderer.RenderOverlay(Plugin.GameInfo, Point.Empty, null, tile, Scale, new Overlay { Type = overlayType, Icon = 0, IsPreview = true }, false).RenderAction(g);
+                        break;
+                    case SmudgeType smudgeType:
+                        int icon = 0;
+                        for (int y = 0; y < footprint.Height; y++)
+                        {
+                            for (int x = 0; x < footprint.Width; x++, icon++)
+                            {
+                                Smudge smudge = new Smudge(smudgeType, smudgeType.IsMultiCell ? icon : 0, null) { IsPreview = true };
+                                MapRenderer.RenderSmudge(new Point(x, y), tile, Scale, smudge, false, Globals.TheShapeCacheManager).Item2(g);
+                            }
+                        }
+                        break;
+                    default:
+                        preview.Dispose();
+                        return null;
+                }
+            }
+            return preview;
+        }
 
         /// <summary>
         /// Renders the selected layers of the whole map at the current scale. A cached bitmap

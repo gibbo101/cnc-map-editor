@@ -406,9 +406,11 @@ namespace MobiusEditor.App
              ?? SmudgePalette.SelectedItem) as PaletteEntry;
 
         /// <summary>
-        /// The placement ghost: the selected type's thumbnail, footprint-sized, snapped to the
-        /// hovered cell — so it is clear what is being placed and where before clicking. The
-        /// cell-trigger and waypoint brushes show the plain highlight box.
+        /// The placement ghost: a live preview render of the selected type (semi-transparent,
+        /// remapped to the toolbar house), footprint-sized, snapped to the hovered cell — so
+        /// it is clear what is being placed and where before clicking. Templates fall back to
+        /// their pixel-exact thumbnails; the cell-trigger and waypoint brushes show the plain
+        /// highlight box.
         /// </summary>
         private void UpdateGhost(System.Drawing.Point? cell)
         {
@@ -425,10 +427,36 @@ namespace MobiusEditor.App
             GhostBorder.Margin = new Thickness(cell.Value.X * tile.Width, cell.Value.Y * tile.Height, 0, 0);
             GhostBorder.Width = footprint.Width * tile.Width;
             GhostBorder.Height = footprint.Height * tile.Height;
-            GhostImage.Source = eraser ? null : entry?.Image;
+            Avalonia.Media.Imaging.Bitmap live = eraser || entry == null ? null : GhostPreviewFor(entry);
+            GhostImage.Source = eraser ? null : (live ?? entry?.Image);
+            // The live render already carries the preview alpha; only the thumbnail fallback dims.
+            GhostImage.Opacity = live != null ? 1.0 : 0.6;
+            GhostImage.Stretch = live != null ? Avalonia.Media.Stretch.None : Avalonia.Media.Stretch.Fill;
             GhostBorder.BorderBrush = eraser ? EraseBorderBrush : PlaceBorderBrush;
             GhostBorder.Background = eraser ? EraseFillBrush : PlaceFillBrush;
             GhostBorder.IsVisible = true;
+        }
+
+        private object ghostPreviewType;
+        private string ghostPreviewHouse;
+        private double ghostPreviewScale;
+        private Avalonia.Media.Imaging.Bitmap ghostPreview;
+
+        /// <summary>One preview is cached — the brush, house and zoom change far less often than the pointer moves.</summary>
+        private Avalonia.Media.Imaging.Bitmap GhostPreviewFor(PaletteEntry entry)
+        {
+            string house = document.PlacementHouse?.Name;
+            if (!ReferenceEquals(ghostPreviewType, entry.Item.Type) || ghostPreviewHouse != house || ghostPreviewScale != document.Scale)
+            {
+                using (System.Drawing.Bitmap rendered = document.RenderBrushPreview(entry.Item.Type))
+                {
+                    ghostPreview = rendered == null ? null : PaletteEntry.ToAvalonia(rendered);
+                }
+                ghostPreviewType = entry.Item.Type;
+                ghostPreviewHouse = house;
+                ghostPreviewScale = document.Scale;
+            }
+            return ghostPreview;
         }
 
         private static readonly Avalonia.Media.IBrush PlaceBorderBrush = Avalonia.Media.Brush.Parse("#DDFFDD00");

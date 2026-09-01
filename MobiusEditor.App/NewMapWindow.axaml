@@ -17,7 +17,24 @@
         <NumericUpDown Grid.Column="0" Name="WidthNud" FormatString="0" Minimum="16" />
         <NumericUpDown Grid.Column="2" Name="HeightNud" FormatString="0" Minimum="16" />
       </Grid>
-      <TextBlock Text="A new map starts empty; place two player-start waypoints before saving a skirmish map." TextWrapping="Wrap" Opacity="0.8" />
+      <CheckBox Name="RandomFill" Content="Random skirmish fill" />
+      <StackPanel Name="RandomPanel" Spacing="4" IsVisible="False" Margin="12,0,0,0">
+        <Grid ColumnDefinitions="70,*,12,60,*">
+          <TextBlock Grid.Column="0" Text="Seed" VerticalAlignment="Center" />
+          <NumericUpDown Grid.Column="1" Name="SeedNud" FormatString="0" Minimum="0" Maximum="2147483647" Value="1" />
+          <TextBlock Grid.Column="3" Text="Players" VerticalAlignment="Center" />
+          <NumericUpDown Grid.Column="4" Name="PlayersNud" FormatString="0" Minimum="2" Maximum="8" Value="4" />
+        </Grid>
+        <Grid ColumnDefinitions="70,*">
+          <TextBlock Grid.Column="0" Text="Trees" VerticalAlignment="Center" />
+          <Slider Grid.Column="1" Name="TreesSlider" Minimum="0" Maximum="1" Value="0.5" />
+        </Grid>
+        <Grid ColumnDefinitions="70,*">
+          <TextBlock Grid.Column="0" Text="Resources" VerticalAlignment="Center" />
+          <Slider Grid.Column="1" Name="OreSlider" Minimum="0" Maximum="1" Value="0.5" />
+        </Grid>
+      </StackPanel>
+      <TextBlock Name="EmptyMapHint" Text="A new map starts empty; place two player-start waypoints before saving a skirmish map." TextWrapping="Wrap" Opacity="0.8" />
       <StackPanel Name="CreateProgress" Spacing="4" IsVisible="False">
         <ProgressBar IsIndeterminate="True" />
         <TextBlock Name="CreateProgressLabel" HorizontalAlignment="Center" Opacity="0.9" />

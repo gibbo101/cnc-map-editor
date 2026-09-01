@@ -42,6 +42,12 @@ namespace MobiusEditor.App
                     WidthNud.Value = HeightNud.Value = presets[SizePreset.SelectedIndex].Size;
                 }
             };
+            RandomFill.IsCheckedChanged += (s, e) =>
+            {
+                bool random = RandomFill.IsChecked == true;
+                RandomPanel.IsVisible = random;
+                EmptyMapHint.IsVisible = !random;
+            };
             OkButton.Click += async (s, e) =>
             {
                 if (!(TheaterList.SelectedItem is string theater))
@@ -56,7 +62,21 @@ namespace MobiusEditor.App
                 CreateProgressLabel.Text = "Creating " + theater + " map…";
                 CreateProgress.IsVisible = true;
                 System.Drawing.Size playable = new System.Drawing.Size((int)(WidthNud.Value ?? 126), (int)(HeightNud.Value ?? 126));
-                await System.Threading.Tasks.Task.Run(() => document.NewMap(theater, playable));
+                if (RandomFill.IsChecked == true)
+                {
+                    MobiusEditor.Headless.MapGeneratorOptions options = new MobiusEditor.Headless.MapGeneratorOptions
+                    {
+                        Seed = (int)(SeedNud.Value ?? 1),
+                        Players = (int)(PlayersNud.Value ?? 4),
+                        Trees = TreesSlider.Value,
+                        Ore = OreSlider.Value,
+                    };
+                    await System.Threading.Tasks.Task.Run(() => document.NewRandomMap(theater, playable, options));
+                }
+                else
+                {
+                    await System.Threading.Tasks.Task.Run(() => document.NewMap(theater, playable));
+                }
                 Close();
             };
             CancelButton.Click += (s, e) => Close();
