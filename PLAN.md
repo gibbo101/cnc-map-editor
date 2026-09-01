@@ -293,8 +293,9 @@ stream river and the GUI coast/river combos; the TF mod's mapeditor.json on the 
 was stale (no `resources` section — tiberium dial dead there) and was re-synced,
 md5-verified against the local build copy. Luke tests at home through the GUI's New
 dialog. Background `dotnet test` runs get KILLED on this box (three in a row) — run
-tiers foreground in <10-min chunks; oracle tier = OfficialMaps+Miner chunk (~9 min ✅
-green post-stream), SaveRoundTrip chunk, MapRenderOracle chunk.**
+tiers foreground in <10-min chunks; oracle tier = OfficialMaps+Miner chunk (~9 min),
+SaveRoundTrip chunk (~14 min, 261 byte-exact), MapRenderOracle chunk (~1 min) — ALL
+THREE GREEN on the final pushed state (8dfb694), full hygiene closed.**
 
 **RV-STREAM RIVER — SHIPPED (2026-09-02, Luke steering live):** `--river-width 1`
 (and the default at low water) is now the rv-chain stream. What the iteration taught:
