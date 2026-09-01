@@ -248,7 +248,34 @@ Wine.** It would not inform the native build at all, nothing is blocked today th
 would unblock (campaign authoring is deferred behind the AI milestone), and a working stopgap
 would only tempt the native editor to slip. Not part of the plan.
 
-## RESUME HERE (2026-09-01, daytime session — the generator terrain arc)
+## RESUME HERE (2026-09-01 continued — coast walker + resource flavors SHIPPED)
+
+**⭐ THE COAST WALKER IS REAL (4c5e604, pushed):** Luke's "train on existing maps" idea
+works end-to-end. Corpus baked into `MobiusCore/Resources/mined-transitions.txt` (14,138
+idioms, 6 families, 2,119 cliff↔beach splices; regenerate via the oracle-tier miner test).
+`TransitionGraph` (reverse edges, frequency-sorted) + `CoastWalker.PlanPath` (deterministic
+A*, common idioms cheaper, water-side lock ±45°, edge-sharing seal) + `ExtendToEdge`,
+mask-seal by growth-from-water, 3-seed flood, `PatchBareContacts` (sh55 shallow tile),
+`ExtendWaterIntoBorder` (terrain continues under the map frame — Luke spotted it).
+**Ocean style now walks its coast** (verified temperate+snow, both orientations —
+showcase-quality natural shorelines); block shoreline = fallback (TD). Strict invariant
+pinned: ZERO flood-water cells touching bare clear land. KEY LESSON: authored pieces paint
+their own internal grass-water transitions — the seam invariant must count only
+FILL-water (w1/w2) contacts, not piece-internal ones.
+
+**TIBERIUM DIAL (3e8318a + mod repo 9c6cbfc5):** manifest `resources` section (flavor/
+overlays/spawner) — TF declares tiberium/tib01/tdblossom; generator fields: ore seeds an
+ORE MINE, tiberium a BLOSSOM TREE (Luke's ecology rule); `--tiberium 0..1` share + GUI
+slider. Patches avoid building cells.
+
+**WALKER NEXT (same machinery, in rough order):** closed-loop lakes (segment ring, strict
+closure = final piece has a mined transition back to the start piece), meandering river
+banks (two walked coasts), island coasts, landing-beach splices on cliff coasts (Luke's
+amphibious rule: cliff coasts MUST carry sh landing beaches — splice idioms are mined,
+make count/spacing a tunable), cliff-vs-beach coast flavor tunable, then the rf land-cliff
+family (cliffs setting) and mined road curves.
+
+## Previous block (2026-09-01, daytime session — the generator terrain arc)
 
 **TERRAIN SUITE SHIPPED (b871bd2, pushed):** the generator grew real water, villages and
 roads, all seeded/deterministic/tunable (CLI flags + New-dialog controls):
