@@ -336,6 +336,12 @@ namespace MobiusCore.Tests
             {
                 Assert.True(reached.Contains(start), $"start {start} is cut off from {starts[0]}");
             }
+            // One continuous coastline around the whole landmass leaves no junction
+            // surgery to break the shore rule. What remains is flood-exposure art
+            // (fill water against a piece's land-side clear cells — the tile-art
+            // waterness arc owns that) and a few local tangles; this pins the level.
+            int shoreViolations = CoastWalker.AuditShoreRule(map).Count;
+            Assert.True(shoreViolations <= 40, "shore-rule violations on the island world: " + shoreViolations);
         }
 
         private static System.Collections.Generic.IEnumerable<TemplateType> EnumerateShoreTemplates(Map map)

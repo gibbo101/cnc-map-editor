@@ -96,7 +96,8 @@ namespace MobiusEditor.Headless
         public static List<Step> PlanPath(Map map, TransitionGraph graph,
             IReadOnlyDictionary<string, ShorePiece> catalog,
             string startPiece, Point startOrigin, Point goal, int maxPieces, int desiredSide = -1,
-            string goalPiece = null, IReadOnlyList<Rectangle> forbidden = null, string preferPrefix = null)
+            string goalPiece = null, IReadOnlyList<Rectangle> forbidden = null, string preferPrefix = null,
+            IReadOnlyDictionary<Point, LandType> placed = null)
         {
             TemplateType Lookup(string name) => map.TemplateTypes.FirstOrDefault(t =>
                 t.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && t.ExistsInTheater);
@@ -158,6 +159,10 @@ namespace MobiusEditor.Headless
                     Rectangle boxA = new Rectangle(origin, new Size(current.IconWidth, current.IconHeight));
                     if (!SealedAdjacency(boxA, box)) continue;
                     if (desiredSide >= 0 && !SeamSealed(current, origin, next, nextOrigin)) continue;
+                    // Placement-exact: the candidate must not create a cross-stamp
+                    // water-clear junction against ANYTHING already laid — pair checks
+                    // cannot see a third stamp's overwrite, this can.
+                    if (placed != null && !CompositeSeals(next, nextOrigin, placed)) continue;
                     double stepCost = 1.0 + 4.0 / (t.Count + 1);
                     // Coast flavor: the off-family pieces stay reachable (the mined
                     // wc-sh splices are how a cliff coast carries a landing beach), but
@@ -212,28 +217,44 @@ namespace MobiusEditor.Headless
             IReadOnlyDictionary<int, IReadOnlyList<(string Piece, Point Origin)>> pins = null,
             IReadOnlyCollection<Rectangle> avoid = null, string flavorPrefix = null)
         {
-            TemplateType Lookup(string name) => map.TemplateTypes.FirstOrDefault(t =>
-                t.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && t.ExistsInTheater);
-            IReadOnlyList<(string Piece, Point Origin)> Strip(int k) =>
-                pins != null && pins.TryGetValue(k % 8, out IReadOnlyList<(string Piece, Point Origin)> s) && s.Count > 0 ? s : null;
-            Point[] anchors = new Point[8];
-            for (int k = 0; k < anchors.Length; k++)
-            {
-                if (Strip(k) is IReadOnlyList<(string Piece, Point Origin)> pinned)
-                {
-                    anchors[k] = pinned[0].Origin;
-                    continue;
-                }
-                double angle = (k * 45 - 90) * Math.PI / 180.0;
-                int outward = random?.Next(3) ?? 0;
-                anchors[k] = new Point(
-                    center.X + (int)Math.Round(Math.Cos(angle) * (radius.Width + outward)),
-                    center.Y + (int)Math.Round(Math.Sin(angle) * (radius.Height + outward)));
-            }
             // Anchor 0 sits at the ring's top; going clockwise the anchor at compass
             // position k wants its water side at (4 + k) mod 8 for a lake (water toward
             // the center), k mod 8 for an island (water away from it).
-            int SideAt(int k) => waterInside ? (4 + k) % 8 : k % 8;
+            var ring = new List<(Point Anchor, int Side)>();
+            for (int k = 0; k < 8; k++)
+            {
+                double angle = (k * 45 - 90) * Math.PI / 180.0;
+                int outward = random?.Next(3) ?? 0;
+                ring.Add((new Point(
+                    center.X + (int)Math.Round(Math.Cos(angle) * (radius.Width + outward)),
+                    center.Y + (int)Math.Round(Math.Sin(angle) * (radius.Height + outward))),
+                    waterInside ? (4 + k) % 8 : k % 8));
+            }
+            return PlanRing(map, graph, catalog, ring, pins, avoid, flavorPrefix);
+        }
+
+        /// <summary>
+        /// Plans a closed coast around any ordered ring of anchors, each commanding its
+        /// own water side (the outward normal for a landmass outline, the inward one for
+        /// a lake). Same contract as the ellipse loop: mined idioms only, strict closure
+        /// back into the start piece, self-separation with joint exemptions, optional
+        /// pinned strips by anchor index.
+        /// </summary>
+        public static List<Step> PlanRing(Map map, TransitionGraph graph,
+            IReadOnlyDictionary<string, ShorePiece> catalog,
+            IReadOnlyList<(Point Anchor, int Side)> ring,
+            IReadOnlyDictionary<int, IReadOnlyList<(string Piece, Point Origin)>> pins = null,
+            IReadOnlyCollection<Rectangle> avoid = null, string flavorPrefix = null)
+        {
+            if (ring == null || ring.Count < 3) return null;
+            int count = ring.Count;
+            TemplateType Lookup(string name) => map.TemplateTypes.FirstOrDefault(t =>
+                t.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && t.ExistsInTheater);
+            IReadOnlyList<(string Piece, Point Origin)> Strip(int k) =>
+                pins != null && pins.TryGetValue(k % count, out IReadOnlyList<(string Piece, Point Origin)> s) && s.Count > 0 ? s : null;
+            Point AnchorAt(int k) => Strip(k) is IReadOnlyList<(string Piece, Point Origin)> pinned
+                ? pinned[0].Origin : ring[k % count].Anchor;
+            int SideAt(int k) => ring[k % count].Side;
             bool AppendStrip(List<Step> steps, IReadOnlyList<(string Piece, Point Origin)> strip, int from)
             {
                 for (int i = from; i < strip.Count; i++)
@@ -250,22 +271,42 @@ namespace MobiusEditor.Headless
                 ?? BestStartPiece(map, graph, catalog, SideAt(0));
             if (start == null) return null;
             List<Step> all = new List<Step>();
+            var composite = new Dictionary<Point, LandType>();
+            int recorded = 0;
+            void RecordUpTo(int end)
+            {
+                for (; recorded < end; recorded++)
+                {
+                    Step s2 = all[recorded];
+                    LandType[,] grid = ShoreCatalog.LandGrid(s2.Piece);
+                    for (int y = 0; y < s2.Piece.IconHeight; y++)
+                        for (int x = 0; x < s2.Piece.IconWidth; x++)
+                            if (grid[y, x] != LandType.None)
+                                composite[new Point(s2.Origin.X + x, s2.Origin.Y + y)] = grid[y, x];
+                }
+            }
             if (startStrip != null && !AppendStrip(all, startStrip, 0)) return null;
             string piece = all.Count > 0 ? all[^1].Piece.Name : start;
-            Point origin = all.Count > 0 ? all[^1].Origin : anchors[0];
+            Point origin = all.Count > 0 ? all[^1].Origin : AnchorAt(0);
             Rectangle BoxOf(Step s) => new Rectangle(s.Origin, new Size(s.Piece.IconWidth, s.Piece.IconHeight));
-            for (int k = 1; k <= anchors.Length; k++)
+            for (int k = 1; k <= count; k++)
             {
-                bool closing = k == anchors.Length;
+                bool closing = k == count;
                 IReadOnlyList<(string Piece, Point Origin)> strip = closing ? null : Strip(k);
                 // The ring so far is off-limits to this segment, apart from the joints:
-                // the last two pieces (the segment grows out of them) and, when closing,
-                // the first two (the segment must reach back into them).
+                // the last few pieces (the segment grows out of them — corner idioms
+                // stride one or two cells, so a narrow window rejects legal turns) and,
+                // when closing, the first few (the segment must reach back into them).
+                // The placement-exact composite trails by the same window: a joint piece
+                // legitimately overwrites its predecessors, and the pair checks already
+                // guard those seams.
                 List<Rectangle> forbidden = new List<Rectangle>(avoid ?? Array.Empty<Rectangle>());
-                for (int i = closing ? 2 : 0; i < all.Count - 2; i++) forbidden.Add(BoxOf(all[i]));
+                for (int i = closing ? 4 : 0; i < all.Count - 4; i++) forbidden.Add(BoxOf(all[i]));
+                RecordUpTo(Math.Max(0, all.Count - 4));
                 List<Step> segment = PlanPath(map, graph, catalog, piece, origin,
-                    anchors[k % 8], 40, SideAt(k), closing ? start : strip?[0].Piece,
-                    forbidden.Count > 0 ? forbidden : null, flavorPrefix);
+                    closing ? AnchorAt(0) : AnchorAt(k), 40, SideAt(k), closing ? start : strip?[0].Piece,
+                    forbidden.Count > 0 ? forbidden : null, flavorPrefix,
+                    composite.Count > 0 ? composite : null);
                 if (segment == null) return null;
                 if (all.Count > 0) segment.RemoveAt(0);
                 if (closing) segment.RemoveAt(segment.Count - 1);
@@ -442,15 +483,22 @@ namespace MobiusEditor.Headless
             bool IsFill(Point p) => map.Bounds.Contains(p)
                 && map.Templates[p.Y, p.X]?.Type?.Name is string n && (n == "w1" || n == "w2" || n == "sh55");
             int previous = int.MaxValue;
+            var passUndo = new Dictionary<int, Template>();
             for (int pass = 0; pass < 12; pass++)
             {
                 List<(Point Water, Point Land)> violations = AuditShoreRule(map);
+                // A pass that did not reduce the count is structural (open water against
+                // a cut only surgery can dress): eroding further just marches a bare
+                // line through the sea — take the pass back and leave the original for
+                // the audit to report, rather than trading water for bitten grass.
+                if (violations.Count >= previous)
+                {
+                    foreach (KeyValuePair<int, Template> cell in passUndo) map.Templates[cell.Key] = cell.Value;
+                    return;
+                }
                 if (violations.Count == 0) return;
-                // A front that does not shrink is structural (open water against a cut
-                // that only surgery can dress): eroding it further just marches a bare
-                // line through the sea. Leave it for the audit to report.
-                if (violations.Count >= previous) return;
                 previous = violations.Count;
+                passUndo = new Dictionary<int, Template>();
                 var handled = new HashSet<Point>();
                 foreach ((Point water, _) in violations)
                 {
@@ -469,7 +517,7 @@ namespace MobiusEditor.Headless
                             LandType land = t?.Type == null ? LandType.Clear : t.Type.GetLandType(t.Icon);
                             if (land == LandType.Water || land == LandType.River) wet++;
                         }
-                        if (wet <= 1) TemplateEdit.Erase(map.Templates, null, null, water, undo, redo);
+                        if (wet <= 1) TemplateEdit.Erase(map.Templates, null, null, water, passUndo, redo);
                         continue;
                     }
                     // A small enclosed pool with no drawn shore drains whole; a junction
@@ -492,7 +540,7 @@ namespace MobiusEditor.Headless
                     }
                     foreach (Point p in small ? pocket : new List<Point> { water })
                     {
-                        TemplateEdit.Erase(map.Templates, null, null, p, undo, redo);
+                        TemplateEdit.Erase(map.Templates, null, null, p, passUndo, redo);
                     }
                 }
             }
@@ -629,6 +677,40 @@ namespace MobiusEditor.Headless
                 }
             }
             return violations;
+        }
+
+        /// <summary>
+        /// Whether laying this piece into the composite of already-placed cells creates
+        /// no cross-stamp water-against-clear junction: each painted cell is checked
+        /// against the surviving neighbours it does not itself overwrite.
+        /// </summary>
+        private static bool CompositeSeals(TemplateType piece, Point at, IReadOnlyDictionary<Point, LandType> placed)
+        {
+            LandType[,] grid = ShoreCatalog.LandGrid(piece);
+            static bool IsWater(LandType l) => l == LandType.Water || l == LandType.River;
+            bool Paints(Point p) => p.X >= at.X && p.X < at.X + piece.IconWidth
+                && p.Y >= at.Y && p.Y < at.Y + piece.IconHeight
+                && grid[p.Y - at.Y, p.X - at.X] != LandType.None;
+            for (int y = 0; y < piece.IconHeight; y++)
+            {
+                for (int x = 0; x < piece.IconWidth; x++)
+                {
+                    if (grid[y, x] == LandType.None) continue;
+                    LandType mine = grid[y, x];
+                    Point world = new Point(at.X + x, at.Y + y);
+                    foreach (Point n in new[]
+                    {
+                        new Point(world.X + 1, world.Y), new Point(world.X - 1, world.Y),
+                        new Point(world.X, world.Y + 1), new Point(world.X, world.Y - 1),
+                    })
+                    {
+                        if (Paints(n)) continue;
+                        if (!placed.TryGetValue(n, out LandType other)) continue;
+                        if ((IsWater(mine) && other == LandType.Clear) || (mine == LandType.Clear && IsWater(other))) return false;
+                    }
+                }
+            }
+            return true;
         }
 
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<(string, string, Point), bool> landTouch =

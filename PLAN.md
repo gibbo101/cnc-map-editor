@@ -248,7 +248,42 @@ Wine.** It would not inform the native build at all, nothing is blocked today th
 would unblock (campaign authoring is deferred behind the AI milestone), and a working stopgap
 would only tempt the native editor to slip. Not part of the plan.
 
-## RESUME HERE (2026-09-02 early — THE SHORE RULE, islands, cliffs; Luke steering live)
+## RESUME HERE (2026-09-02 — ISLANDS AS ONE WALKED LANDMASS + placement-exact walks)
+
+**THE ISLAND REWORK (after the shore-rule commit; Luke: junctions/size/J-shapes all
+needed real work):** the island world is no longer rings + causeway surgery. The
+archipelago (island squares + causeway rectangles, serpentine-linked) is rasterized
+into a landmass mask; each 4-connected component's boundary is Moore-traced clockwise
+and sampled into anchors carrying their outward normals (seaward-only 0–1 jitter so no
+two islands clone); **`CoastWalker.PlanRing`** (PlanLoop generalized to arbitrary
+anchor rings — the ellipse loop is now a thin wrapper) walks ONE continuous coastline
+around each component. Junction surgery no longer exists: an isthmus is just coast
+turning through mined corner idioms, and the old J/L-causeway geometry reads as a
+natural curved land bridge. `--causeways off` yields separate walked islands (mixed
+beach/cliff flavor per ring). Gate strips, pins, punches, corner stamps and
+PlaceCauseway are gone from the walked path (block fallback still uses them).
+
+**PLACEMENT-EXACT WALKS SHIPPED (arc 2 of the previous block, pulled forward):**
+`PlanPath` takes a `placed` composite (built by PlanRing as segments accrete, trailing
+the 4-piece joint window) and rejects any candidate creating a cross-stamp water-clear
+junction against ANYTHING already laid — the triple-overwrite class a pair check
+cannot see. Also: the self-separation joint exemption widened 2→4 pieces (corner
+idioms stride 1–2 cells; the narrow window rejected legal turns and killed long
+rings), and `EnforceShoreRule` now REVERTS any pass that fails to reduce the count
+(erosion bites at the waterline were themselves violations).
+
+**Island audit: 68 → 32** (bound pinned ≤40 in the test). The residue is
+flood-exposure art — fill water against a piece's land-side clear cells, fixable only
+by scoring edge-column waterness from the tile art (the miner-art arc) — plus a few
+local tangles and small offshore stubs the orphan sweep misses (4+ cells or
+diagonally coast-linked).
+
+**NEXT:** rv-stream rivers (unchanged, see previous block), the miner-art waterness
+scoring, landing-beach splices on cliff coasts (amphibious rule — Luke flagged the
+all-cliff right island), stub sweep for 4-6-cell offshore fragments, GUI coast-flavor
+control, and thread the placement-exact composite through the river banks and ocean.
+
+## Previous block (2026-09-02 early — THE SHORE RULE, islands, cliffs; Luke steering live)
 
 **LUKE'S DESIGN LAW (2026-09-02, verbatim intent): "between water and land tiles should
 always be a cliff or a beach, no exceptions."** Formalized: authored pieces carry the
