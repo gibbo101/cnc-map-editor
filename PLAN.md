@@ -288,6 +288,14 @@ stage — gold04/gem04 hearts thinning to 01 rims like hand-placed fields.** Bri
 over pinched rv channels are the answer for island links (Luke asked bridges-or-fords;
 fords are 1-cell-stream art with zero mined edges) — rides on the rv-stream arc.
 
+**DECK IS CURRENT (2026-09-02): editor + CLI deployed with everything through the
+stream river and the GUI coast/river combos; the TF mod's mapeditor.json on the Deck
+was stale (no `resources` section — tiberium dial dead there) and was re-synced,
+md5-verified against the local build copy. Luke tests at home through the GUI's New
+dialog. Background `dotnet test` runs get KILLED on this box (three in a row) — run
+tiers foreground in <10-min chunks; oracle tier = OfficialMaps+Miner chunk (~9 min ✅
+green post-stream), SaveRoundTrip chunk, MapRenderOracle chunk.**
+
 **RV-STREAM RIVER — SHIPPED (2026-09-02, Luke steering live):** `--river-width 1`
 (and the default at low water) is now the rv-chain stream. What the iteration taught:
 - The mined rv↔d idioms are roads BESIDE streams — stamping one CUTS the river (Luke:
