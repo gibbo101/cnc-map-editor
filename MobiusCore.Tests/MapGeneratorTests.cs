@@ -156,6 +156,35 @@ namespace MobiusCore.Tests
         }
 
         [Fact]
+        public void WalkedOceanIsDeterministicAndSealed()
+        {
+            MapGeneratorOptions options = new MapGeneratorOptions
+            { Seed = 44, Players = 4, Style = WaterStyle.Ocean, OceanEdge = 1 };
+            byte[] first = SaveBytes(Generate(options), "ocean-a.mpr");
+            byte[] second = SaveBytes(Generate(options), "ocean-b.mpr");
+            Assert.Equal(first, second);
+
+            IGamePlugin plugin = Generate(options);
+            Map map = plugin.Map;
+            int clearAgainstWater = 0;
+            for (int y = map.Bounds.Top; y < map.Bounds.Bottom; y++)
+            {
+                for (int x = map.Bounds.Left; x < map.Bounds.Right; x++)
+                {
+                    // Authored pieces paint their own internal grass-to-water transitions;
+                    // the defect is bare clear land against flood-filled open water.
+                    Template fill = map.Templates[y, x];
+                    if (fill?.Type == null || (fill.Type.Name != "w1" && fill.Type.Name != "w2")) continue;
+                    foreach (System.Drawing.Point n in new[] { new System.Drawing.Point(x + 1, y), new System.Drawing.Point(x - 1, y), new System.Drawing.Point(x, y + 1), new System.Drawing.Point(x, y - 1) })
+                    {
+                        if (map.Bounds.Contains(n) && LakeBuilder.LandAt(map, n) == LandType.Clear) clearAgainstWater++;
+                    }
+                }
+            }
+            Assert.Equal(0, clearAgainstWater);
+        }
+
+        [Fact]
         public void TiberianDawnMapsGenerateToo()
         {
             IGamePlugin plugin = EditorHost.SharedFor(GameType.TiberianDawn).New(null, out _);

@@ -111,7 +111,13 @@ namespace MobiusEditor.Headless
             {
                 case WaterStyle.Ocean:
                     int edge = options.OceanEdge is int chosen && chosen >= 0 && chosen <= 3 ? chosen : random.Next(4);
-                    LakeBuilder.PlaceOcean(map, edge, options.OceanDepth ?? 1 + (int)Math.Round(options.Water * 2), random, catalog);
+                    int depth = options.OceanDepth ?? 1 + (int)Math.Round(options.Water * 2);
+                    // The corpus-walked coast is the real thing; the straight block
+                    // shoreline stays as the fallback for games the corpus does not cover.
+                    if (!PlaceWalkedOcean(map, edge, depth, random, catalog))
+                    {
+                        LakeBuilder.PlaceOcean(map, edge, depth, random, catalog);
+                    }
                     break;
                 case WaterStyle.River:
                     LakeBuilder.PlaceRiver(map, random.Next(2) == 0,
@@ -125,6 +131,73 @@ namespace MobiusEditor.Headless
                     PlaceScatteredLakes(map, options, random, catalog);
                     break;
             }
+        }
+
+        /// <summary>
+        /// An ocean with a corpus-walked coastline: anchors jittered along the coast band,
+        /// A* segments chained through mined idioms, both ends flush with the map edges,
+        /// the sea flooded behind it. Plans everything before placing anything; false when
+        /// planning fails and the caller should fall back.
+        /// </summary>
+        private static bool PlaceWalkedOcean(Map map, int edge, int depthBlocks,
+            DeterministicRandom random, IReadOnlyList<ShorePiece> shoreCatalog)
+        {
+            TransitionGraph graph = TransitionGraph.Baked;
+            Dictionary<string, ShorePiece> catalog = ShoreCatalog.Build(map.TemplateTypes)
+                .Concat(ShoreCatalog.Build(map.TemplateTypes, "wc"))
+                .GroupBy(p => p.Template.Name, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+            int desiredSide = edge switch { 0 => 0, 1 => 4, 2 => 2, _ => 6 };
+            string start = CoastWalker.BestStartPiece(map, graph, catalog, desiredSide);
+            if (start == null) return false;
+            Rectangle b = map.Bounds;
+            int depth = Math.Max(2, depthBlocks) * LakeBuilder.Block;
+            bool horizontal = edge <= 1;
+            int coastLine = edge switch { 0 => b.Top + depth, 1 => b.Bottom - depth - 3, 2 => b.Right - depth - 3, _ => b.Left + depth };
+            int runStart = horizontal ? b.Left : b.Top;
+            int runEnd = horizontal ? b.Right : b.Bottom;
+
+            Point At(int along, int across) => horizontal ? new Point(along, across) : new Point(across, along);
+            Point origin = At(runStart, coastLine);
+            string piece = start;
+            List<CoastWalker.Step> all = new List<CoastWalker.Step>();
+            int anchorCount = 4;
+            // Jitter pulls the coast landward only: a landward bulge is a fully shored
+            // peninsula, a seaward one strands naked water between coast and map edge.
+            int landward = edge switch { 0 => 1, 1 => -1, 2 => -1, _ => 1 };
+            for (int i = 1; i <= anchorCount; i++)
+            {
+                int along = runStart + (runEnd - runStart) * i / anchorCount - (i == anchorCount ? 3 : 0);
+                int across = coastLine + landward * random.Next(9);
+                List<CoastWalker.Step> segment = CoastWalker.PlanPath(map, graph, catalog,
+                    piece, origin, At(along, across), 70, desiredSide);
+                if (segment == null) return false;
+                if (all.Count > 0) segment.RemoveAt(0);
+                all.AddRange(segment);
+                piece = all[^1].Piece.Name;
+                origin = all[^1].Origin;
+            }
+            CoastWalker.ExtendToEdge(map, graph, catalog, all, horizontal ? 2 : 1, desiredSide);
+            CoastWalker.Place(map, all, catalog, random);
+            // Seeds at the sea edge's midpoint and both sea corners — a headland near an
+            // end can pinch a corner pocket off from a single mid-edge seed.
+            Point[] seeds = edge switch
+            {
+                0 => new[] { new Point(b.Left + b.Width / 2, b.Top + 1), new Point(b.Left + 1, b.Top + 1), new Point(b.Right - 2, b.Top + 1) },
+                1 => new[] { new Point(b.Left + b.Width / 2, b.Bottom - 2), new Point(b.Left + 1, b.Bottom - 2), new Point(b.Right - 2, b.Bottom - 2) },
+                2 => new[] { new Point(b.Right - 2, b.Top + b.Height / 2), new Point(b.Right - 2, b.Top + 1), new Point(b.Right - 2, b.Bottom - 2) },
+                _ => new[] { new Point(b.Left + 1, b.Top + b.Height / 2), new Point(b.Left + 1, b.Top + 1), new Point(b.Left + 1, b.Bottom - 2) },
+            };
+            int maxCells = (horizontal ? b.Width : b.Height) * (depth + 12);
+            // A burst flood leaves partial sea rather than double-placing a fallback coast
+            // over this one; the sketch-proven flush ends make it rare.
+            foreach (Point seed in seeds)
+            {
+                CoastWalker.FloodWater(map, seed, maxCells, random);
+            }
+            CoastWalker.PatchBareContacts(map, random);
+            CoastWalker.ExtendWaterIntoBorder(map, random);
+            return true;
         }
 
         /// <summary>Lakes scaled by the water dial, spaced apart inside the playable bounds.</summary>
