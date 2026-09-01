@@ -158,7 +158,7 @@ namespace MobiusCli
         /// </summary>
         public static int Generate(Invocation inv, EditorSession session, TextWriter o)
         {
-            if (inv.Positional.Count < 1) throw new ArgumentException("generate needs an output path: cncmap generate <out> [--theater <name>] [--seed <n>] [--players <n>] [--trees 0..1] [--ore 0..1]");
+            if (inv.Positional.Count < 1) throw new ArgumentException("generate needs an output path: cncmap generate <out> [--theater <name>] [--seed <n>] [--players <n>] [--trees 0..1] [--ore 0..1] [--water 0..1] [--water-style lakes|river|ocean|islands]");
             string outPath = inv.Positional[0];
             if (File.Exists(outPath)) throw new ArgumentException("refusing to overwrite existing file " + outPath);
             MapGeneratorOptions options = new MapGeneratorOptions
@@ -167,6 +167,21 @@ namespace MobiusCli
                 Players = int.Parse(inv.Option("players", "4")),
                 Trees = double.Parse(inv.Option("trees", "0.5"), System.Globalization.CultureInfo.InvariantCulture),
                 Ore = double.Parse(inv.Option("ore", "0.5"), System.Globalization.CultureInfo.InvariantCulture),
+                Water = double.Parse(inv.Option("water", "0.5"), System.Globalization.CultureInfo.InvariantCulture),
+                Style = Enum.TryParse(inv.Option("water-style", "lakes"), true, out WaterStyle style) ? style
+                    : throw new ArgumentException("unknown --water-style (none|lakes|river|ocean|islands)"),
+                Lakes = OptInt(inv, "lakes"),
+                Islands = OptInt(inv, "islands"),
+                RiverWidth = OptInt(inv, "river-width"),
+                Fords = OptInt(inv, "fords"),
+                OceanDepth = OptInt(inv, "ocean-depth"),
+                OceanEdge = inv.Option("ocean-edge") is string oe
+                    ? Array.IndexOf(new[] { "north", "south", "east", "west" }, oe.ToLowerInvariant()) is int idx && idx >= 0 ? idx
+                        : throw new ArgumentException("unknown --ocean-edge (north|south|east|west)")
+                    : (int?)null,
+                Causeways = OptBool(inv, "causeways"),
+                Villages = OptInt(inv, "villages"),
+                Roads = OptBool(inv, "roads"),
             };
             IGamePlugin plugin = session.New(inv.Option("theater"), out string[] notes);
             foreach (string n in notes) o.WriteLine("note: " + n);
@@ -230,6 +245,12 @@ namespace MobiusCli
         }
 
         /// <summary>Distinct mods that supplied the types the map actually places; empty = vanilla-safe.</summary>
+        private static int? OptInt(Invocation inv, string name) =>
+            inv.Option(name) is string v ? int.Parse(v) : (int?)null;
+
+        private static bool? OptBool(Invocation inv, string name) =>
+            inv.Option(name) is string v ? !v.Equals("false", StringComparison.OrdinalIgnoreCase) && !v.Equals("off", StringComparison.OrdinalIgnoreCase) : (bool?)null;
+
         private static List<string> RequiredMods(Map map) =>
             map.Templates.Select(t => t.Value?.Type?.ModSource)
                 .Concat(map.Buildings.Select(b => b.Occupier).OfType<Building>().Select(b => b.Type?.ModSource))

@@ -108,6 +108,42 @@ namespace MobiusCore.Tests
         }
 
         [Fact]
+        public void LakesDrawRealShoresAndStartsStayOnLand()
+        {
+            IGamePlugin dry = Generate(new MapGeneratorOptions { Seed = 6, Players = 2, Water = 0 });
+            Assert.DoesNotContain(EnumerateLand(dry.Map), t => t == LandType.Water);
+
+            IGamePlugin wet = Generate(new MapGeneratorOptions { Seed = 6, Players = 4, Water = 1 });
+            var lands = EnumerateLand(wet.Map).ToList();
+            Assert.Contains(lands, t => t == LandType.Water);
+            Assert.Contains(lands, t => t == LandType.Beach);
+            foreach (Waypoint start in wet.Map.Waypoints.Where(w => w.Flags.HasFlag(WaypointFlag.PlayerStart) && w.Cell.HasValue))
+            {
+                wet.Map.Metrics.GetLocation(start.Cell.Value, out System.Drawing.Point p);
+                Assert.Equal(LandType.Clear, LakeBuilder.LandAt(wet.Map, p));
+            }
+        }
+
+        private static System.Collections.Generic.IEnumerable<LandType> EnumerateLand(Map map)
+        {
+            for (int y = map.Bounds.Top; y < map.Bounds.Bottom; y++)
+                for (int x = map.Bounds.Left; x < map.Bounds.Right; x++)
+                    yield return LakeBuilder.LandAt(map, new System.Drawing.Point(x, y));
+        }
+
+        [Fact]
+        public void VillagesAndRoadsArePlacedWhenAsked()
+        {
+            IGamePlugin plugin = Generate(new MapGeneratorOptions { Seed = 5, Players = 4, Water = 0.4, Villages = 3 });
+            Assert.NotEmpty(plugin.Map.Buildings.Occupiers.OfType<Building>()
+                .Where(b => b.House.Name.Equals("Neutral", StringComparison.OrdinalIgnoreCase)));
+            Assert.Contains(EnumerateLand(plugin.Map), t => t == LandType.Road);
+
+            IGamePlugin bare = Generate(new MapGeneratorOptions { Seed = 5, Players = 4, Water = 0.4, Villages = 0 });
+            Assert.Empty(bare.Map.Buildings.Occupiers.OfType<Building>());
+        }
+
+        [Fact]
         public void TiberianDawnMapsGenerateToo()
         {
             IGamePlugin plugin = EditorHost.SharedFor(GameType.TiberianDawn).New(null, out _);

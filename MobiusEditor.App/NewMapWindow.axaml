@@ -19,6 +19,10 @@
       </Grid>
       <CheckBox Name="RandomFill" Content="Random skirmish fill" />
       <StackPanel Name="RandomPanel" Spacing="4" IsVisible="False" Margin="12,0,0,0">
+        <Grid ColumnDefinitions="70,*">
+          <TextBlock Grid.Column="0" Text="Style" VerticalAlignment="Center" />
+          <ComboBox Grid.Column="1" Name="WaterStyleCombo" HorizontalAlignment="Stretch" />
+        </Grid>
         <Grid ColumnDefinitions="70,*,12,60,*">
           <TextBlock Grid.Column="0" Text="Seed" VerticalAlignment="Center" />
           <NumericUpDown Grid.Column="1" Name="SeedNud" FormatString="0" Minimum="0" Maximum="2147483647" Value="1" />
@@ -32,6 +36,15 @@
         <Grid ColumnDefinitions="70,*">
           <TextBlock Grid.Column="0" Text="Resources" VerticalAlignment="Center" />
           <Slider Grid.Column="1" Name="OreSlider" Minimum="0" Maximum="1" Value="0.5" />
+        </Grid>
+        <Grid ColumnDefinitions="70,*">
+          <TextBlock Grid.Column="0" Text="Water" VerticalAlignment="Center" />
+          <Slider Grid.Column="1" Name="WaterSlider" Minimum="0" Maximum="1" Value="0.5" />
+        </Grid>
+        <Grid ColumnDefinitions="70,*,12,*">
+          <TextBlock Grid.Column="0" Text="Villages" VerticalAlignment="Center" />
+          <NumericUpDown Grid.Column="1" Name="VillagesNud" FormatString="0" Minimum="0" Maximum="8" Value="2" />
+          <CheckBox Grid.Column="3" Name="RoadsCheck" Content="Roads" IsChecked="True" />
         </Grid>
       </StackPanel>
       <TextBlock Name="EmptyMapHint" Text="A new map starts empty; place two player-start waypoints before saving a skirmish map." TextWrapping="Wrap" Opacity="0.8" />

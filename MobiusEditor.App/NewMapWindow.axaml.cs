@@ -42,6 +42,8 @@ namespace MobiusEditor.App
                     WidthNud.Value = HeightNud.Value = presets[SizePreset.SelectedIndex].Size;
                 }
             };
+            WaterStyleCombo.ItemsSource = new[] { "Lakes", "River", "Ocean", "Islands", "None" };
+            WaterStyleCombo.SelectedIndex = 0;
             RandomFill.IsCheckedChanged += (s, e) =>
             {
                 bool random = RandomFill.IsChecked == true;
@@ -70,6 +72,11 @@ namespace MobiusEditor.App
                         Players = (int)(PlayersNud.Value ?? 4),
                         Trees = TreesSlider.Value,
                         Ore = OreSlider.Value,
+                        Water = WaterSlider.Value,
+                        Style = System.Enum.TryParse(WaterStyleCombo.SelectedItem as string, out MobiusEditor.Headless.WaterStyle style)
+                            ? style : MobiusEditor.Headless.WaterStyle.Lakes,
+                        Villages = (int)(VillagesNud.Value ?? 0),
+                        Roads = RoadsCheck.IsChecked == true,
                     };
                     await System.Threading.Tasks.Task.Run(() => document.NewRandomMap(theater, playable, options));
                 }

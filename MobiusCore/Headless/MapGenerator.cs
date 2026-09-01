@@ -23,7 +23,31 @@ namespace MobiusEditor.Headless
         public double Trees { get; set; } = 0.5;
         /// <summary>Resource richness, 0 (no fields) to 1 (large fields).</summary>
         public double Ore { get; set; } = 0.5;
+        /// <summary>Water amount, 0 (none) to 1 (maximal for the chosen style), drawn with real shore templates.</summary>
+        public double Water { get; set; } = 0.5;
+        /// <summary>The shape the water takes: scattered lakes, one big river, an ocean along an edge, or an island world.</summary>
+        public WaterStyle Style { get; set; } = WaterStyle.Lakes;
+        /// <summary>Lakes style: how many lakes; unset = derived from the water dial.</summary>
+        public int? Lakes { get; set; }
+        /// <summary>Islands style: how many islands; unset = players plus a few from the water dial.</summary>
+        public int? Islands { get; set; }
+        /// <summary>River style: corridor width in 3-cell blocks; unset = derived from the water dial.</summary>
+        public int? RiverWidth { get; set; }
+        /// <summary>River style: how many ford crossings; unset = more fords the lower the water dial.</summary>
+        public int? Fords { get; set; }
+        /// <summary>Ocean style: band depth in 3-cell blocks; unset = derived from the water dial.</summary>
+        public int? OceanDepth { get; set; }
+        /// <summary>Ocean style: which map edge holds the sea (0 north, 1 south, 2 east, 3 west); unset = seeded choice.</summary>
+        public int? OceanEdge { get; set; }
+        /// <summary>Islands style: join neighbouring islands with land causeways; unset = yes.</summary>
+        public bool? Causeways { get; set; }
+        /// <summary>Neutral civilian villages to scatter; unset = a few on land styles, none on islands.</summary>
+        public int? Villages { get; set; }
+        /// <summary>Dirt roads linking the villages; unset = yes when there are two or more villages.</summary>
+        public bool? Roads { get; set; }
     }
+
+    public enum WaterStyle { None, Lakes, River, Ocean, Islands }
 
     public static class MapGenerator
     {
@@ -36,11 +60,175 @@ namespace MobiusEditor.Headless
             List<string> warnings = new List<string>();
             Map map = plugin.Map;
             DeterministicRandom random = new DeterministicRandom(options.Seed);
+            PlaceLakes(map, options, random, warnings);
             List<Point> starts = PlaceStarts(map, options, random);
             List<Point> fieldCenters = PlaceResources(map, options, random, starts, warnings);
+            PlaceVillagesAndRoads(map, options, random, starts);
             PlaceTrees(plugin, options, random, starts, fieldCenters, warnings);
             plugin.Dirty = true;
             return warnings;
+        }
+
+        /// <summary>Buildable ground: the template grid says clear (water, beach, rock and rough are all out).</summary>
+        private static bool IsClearGround(Map map, Point p) => LakeBuilder.LandAt(map, p) == LandType.Clear;
+
+        /// <summary>The closest buildable cell inside the bounds, scanning outward ring by ring.</summary>
+        private static Point NearestClearGround(Map map, Point from)
+        {
+            int reach = Math.Max(map.Bounds.Width, map.Bounds.Height);
+            for (int radius = 1; radius < reach; radius++)
+            {
+                for (int dy = -radius; dy <= radius; dy++)
+                {
+                    for (int dx = -radius; dx <= radius; dx++)
+                    {
+                        if (Math.Max(Math.Abs(dx), Math.Abs(dy)) != radius) continue;
+                        Point p = new Point(from.X + dx, from.Y + dy);
+                        if (map.Bounds.Contains(p) && IsClearGround(map, p)) return p;
+                    }
+                }
+            }
+            return from;
+        }
+
+        /// <summary>Water in the chosen style — lakes, one big river, an edge ocean, or an island world.</summary>
+        private static void PlaceLakes(Map map, MapGeneratorOptions options, DeterministicRandom random, List<string> warnings)
+        {
+            if (options.Water <= 0 || options.Style == WaterStyle.None) return;
+            IReadOnlyList<ShorePiece> catalog = ShoreCatalog.Build(map.TemplateTypes);
+            if (!LakeBuilder.HaveVocabulary(map, catalog))
+            {
+                warnings.Add("No shore templates in this theater; water skipped.");
+                return;
+            }
+            switch (options.Style)
+            {
+                case WaterStyle.Ocean:
+                    int edge = options.OceanEdge is int chosen && chosen >= 0 && chosen <= 3 ? chosen : random.Next(4);
+                    LakeBuilder.PlaceOcean(map, edge, options.OceanDepth ?? 1 + (int)Math.Round(options.Water * 2), random, catalog);
+                    break;
+                case WaterStyle.River:
+                    LakeBuilder.PlaceRiver(map, random.Next(2) == 0,
+                        options.RiverWidth ?? 1 + (int)Math.Round(options.Water),
+                        options.Fords ?? 1 + (int)Math.Round((1 - options.Water) * 2), random, catalog);
+                    break;
+                case WaterStyle.Islands:
+                    PlaceIslands(map, options, random, catalog);
+                    break;
+                default:
+                    PlaceScatteredLakes(map, options, random, catalog);
+                    break;
+            }
+        }
+
+        /// <summary>Lakes scaled by the water dial, spaced apart inside the playable bounds.</summary>
+        private static void PlaceScatteredLakes(Map map, MapGeneratorOptions options, DeterministicRandom random, IReadOnlyList<ShorePiece> catalog)
+        {
+            List<Rectangle> placed = new List<Rectangle>();
+            int lakeCount = options.Lakes ?? 1 + (int)Math.Round(options.Water * 2);
+            int maxBlocks = 2 + (int)Math.Round(options.Water * 4);
+            for (int attempt = 0; attempt < 200 && placed.Count < lakeCount; attempt++)
+            {
+                int blocksWide = 2 + random.Next(maxBlocks - 1);
+                int blocksHigh = 2 + random.Next(maxBlocks - 1);
+                int spanX = map.Bounds.Width - blocksWide * LakeBuilder.Block - 2;
+                int spanY = map.Bounds.Height - blocksHigh * LakeBuilder.Block - 2;
+                if (spanX < 1 || spanY < 1) continue;
+                Point origin = new Point(map.Bounds.Left + 1 + random.Next(spanX), map.Bounds.Top + 1 + random.Next(spanY));
+                Rectangle candidate = new Rectangle(origin, new Size(blocksWide * LakeBuilder.Block, blocksHigh * LakeBuilder.Block));
+                Rectangle spaced = candidate;
+                spaced.Inflate(4, 4);
+                if (placed.Any(r => r.IntersectsWith(spaced))) continue;
+                Rectangle? area = LakeBuilder.Place(map, origin, blocksWide, blocksHigh, random, catalog);
+                if (area.HasValue) placed.Add(area.Value);
+            }
+        }
+
+        /// <summary>
+        /// An island world: the bounds flooded with water, then same-sized islands carved in
+        /// a ring — a top band and a bottom band — and, when enabled, neighbouring islands
+        /// joined by straight land causeways so ground forces can advance without transports.
+        /// Starts land on the islands by the buildable-ground scoring.
+        /// </summary>
+        private static void PlaceIslands(Map map, MapGeneratorOptions options, DeterministicRandom random, IReadOnlyList<ShorePiece> catalog)
+        {
+            if (!LakeBuilder.FloodBounds(map, random, catalog)) return;
+            int players = Math.Clamp(options.Players, 2, 8);
+            int islands = Math.Clamp(options.Islands ?? players + 1, 2, 12);
+            int block = LakeBuilder.Block;
+            // A near-square grid of same-sized islands: neighbours align by construction,
+            // so every causeway is a short straight bridge instead of a ring wall.
+            int rows = Math.Max(1, (int)Math.Round(Math.Sqrt(islands)));
+            int cols = (islands + rows - 1) / rows;
+            int blocksWide = Math.Clamp(7 - (int)Math.Round(options.Water * 3), 4, 6);
+            int blocksHigh = blocksWide;
+            int islandW = blocksWide * block, islandH = blocksHigh * block;
+            int spanX = map.Bounds.Width - islandW, spanY = map.Bounds.Height - islandH;
+            if (spanX < 4 || spanY < 4) return;
+            Rectangle?[,] grid = new Rectangle?[rows, cols];
+            for (int i = 0; i < islands; i++)
+            {
+                int row = i / cols, col = i % cols;
+                double tx = cols == 1 ? 0.5 : 0.12 + col / (double)(cols - 1) * 0.76;
+                double ty = rows == 1 ? 0.5 : 0.2 + row / (double)(rows - 1) * 0.6;
+                int x = map.Bounds.Left + 2 + (int)(tx * (spanX - 4)) / block * block;
+                int y = map.Bounds.Top + 2 + (int)(ty * (spanY - 4)) / block * block;
+                Rectangle area = new Rectangle(x, y, islandW, islandH);
+                if (LakeBuilder.Place(map, area.Location, blocksWide, blocksHigh, random, catalog, island: true).HasValue)
+                {
+                    grid[row, col] = area;
+                }
+            }
+            if (!(options.Causeways ?? true)) return;
+            // A serpentine chain, not a full mesh: every island is reachable on foot but
+            // most of the sea between islands stays open — that is what keeps it reading
+            // as an island map instead of a lattice of canals.
+            Rectangle? previous = null;
+            for (int row = 0; row < rows; row++)
+            {
+                for (int c = 0; c < cols; c++)
+                {
+                    int col = row % 2 == 0 ? c : cols - 1 - c;
+                    if (!(grid[row, col] is Rectangle current)) continue;
+                    if (previous is Rectangle a)
+                    {
+                        if (a.Y == current.Y && Math.Max(current.Left - a.Right, a.Left - current.Right) >= block)
+                        {
+                            Rectangle west = a.X < current.X ? a : current, east = a.X < current.X ? current : a;
+                            int y = CenterBlock(a).Y;
+                            LakeBuilder.PunchBlock(map, new Point(west.Right - block, y));
+                            LakeBuilder.PunchBlock(map, new Point(east.Left, y));
+                            LakeBuilder.PlaceCauseway(map, new Point(west.Right, y), new Point(east.Left - block, y), random, catalog);
+                        }
+                        else if (a.X == current.X && current.Top - a.Bottom >= block)
+                        {
+                            int x = CenterBlock(a).X;
+                            LakeBuilder.PunchBlock(map, new Point(x, a.Bottom - block));
+                            LakeBuilder.PunchBlock(map, new Point(x, current.Top));
+                            LakeBuilder.PlaceCauseway(map, new Point(x, a.Bottom), new Point(x, current.Top - block), random, catalog);
+                        }
+                        else
+                        {
+                            // Row transition onto a different column: an L through open sea —
+                            // a horizontal leg from the upper island to the lower one's
+                            // column, then a vertical leg down to its top edge.
+                            int elbowX = CenterBlock(current).X;
+                            int y = CenterBlock(a).Y;
+                            bool eastward = elbowX > a.Right;
+                            Point exitA = eastward ? new Point(a.Right, y) : new Point(a.Left - block, y);
+                            LakeBuilder.PunchBlock(map, eastward ? new Point(a.Right - block, y) : new Point(a.Left, y));
+                            LakeBuilder.PlaceCauseway(map, exitA, new Point(elbowX, y), random, catalog);
+                            LakeBuilder.PlaceCauseway(map, new Point(elbowX, y + block), new Point(elbowX, current.Top - block), random, catalog);
+                            LakeBuilder.PunchBlock(map, new Point(elbowX, current.Top));
+                        }
+                    }
+                    previous = current;
+                }
+            }
+
+            Point CenterBlock(Rectangle area) => new Point(
+                area.X + (blocksWide / 2) * block,
+                area.Y + (blocksHigh / 2) * block);
         }
 
         /// <summary>
@@ -57,24 +245,63 @@ namespace MobiusEditor.Headless
             for (int i = 0; i < count; i++)
             {
                 Point best = default;
-                double bestScore = -1;
-                for (int candidate = 0; candidate < 24; candidate++)
+                double bestScore = double.NegativeInfinity;
+                for (int candidate = 0; candidate < 40; candidate++)
                 {
                     Point p = new Point(area.Left + random.Next(area.Width), area.Top + random.Next(area.Height));
+                    // A base needs buildable ground; a candidate on water/beach only counts
+                    // when nothing better turned up at all.
                     double score = starts.Count == 0
                         ? 1
                         : starts.Min(s => Math.Pow(s.X - p.X, 2) + Math.Pow(s.Y - p.Y, 2));
+                    if (!IsClearGround(map, p)) score -= 1e9;
                     if (score > bestScore)
                     {
                         bestScore = score;
                         best = p;
                     }
                 }
+                // On water-heavy maps every sample can miss land; walk to the nearest
+                // buildable cell rather than start a player in the sea.
+                if (!IsClearGround(map, best)) best = NearestClearGround(map, best);
                 starts.Add(best);
                 if (map.Metrics.GetCell(best, out int cell)) slots[i].Cell = cell;
             }
             for (int i = count; i < slots.Length; i++) slots[i].Cell = null;
             return starts;
+        }
+
+        /// <summary>
+        /// Villages of neutral civilian buildings on open ground away from the starts, and
+        /// the dirt roads that chain them together.
+        /// </summary>
+        private static void PlaceVillagesAndRoads(Map map, MapGeneratorOptions options, DeterministicRandom random, List<Point> starts)
+        {
+            int villages = options.Villages ?? (options.Style == WaterStyle.Islands ? 0 : Math.Clamp(options.Players / 2 + 1, 2, 4));
+            if (villages <= 0) return;
+            List<Point> centers = new List<Point>();
+            Rectangle area = map.Bounds;
+            area.Inflate(-StartMargin, -StartMargin);
+            for (int i = 0; i < villages; i++)
+            {
+                Point best = default;
+                double bestScore = double.NegativeInfinity;
+                for (int candidate = 0; candidate < 30; candidate++)
+                {
+                    Point p = new Point(area.Left + random.Next(area.Width), area.Top + random.Next(area.Height));
+                    double score = starts.Concat(centers).Select(s => Math.Pow(s.X - p.X, 2) + Math.Pow(s.Y - p.Y, 2))
+                        .DefaultIfEmpty(1).Min();
+                    if (!IsClearGround(map, p)) score -= 1e9;
+                    if (score > bestScore) { bestScore = score; best = p; }
+                }
+                if (!IsClearGround(map, best)) continue;
+                if (SettlementBuilder.PlaceVillage(map, best, 3 + random.Next(4), random).Count > 0) centers.Add(best);
+            }
+            if (!(options.Roads ?? centers.Count >= 2)) return;
+            for (int i = 0; i + 1 < centers.Count; i++)
+            {
+                SettlementBuilder.PlaceRoad(map, centers[i], centers[i + 1], random);
+            }
         }
 
         /// <summary>An ore field beside every start; a contested gem patch between neighbouring starts.</summary>
@@ -122,7 +349,7 @@ namespace MobiusEditor.Headless
                 {
                     if (dx * dx + dy * dy > radius * radius) continue;
                     Point p = new Point(center.X + dx, center.Y + dy);
-                    if (!map.Bounds.Contains(p) || map.Technos[p] != null) continue;
+                    if (!map.Bounds.Contains(p) || map.Technos[p] != null || !IsClearGround(map, p)) continue;
                     OverlayEdit.Place(map, resource, p, undo, redo);
                 }
             }
@@ -167,6 +394,7 @@ namespace MobiusEditor.Headless
                     if (Noise(lattice, bounds, p) < threshold) continue;
                     if (starts.Any(s => Math.Abs(s.X - x) <= StartClearRadius && Math.Abs(s.Y - y) <= StartClearRadius)) continue;
                     if (fieldCenters.Any(c => Math.Abs(c.X - x) <= 5 && Math.Abs(c.Y - y) <= 5)) continue;
+                    if (!IsClearGround(map, p)) continue;
                     candidates.Add(p);
                 }
             }
