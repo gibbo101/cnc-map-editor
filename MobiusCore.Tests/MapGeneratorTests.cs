@@ -185,6 +185,71 @@ namespace MobiusCore.Tests
         }
 
         [Fact]
+        public void LakesStyleWalksAClosedLoopCenterpiece()
+        {
+            MapGeneratorOptions options = new MapGeneratorOptions
+            { Seed = 21, Players = 4, Style = WaterStyle.Lakes, Water = 1 };
+            byte[] first = SaveBytes(Generate(options), "walked-lake-a.mpr");
+            byte[] second = SaveBytes(Generate(options), "walked-lake-b.mpr");
+            Assert.Equal(first, second);
+
+            IGamePlugin plugin = Generate(options);
+            Map map = plugin.Map;
+            // The walked centerpiece is a single basin far bigger than any block pond
+            // (which top out around 18x18 with shores taking part of that).
+            Assert.True(LargestWaterBody(map) >= 300, "largest water body only " + LargestWaterBody(map) + " cells");
+            var contacts = new System.Collections.Generic.List<string>();
+            int clearAgainstWater = 0;
+            for (int y = map.Bounds.Top; y < map.Bounds.Bottom; y++)
+            {
+                for (int x = map.Bounds.Left; x < map.Bounds.Right; x++)
+                {
+                    Template fill = map.Templates[y, x];
+                    if (fill?.Type == null || (fill.Type.Name != "w1" && fill.Type.Name != "w2")) continue;
+                    foreach (System.Drawing.Point n in new[] { new System.Drawing.Point(x + 1, y), new System.Drawing.Point(x - 1, y), new System.Drawing.Point(x, y + 1), new System.Drawing.Point(x, y - 1) })
+                    {
+                        if (map.Bounds.Contains(n) && LakeBuilder.LandAt(map, n) == LandType.Clear)
+                        {
+                            clearAgainstWater++;
+                            contacts.Add($"{fill.Type.Name}@{x},{y} vs {map.Templates[n.Y, n.X]?.Type?.Name ?? "null"}@{n.X},{n.Y}");
+                        }
+                    }
+                }
+            }
+            Assert.True(clearAgainstWater == 0, string.Join("; ", contacts));
+        }
+
+        private static int LargestWaterBody(Map map)
+        {
+            bool IsWater(System.Drawing.Point p) => map.Bounds.Contains(p)
+                && LakeBuilder.LandAt(map, p) is LandType land && (land == LandType.Water || land == LandType.River);
+            var seen = new System.Collections.Generic.HashSet<System.Drawing.Point>();
+            int best = 0;
+            for (int y = map.Bounds.Top; y < map.Bounds.Bottom; y++)
+            {
+                for (int x = map.Bounds.Left; x < map.Bounds.Right; x++)
+                {
+                    System.Drawing.Point start = new System.Drawing.Point(x, y);
+                    if (!IsWater(start) || !seen.Add(start)) continue;
+                    int size = 0;
+                    var frontier = new System.Collections.Generic.Queue<System.Drawing.Point>();
+                    frontier.Enqueue(start);
+                    while (frontier.Count > 0)
+                    {
+                        System.Drawing.Point p = frontier.Dequeue();
+                        size++;
+                        foreach (System.Drawing.Point n in new[] { new System.Drawing.Point(p.X + 1, p.Y), new System.Drawing.Point(p.X - 1, p.Y), new System.Drawing.Point(p.X, p.Y + 1), new System.Drawing.Point(p.X, p.Y - 1) })
+                        {
+                            if (IsWater(n) && seen.Add(n)) frontier.Enqueue(n);
+                        }
+                    }
+                    best = Math.Max(best, size);
+                }
+            }
+            return best;
+        }
+
+        [Fact]
         public void TiberianDawnMapsGenerateToo()
         {
             IGamePlugin plugin = EditorHost.SharedFor(GameType.TiberianDawn).New(null, out _);

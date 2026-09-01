@@ -68,8 +68,18 @@ namespace MobiusEditor.Headless
             void Stamp(TemplateType piece, Point at)
             {
                 // Roads never overwrite shores or water — a track stops at the coast.
-                if (!map.Bounds.Contains(at)) return;
-                if (LakeBuilder.LandAt(map, at) != LandType.Clear) return;
+                // The whole footprint must be plain ground or existing road (legs and
+                // bends overlap on purpose); one shore or water cell rejects the stamp.
+                for (int y = 0; y < piece.IconHeight; y++)
+                {
+                    for (int x = 0; x < piece.IconWidth; x++)
+                    {
+                        Point cell = new Point(at.X + x, at.Y + y);
+                        if (!map.Bounds.Contains(cell)) return;
+                        LandType land = LakeBuilder.LandAt(map, cell);
+                        if (land != LandType.Clear && land != LandType.Road) return;
+                    }
+                }
                 TemplateEdit.Place(map.TemplateTypes, map.Templates, piece, at, null, random, undo, redo);
             }
             Point corner = new Point(to.X, from.Y);

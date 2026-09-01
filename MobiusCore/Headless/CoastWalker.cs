@@ -89,10 +89,14 @@ namespace MobiusEditor.Headless
         /// transition graph, cheaper along common idioms, pruned when a successor's water
         /// side turns more than a quarter turn from its predecessor's. Returns the piece
         /// chain including the start, or null when no path reaches the goal's vicinity.
+        /// With goalPiece set the search only succeeds on that exact piece at the exact
+        /// goal cell — the edge into it is then itself a mined, sealed transition, which
+        /// is what lets a loop close strictly.
         /// </summary>
         public static List<Step> PlanPath(Map map, TransitionGraph graph,
             IReadOnlyDictionary<string, ShorePiece> catalog,
-            string startPiece, Point startOrigin, Point goal, int maxPieces, int desiredSide = -1)
+            string startPiece, Point startOrigin, Point goal, int maxPieces, int desiredSide = -1,
+            string goalPiece = null)
         {
             TemplateType Lookup(string name) => map.TemplateTypes.FirstOrDefault(t =>
                 t.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && t.ExistsInTheater);
@@ -111,7 +115,10 @@ namespace MobiusEditor.Headless
                 (string piece, Point origin) = open.Dequeue();
                 explored++;
                 double cost = bestCost[(piece, origin)];
-                if (Chebyshev(origin, goal) <= 2 && (piece, origin) != (startPiece, startOrigin))
+                bool atGoal = goalPiece == null
+                    ? Chebyshev(origin, goal) <= 2 && (piece, origin) != (startPiece, startOrigin)
+                    : origin == goal && piece.Equals(goalPiece, StringComparison.OrdinalIgnoreCase);
+                if (atGoal)
                 {
                     found = (piece, origin);
                     break;
@@ -161,17 +168,65 @@ namespace MobiusEditor.Headless
         }
 
         /// <summary>
+        /// Plans a closed coast ring around a center: eight anchors on an ellipse with the
+        /// water inside, each segment walked through mined idioms with the water side
+        /// rotating to keep facing the center, and the final segment required to re-enter
+        /// the start piece at its exact origin — so the loop closes on a mined transition,
+        /// never a lucky abutment. Anchor jitter grows the ring landward (outward) only,
+        /// for the ocean's reason inverted: an inward bulge would pinch the flood basin.
+        /// Returns the ring without the duplicated closing step, or null when any segment
+        /// or the strict closure cannot be planned.
+        /// </summary>
+        public static List<Step> PlanLoop(Map map, TransitionGraph graph,
+            IReadOnlyDictionary<string, ShorePiece> catalog, Point center, Size radius,
+            MobiusEditor.Utility.DeterministicRandom random = null)
+        {
+            Point[] anchors = new Point[8];
+            for (int k = 0; k < anchors.Length; k++)
+            {
+                double angle = (k * 45 - 90) * Math.PI / 180.0;
+                int outward = random?.Next(3) ?? 0;
+                anchors[k] = new Point(
+                    center.X + (int)Math.Round(Math.Cos(angle) * (radius.Width + outward)),
+                    center.Y + (int)Math.Round(Math.Sin(angle) * (radius.Height + outward)));
+            }
+            // Anchor 0 sits at the ring's top, so its water side faces south; going
+            // clockwise the anchor at compass position k wants side (4 + k) mod 8.
+            string start = BestStartPiece(map, graph, catalog, 4);
+            if (start == null) return null;
+            List<Step> all = new List<Step>();
+            string piece = start;
+            Point origin = anchors[0];
+            for (int k = 1; k <= anchors.Length; k++)
+            {
+                bool closing = k == anchors.Length;
+                List<Step> segment = PlanPath(map, graph, catalog, piece, origin,
+                    closing ? anchors[0] : anchors[k], 40, (4 + k) % 8, closing ? start : null);
+                if (segment == null) return null;
+                if (all.Count > 0) segment.RemoveAt(0);
+                if (closing) segment.RemoveAt(segment.Count - 1);
+                all.AddRange(segment);
+                if (all.Count == 0) return null;
+                piece = all[^1].Piece.Name;
+                origin = all[^1].Origin;
+            }
+            return all;
+        }
+
+        /// <summary>
         /// Stamps a planned path onto the map, in order, then seals each piece's masked
         /// cells on its water side with water tiles — in the corpus maps those transparent
         /// cells sit over open water, and without them the coast line leaks.
         /// </summary>
         public static void Place(Map map, IEnumerable<Step> path,
-            IReadOnlyDictionary<string, ShorePiece> catalog, MobiusEditor.Utility.DeterministicRandom random)
+            IReadOnlyDictionary<string, ShorePiece> catalog, MobiusEditor.Utility.DeterministicRandom random,
+            IDictionary<int, Template> undo = null)
         {
             TemplateType water = map.TemplateTypes.FirstOrDefault(t =>
                 (t.Flags & TemplateTypeFlag.DefaultFill) == TemplateTypeFlag.DefaultFill && t.ExistsInTheater
                 && t.LandTypes != null && t.LandTypes.Length > 0 && t.LandTypes[0] == LandType.Water);
-            Dictionary<int, Template> undo = new Dictionary<int, Template>(), redo = new Dictionary<int, Template>();
+            undo ??= new Dictionary<int, Template>();
+            Dictionary<int, Template> redo = new Dictionary<int, Template>();
             List<Step> placed = path.ToList();
             foreach (Step step in placed)
             {
@@ -324,7 +379,13 @@ namespace MobiusEditor.Headless
                 {
                     Template t = map.Templates[y, x];
                     if (t?.Type == null || (t.Type.Name != "w1" && t.Type.Name != "w2")) continue;
-                    foreach (Point n in new[] { new Point(x + 1, y), new Point(x - 1, y), new Point(x, y + 1), new Point(x, y - 1) })
+                    // Diagonal contact counts too: a corner-only touch renders as a hard
+                    // square step in the waterline.
+                    foreach (Point n in new[]
+                    {
+                        new Point(x + 1, y), new Point(x - 1, y), new Point(x, y + 1), new Point(x, y - 1),
+                        new Point(x + 1, y + 1), new Point(x - 1, y + 1), new Point(x + 1, y - 1), new Point(x - 1, y - 1),
+                    })
                     {
                         if (!map.Bounds.Contains(n)) continue;
                         if (LakeBuilder.LandAt(map, n) == LandType.Clear)

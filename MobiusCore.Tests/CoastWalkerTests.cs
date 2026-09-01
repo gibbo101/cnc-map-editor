@@ -56,6 +56,63 @@ namespace MobiusCore.Tests
         }
 
         [Fact]
+        public void PlansAClosedLoopOfMinedTransitions()
+        {
+            (IGamePlugin plugin, var catalog) = Fresh();
+            List<CoastWalker.Step> loop = CoastWalker.PlanLoop(plugin.Map, TransitionGraph.Baked, catalog,
+                new Point(60, 60), new Size(12, 10));
+            Assert.NotNull(loop);
+            Assert.True(loop.Count >= 10, "loop too short: " + loop.Count);
+            output.WriteLine(string.Join(" ", loop.Select(s => $"{s.Piece.Name}@{s.Origin.X},{s.Origin.Y}")));
+            for (int i = 1; i < loop.Count; i++)
+            {
+                Point offset = new Point(loop[i].Origin.X - loop[i - 1].Origin.X, loop[i].Origin.Y - loop[i - 1].Origin.Y);
+                Assert.Contains(TransitionGraph.Baked.From(loop[i - 1].Piece.Name),
+                    t => t.To.Equals(loop[i].Piece.Name, System.StringComparison.OrdinalIgnoreCase) && t.Offset == offset);
+            }
+            // Strict closure: the final piece transitions back onto the first by a mined
+            // idiom, not a lucky abutment.
+            Point close = new Point(loop[0].Origin.X - loop[^1].Origin.X, loop[0].Origin.Y - loop[^1].Origin.Y);
+            Assert.Contains(TransitionGraph.Baked.From(loop[^1].Piece.Name),
+                t => t.To.Equals(loop[0].Piece.Name, System.StringComparison.OrdinalIgnoreCase) && t.Offset == close);
+
+            List<CoastWalker.Step> again = CoastWalker.PlanLoop(plugin.Map, TransitionGraph.Baked, catalog,
+                new Point(60, 60), new Size(12, 10));
+            Assert.Equal(loop.Select(s => (s.Piece.Name, s.Origin)), again.Select(s => (s.Piece.Name, s.Origin)));
+        }
+
+        [Fact]
+        public void WalkedLakeLoopHoldsItsWater()
+        {
+            (IGamePlugin plugin, var catalog) = Fresh();
+            Map map = plugin.Map;
+            var random = new MobiusEditor.Utility.DeterministicRandom(9);
+            List<CoastWalker.Step> loop = CoastWalker.PlanLoop(map, TransitionGraph.Baked, catalog,
+                new Point(60, 60), new Size(12, 10), random);
+            Assert.NotNull(loop);
+            CoastWalker.Place(map, loop, catalog, random);
+            Assert.True(CoastWalker.FloodWater(map, new Point(60, 60), 40 * 40, random),
+                "flood escaped the ring");
+            CoastWalker.PatchBareContacts(map, random);
+            Assert.Equal(LandType.Water, LakeBuilder.LandAt(map, new Point(60, 60)));
+            // The seam invariant: no flood-fill water cell may touch bare clear land.
+            int bare = 0;
+            for (int y = map.Bounds.Top; y < map.Bounds.Bottom; y++)
+            {
+                for (int x = map.Bounds.Left; x < map.Bounds.Right; x++)
+                {
+                    Template fill = map.Templates[y, x];
+                    if (fill?.Type == null || (fill.Type.Name != "w1" && fill.Type.Name != "w2")) continue;
+                    foreach (Point n in new[] { new Point(x + 1, y), new Point(x - 1, y), new Point(x, y + 1), new Point(x, y - 1) })
+                    {
+                        if (map.Bounds.Contains(n) && LakeBuilder.LandAt(map, n) == LandType.Clear) bare++;
+                    }
+                }
+            }
+            Assert.Equal(0, bare);
+        }
+
+        [Fact]
         public void EveryStepIsAMinedTransition()
         {
             (IGamePlugin plugin, var catalog) = Fresh();

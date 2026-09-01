@@ -131,6 +131,9 @@ namespace MobiusEditor.Headless
                     PlaceScatteredLakes(map, options, random, catalog);
                     break;
             }
+            // Every style honours the seam invariant: no fill-water cell may touch bare
+            // clear land. The 1x1 shallow tile is the corpus's own patch for the rare gap.
+            CoastWalker.PatchBareContacts(map, random);
         }
 
         /// <summary>
@@ -205,6 +208,9 @@ namespace MobiusEditor.Headless
         {
             List<Rectangle> placed = new List<Rectangle>();
             int lakeCount = options.Lakes ?? 1 + (int)Math.Round(options.Water * 2);
+            // The first lake is the centerpiece: a corpus-walked closed shoreline at a
+            // size the idioms deserve. The rest scatter as block-built ponds.
+            if (lakeCount > 0) TryPlaceWalkedLake(map, options, random, placed);
             int maxBlocks = 2 + (int)Math.Round(options.Water * 4);
             for (int attempt = 0; attempt < 200 && placed.Count < lakeCount; attempt++)
             {
@@ -221,6 +227,60 @@ namespace MobiusEditor.Headless
                 Rectangle? area = LakeBuilder.Place(map, origin, blocksWide, blocksHigh, random, catalog);
                 if (area.HasValue) placed.Add(area.Value);
             }
+        }
+
+        /// <summary>
+        /// Tries a few candidate centers for the walked centerpiece lake and records the
+        /// area it claims (with margin for jitter and piece overhang) so the block ponds
+        /// keep their distance. False when no candidate plans and holds its water.
+        /// </summary>
+        private static bool TryPlaceWalkedLake(Map map, MapGeneratorOptions options, DeterministicRandom random, List<Rectangle> placed)
+        {
+            Size radius = new Size(8 + (int)Math.Round(options.Water * 5), 7 + (int)Math.Round(options.Water * 4));
+            int margin = Math.Max(radius.Width, radius.Height) + 7;
+            Rectangle b = map.Bounds;
+            if (b.Width <= margin * 2 || b.Height <= margin * 2) return false;
+            for (int attempt = 0; attempt < 12; attempt++)
+            {
+                Point center = new Point(
+                    b.Left + margin + random.Next(b.Width - margin * 2),
+                    b.Top + margin + random.Next(b.Height - margin * 2));
+                if (TryWalkedLake(map, center, radius, random))
+                {
+                    placed.Add(new Rectangle(center.X - radius.Width - 6, center.Y - radius.Height - 6,
+                        radius.Width * 2 + 12, radius.Height * 2 + 12));
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// A lake with a corpus-walked closed shoreline: ring planned around the center,
+        /// placed, the basin flooded from the middle. A failed plan or a flood that
+        /// escapes the ring reverts every stamped cell and reports false, so the caller
+        /// falls back to the block-built lake with the map unmarked.
+        /// </summary>
+        private static bool TryWalkedLake(Map map, Point center, Size radius, DeterministicRandom random)
+        {
+            TransitionGraph graph = TransitionGraph.Baked;
+            Dictionary<string, ShorePiece> catalog = ShoreCatalog.Build(map.TemplateTypes)
+                .Concat(ShoreCatalog.Build(map.TemplateTypes, "wc"))
+                .GroupBy(p => p.Template.Name, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+            List<CoastWalker.Step> loop = CoastWalker.PlanLoop(map, graph, catalog, center, radius, random);
+            if (loop == null) return false;
+            Dictionary<int, Template> undo = new Dictionary<int, Template>();
+            CoastWalker.Place(map, loop, catalog, random, undo);
+            // The bound comfortably exceeds the basin's area; a flood that leaks past the
+            // ring hits it long before filling the map.
+            int maxCells = (radius.Width * 2 + 8) * (radius.Height * 2 + 8);
+            if (!CoastWalker.FloodWater(map, center, maxCells, random))
+            {
+                foreach (KeyValuePair<int, Template> cell in undo) map.Templates[cell.Key] = cell.Value;
+                return false;
+            }
+            return true;
         }
 
         /// <summary>

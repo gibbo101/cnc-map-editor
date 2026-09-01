@@ -248,7 +248,47 @@ Wine.** It would not inform the native build at all, nothing is blocked today th
 would unblock (campaign authoring is deferred behind the AI milestone), and a working stopgap
 would only tempt the native editor to slip. Not part of the plan.
 
-## RESUME HERE (2026-09-01 continued — coast walker + resource flavors SHIPPED)
+## RESUME HERE (2026-09-01 night — closed-loop walked lakes SHIPPED)
+
+**CLOSED-LOOP LAKES (this session):** the Lakes style now places one corpus-walked
+centerpiece lake — `CoastWalker.PlanLoop` rings 8 ellipse anchors (water inside, water
+side rotating to face the center, outward-only jitter) and the final segment must
+re-enter the start piece at its exact origin via `PlanPath`'s new exact-goal mode
+(`goalPiece`), so the loop closes on a mined transition, never a lucky abutment. Block
+ponds fill the remaining lake count. A failed plan or a flood that escapes the ring
+reverts every stamped cell (`Place` grew an optional undo capture) and falls back to
+block lakes; TD still falls back wholesale (RA-only corpus). Verified by render at seed
+21: organic coves, rock outcrops, a hooked-peninsula idiom — nothing like the block
+ponds.
+
+Fixes that rode along:
+- **Road stamps now guard their whole footprint** (Clear or Road on every cell; one
+  shore/water cell rejects the stamp) — origin-only checking let multi-cell road pieces
+  overwrite shore next to fill water. Roads still overlap each other (bends/junctions).
+- **`PatchBareContacts` patches diagonal contacts too** (corner-only touch rendered as a
+  hard square step) and now runs at the end of `PlaceLakes` for EVERY style — the seam
+  invariant (zero fill-water cells touching bare Clear) is now generator-wide, asserted
+  in `LakesStyleWalksAClosedLoopCenterpiece`.
+
+**Known polish item (logged, not chased):** occasional hard square step where fill water
+meets a mined piece's land-side column (e.g. sh44's west column: LandType Beach, art
+mostly grass — every invariant passes, art shows an edge). In the corpus a second
+covering piece hides these; our walk is single-strand. Candidate fixes: mine multi-piece
+cover idioms, or have the miner score edge-column "waterness" from the tile art and
+penalize exposing land-heavy columns to the water side.
+
+**Test state (2026-09-01 night):** ALL TIERS GREEN — full oracle 391/391 (the hygiene
+run the previous block asked for; it covered the daytime commits, and tonight's changes
+are Headless-side only), Core-fast 129, CLI 24, Shell 83, App 31. **DECK STILL STALE** —
+the previous block's Deck checklist still applies, now including tonight's work.
+
+**WALKER NEXT (updated order):** meandering river banks (two walked coasts), island
+coasts, landing-beach splices on cliff coasts (Luke's amphibious rule: cliff coasts MUST
+carry sh landing beaches — 2,119 mined wc↔sh splices make it data-driven; count/spacing
+tunable), cliff-vs-beach coast flavor tunable, the rf land-cliff family (cliffs setting),
+mined road curves, and the land-column-art polish item above.
+
+## Previous block (2026-09-01 continued — coast walker + resource flavors SHIPPED)
 
 **⭐ THE COAST WALKER IS REAL (4c5e604, pushed):** Luke's "train on existing maps" idea
 works end-to-end. Corpus baked into `MobiusCore/Resources/mined-transitions.txt` (14,138
