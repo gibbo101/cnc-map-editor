@@ -44,6 +44,10 @@ namespace MobiusEditor.App
             };
             WaterStyleCombo.ItemsSource = new[] { "Lakes", "River", "Ocean", "Islands", "None" };
             WaterStyleCombo.SelectedIndex = 0;
+            CoastCombo.ItemsSource = new[] { "Mixed", "Beach", "Cliff" };
+            CoastCombo.SelectedIndex = 0;
+            RiverKindCombo.ItemsSource = new[] { "Auto", "Stream", "Wide", "Broad" };
+            RiverKindCombo.SelectedIndex = 0;
             RandomFill.IsCheckedChanged += (s, e) =>
             {
                 bool random = RandomFill.IsChecked == true;
@@ -78,6 +82,9 @@ namespace MobiusEditor.App
                         Villages = (int)(VillagesNud.Value ?? 0),
                         Tiberium = TiberiumSlider.Value,
                         Roads = RoadsCheck.IsChecked == true,
+                        Coast = System.Enum.TryParse(CoastCombo.SelectedItem as string, out MobiusEditor.Headless.CoastFlavor coast)
+                            ? coast : MobiusEditor.Headless.CoastFlavor.Mixed,
+                        RiverWidth = RiverKindCombo.SelectedIndex > 0 ? RiverKindCombo.SelectedIndex : null,
                     };
                     await System.Threading.Tasks.Task.Run(() => document.NewRandomMap(theater, playable, options));
                 }

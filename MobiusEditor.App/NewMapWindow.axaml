@@ -24,6 +24,12 @@
           <ComboBox Grid.Column="1" Name="WaterStyleCombo" HorizontalAlignment="Stretch" />
         </Grid>
         <Grid ColumnDefinitions="70,*,12,60,*">
+          <TextBlock Grid.Column="0" Text="Coast" VerticalAlignment="Center" />
+          <ComboBox Grid.Column="1" Name="CoastCombo" HorizontalAlignment="Stretch" />
+          <TextBlock Grid.Column="3" Text="River" VerticalAlignment="Center" />
+          <ComboBox Grid.Column="4" Name="RiverKindCombo" HorizontalAlignment="Stretch" />
+        </Grid>
+        <Grid ColumnDefinitions="70,*,12,60,*">
           <TextBlock Grid.Column="0" Text="Seed" VerticalAlignment="Center" />
           <NumericUpDown Grid.Column="1" Name="SeedNud" FormatString="0" Minimum="0" Maximum="2147483647" Value="1" />
           <TextBlock Grid.Column="3" Text="Players" VerticalAlignment="Center" />
