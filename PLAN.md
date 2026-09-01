@@ -268,6 +268,18 @@ overlays/spawner) — TF declares tiberium/tib01/tdblossom; generator fields: or
 ORE MINE, tiberium a BLOSSOM TREE (Luke's ecology rule); `--tiberium 0..1` share + GUI
 slider. Patches avoid building cells.
 
+**SESSION-END STATE (2026-09-01 evening):** Core-fast 126, CLI 24, Shell 83 all green
+after the final commits; App tier was finishing at session end (expected green — its last
+full run passed and later changes were Core/Headless-side; re-run if in doubt). Full
+oracle tier NOT re-run since the walker/tiberium commits — LOW RISK (all changes live in
+Headless/ + manifest parsing; renders and saves untouched; fast tier covers the manifest
+seam) but run it as next session's first background task for hygiene. **DECK IS STALE:**
+none of today's daytime work (terrain suite, tunables, tiberium ecology, coast walker) is
+deployed — Deck was off; when Luke wakes it: `DECK_HOST=deck@<deck-ip>
+./deploy-deck.sh` and md5-check the TF mod's mapeditor.json (the tiberium `resources`
+section must be present — mod repo 9c6cbfc5 regenerated it; the build-dir copy was synced
+by hand, verify it survived any mod-side rebuild). Luke verifies in-editor after deploy.
+
 **WALKER NEXT (same machinery, in rough order):** closed-loop lakes (segment ring, strict
 closure = final piece has a mined transition back to the start piece), meandering river
 banks (two walked coasts), island coasts, landing-beach splices on cliff coasts (Luke's
