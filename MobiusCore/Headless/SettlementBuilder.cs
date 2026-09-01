@@ -77,7 +77,12 @@ namespace MobiusEditor.Headless
                         Point cell = new Point(at.X + x, at.Y + y);
                         if (!map.Bounds.Contains(cell)) return;
                         LandType land = LakeBuilder.LandAt(map, cell);
-                        if (land != LandType.Clear && land != LandType.Road) return;
+                        // Rough is allowed only when it is road art's own potholes —
+                        // river shallows and ford water stay uncrossable.
+                        bool roadRough = land == LandType.Rough
+                            && map.Templates[cell.Y, cell.X]?.Type?.Name is string n
+                            && n.Length > 0 && n[0] == 'd';
+                        if (land != LandType.Clear && land != LandType.Road && !roadRough) return;
                     }
                 }
                 TemplateEdit.Place(map.TemplateTypes, map.Templates, piece, at, null, random, undo, redo);

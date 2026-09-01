@@ -343,9 +343,22 @@ self-separation forbidden ON, and the placement-exact composite accumulated per
 segment (PlanRing-style). No flood, no banks — the art is complete. Expected: the
 first fully audit-clean river; pin audit==0 in its test.
 
-**THEN:** miner-art waterness scoring, remaining offshore stubs, GUI coast-flavor
-control, composite for the wide-river banks and ocean, landing-beach flavors for
-cliff oceans/lakes, island bridges over pinched rv channels.
+**ISLAND BRIDGES — DESIGN LOCKED FROM THE EXTENDED CORPUS (build next session):**
+RA's long wooden bridges span open water SHORE TO SHORE (never rv): mined grammar =
+near head `sh08→br1x @1,0 ×27` (cliff variants via wc15/wc01/wc21 splices) →
+`br1x→br3a @-1,2` → spans `br3a→br3a @-1,1 ×227` (NE-SW diagonal; the br3f family
+chains @1,0/@2,0 for the other orientation) → far head `br3a→br2a @-2,1`,
+`br2a→br2x @0,2`, landing `br2a→sh29 @-1,1`; roads hook the head (`d03→br1x @-3,2
+×42`). The br a/b/c stages are the engine's destroyable-bridge swap — placing br?a
+gives Luke cuttable bridges for free. Build: a Links mode for the islands world
+(separate islands + bridge links along the serpentine chain): pick the strait pair,
+compute span count from the gap, PIN sh08 on ring A and sh29 on ring B at the exact
+chain-derived origins (PlanRing pins — machinery exists), stamp the chain after the
+sea flood, hook d03 roads. Every offset is corpus-observed; nothing hand-aligned.
+
+**THEN:** miner-art waterness scoring (kills the islands' 32 residual audit
+violations), remaining offshore stubs, EW streams via real corner topology,
+landing-beach flavors for cliff oceans/lakes, composite for wide-river banks/ocean.
 
 ## Previous block (2026-09-02 early — THE SHORE RULE, islands, cliffs; Luke steering live)
 
