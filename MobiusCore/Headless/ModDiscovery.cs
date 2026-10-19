@@ -103,7 +103,9 @@ namespace MobiusEditor.Headless
             {
                 string steam = SteamAssist.GetSteamFolder();
                 if (steam == null) return null;
-                documents = System.IO.Path.Combine(steam, "steamapps", "compatdata", steamAppId, "pfx", "drive_c", "users", "steamuser", "Documents");
+                IEnumerable<string> libraries = (SteamAssist.GetLibraryFoldersForAppId(steamAppId) ?? new string[0]).Append(steam);
+                string library = libraries.FirstOrDefault(l => Directory.Exists(System.IO.Path.Combine(l, "steamapps", "compatdata", steamAppId))) ?? steam;
+                documents = System.IO.Path.Combine(library, "steamapps", "compatdata", steamAppId, "pfx", "drive_c", "users", "steamuser", "Documents");
             }
             return System.IO.Path.Combine(documents, "CnCRemastered", "Mods");
         }

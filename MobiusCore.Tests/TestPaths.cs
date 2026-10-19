@@ -7,7 +7,7 @@ namespace MobiusCore.Tests
     public static class TestPaths
     {
         static string Home => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        public static string GameDir => Environment.GetEnvironmentVariable("CNC_GAME_DIR") ?? Path.Combine(Home, ".steam/steam/steamapps/common/CnCRemastered");
+        public static string GameDir => Environment.GetEnvironmentVariable("CNC_GAME_DIR") ?? MobiusEditor.Utility.SteamAssist.TryGetSteamGameFolder(MobiusEditor.Program.RemasterSteamId) ?? Path.Combine(Home, ".steam/steam/steamapps/common/CnCRemastered");
         public static string ModDir => Environment.GetEnvironmentVariable("CNC_TF_MOD_DIR") ?? Path.Combine(Home, "Documents/development/cnc-remastered-mods/cnc-ra-tiberian-factions/build/remaster/Vanilla_RA");
         public static string MapEdits => Path.Combine(Home, "Documents/development/cnc-remastered-mods/map-edits");
         public static string RepoRoot => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../.."));
