@@ -7,6 +7,7 @@ REL=$FORK/CnCTDRAMapEditor/bin/Release
 OUT=$(cd "$(dirname "$0")" && pwd)
 MAPS=$HOME/Documents/development/cnc-remastered-mods/map-edits
 TF=$HOME/Documents/development/cnc-remastered-mods/cnc-ra-tiberian-factions/build/remaster/Vanilla_RA/CustomMaps
+export CNC_GAME_DIR=${CNC_GAME_DIR:-$(python3 $HOME/Documents/development/cnc-remastered-mods/cnc-ra-tiberian-factions/scripts/steam_library.py path common/CnCRemastered)}
 mono-csc -nologo -r:$REL/MobiusMapEditor.exe -r:System.Drawing.dll -out:/tmp/renderprobe.exe $FORK/tools/probes/RenderProbe.cs
 mono-csc -nologo -r:$REL/MobiusMapEditor.exe -r:System.Drawing.dll -out:/tmp/rtprobe.exe $FORK/tools/probes/RoundTripProbe.cs
 cd $REL
