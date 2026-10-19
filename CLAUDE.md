@@ -42,7 +42,7 @@ env -u DISPLAY dotnet test MobiusCore.Tests                              # + ora
 dotnet run --project MobiusCli -- info <map> [--mod <dir>]              # the CLI itself
 ```
 
-Tests read the game from `~/.steam/steam/steamapps/common/CnCRemastered` and the mod build from
+Tests read the game from the Steam library that holds it (`SteamAssist`) and the mod build from
 `../cnc-ra-tiberian-factions/build/remaster/Vanilla_RA` (override with `CNC_GAME_DIR` /
 `CNC_TF_MOD_DIR`, see `TestPaths.cs`). Always run with `DISPLAY` unset: nothing here needs a
 display and anything that tries to open one is a bug.
