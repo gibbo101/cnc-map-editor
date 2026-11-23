@@ -24,18 +24,18 @@ namespace MobiusCli.Tests
             return (code, o.ToString(), e.ToString());
         }
 
-        private static readonly string Source = Path.Combine(TestPaths.MapEdits, "scm05ea.ini");
+        private static readonly string Source = Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini");
 
         [Fact]
         public void PlacesTemplatesAndOverlayInOrder()
         {
             string outPath = TestPaths.Output("cli-edit-place.ini");
             (int code, string stdout, string stderr) = Run("edit", Source, "--out", outPath,
-                "--place", "tdsh1@10,10", "--erase", "11,11", "--place-overlay", "brik@20,20",
+                "--place", "sh09@10,10", "--erase", "11,11", "--place-overlay", "brik@20,20",
                 "--game", TestPaths.GameDir, "--mod", TestPaths.ModDir);
             Assert.True(code == 0, stderr);
             IGamePlugin plugin = EditorHost.Shared.Load(outPath, out _);
-            Assert.Equal("tdsh1", plugin.Map.Templates[10, 10].Type.Name);
+            Assert.Equal("sh09", plugin.Map.Templates[10, 10].Type.Name);
             Assert.Equal(0, plugin.Map.Templates[10, 10].Icon);
             Assert.Null(plugin.Map.Templates[11, 11]);
             Assert.Equal("brik", plugin.Map.Overlay[20, 20].Type.Name);
@@ -46,7 +46,7 @@ namespace MobiusCli.Tests
         public void RefusesToOverwriteTheInput()
         {
             (int code, string _, string stderr) = Run("edit", Source, "--out", Source,
-                "--place", "tdsh1@10,10", "--game", TestPaths.GameDir, "--mod", TestPaths.ModDir);
+                "--place", "sh09@10,10", "--game", TestPaths.GameDir, "--mod", TestPaths.ModDir);
             Assert.NotEqual(0, code);
             Assert.Contains("input", stderr);
         }
@@ -63,7 +63,7 @@ namespace MobiusCli.Tests
         [Fact]
         public void TemplateWithoutArtInTheTheaterIsAnErrorNotASilentNoOp()
         {
-            // scm05ea is Temperate; tdsh51 is a TD desert-only tile, hosted in the Interior slot.
+            // scm05ea is Temperate; TF draws tdsh51 only in its TD theatres.
             (int code, string _, string stderr) = Run("edit", Source, "--out", TestPaths.Output("cli-edit-theater.ini"),
                 "--place", "tdsh51@10,10", "--game", TestPaths.GameDir, "--mod", TestPaths.ModDir);
             Assert.NotEqual(0, code);

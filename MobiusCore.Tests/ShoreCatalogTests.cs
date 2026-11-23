@@ -20,7 +20,7 @@ namespace MobiusCore.Tests
 
         private static IGamePlugin Open()
         {
-            return EditorHost.Shared.Load(Path.Combine(TestPaths.MapEdits, "scm05ea.ini"), out _);
+            return EditorHost.Shared.Load(Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini"), out _);
         }
 
         [Fact]

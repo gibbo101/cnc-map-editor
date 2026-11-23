@@ -23,7 +23,7 @@ namespace MobiusCore.Tests
         [Fact]
         public void ReconstructsPlacedInstancesFromTheGrid()
         {
-            IGamePlugin plugin = EditorHost.Shared.Load(Path.Combine(TestPaths.MapEdits, "scm05ea.ini"), out _);
+            IGamePlugin plugin = EditorHost.Shared.Load(Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini"), out _);
             Map map = plugin.Map;
             // Stamp a known multicell piece and expect exactly one instance at its origin.
             TemplateType shore = map.TemplateTypes.First(t => t.Name == "sh06" && t.ExistsInTheater || t.Name == "sh06");
@@ -39,8 +39,7 @@ namespace MobiusCore.Tests
         [Trait("Category", "Oracle")]
         public void MinesShoreIdiomsFromTheOfficialCorpus()
         {
-            string officialDir = Path.Combine(TestPaths.RepoRoot, "artifacts", "test-output", "official");
-            Assert.True(Directory.Exists(officialDir), "official extraction missing; run OfficialMapsTests first");
+            string officialDir = TestPaths.OfficialMapsDir;
             var table = new Dictionary<(string, string, Point), PieceTransition>();
             int mapsWithShores = 0;
             foreach (string mapPath in Directory.EnumerateFiles(officialDir, "scm*.ini").OrderBy(f => f))

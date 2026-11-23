@@ -17,7 +17,7 @@ namespace MobiusEditor.Shell.Tests
         private static MapDocument Open()
         {
             MapDocument doc = new MapDocument(EditorHost.Shared);
-            doc.Open(Path.Combine(TestPaths.MapEdits, "scm05ea.ini"));
+            doc.Open(Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini"));
             return doc;
         }
 
@@ -73,7 +73,7 @@ namespace MobiusEditor.Shell.Tests
                 if (tsPower != null)
                 {
                     Assert.Equal("TS GDI (mod)", PaletteGrouping.GroupOf(tsPower));
-                    Assert.StartsWith("Tiberian Power Plant", PaletteItem.From(tsPower).Label);
+                    Assert.StartsWith("GDI Power Plant", PaletteItem.From(tsPower).Label);
                 }
                 // Mod-split RA yards keep their vanilla side, not a mod bucket.
                 BuildingType alliedYard = doc.AvailableBuildings().FirstOrDefault(b => b.Name == "afact");

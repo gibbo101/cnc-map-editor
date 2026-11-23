@@ -18,7 +18,7 @@ namespace MobiusCli.Tests
         [Fact]
         public void DescribesAnOfficialMap()
         {
-            (int code, string stdout, string stderr) = Run("info", Path.Combine(TestPaths.MapEdits, "scm05ea.ini"), "--game", TestPaths.GameDir);
+            (int code, string stdout, string stderr) = Run("info", Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini"), "--game", TestPaths.GameDir);
             Assert.True(code == 0, stderr);
             Assert.Contains("game: RedAlert", stdout);
             Assert.Contains("theater: Temperate", stdout);
@@ -31,7 +31,7 @@ namespace MobiusCli.Tests
         [Fact]
         public void ListsUnknownEntries()
         {
-            string[] lines = File.ReadAllLines(Path.Combine(TestPaths.MapEdits, "scm111ea.ini"));
+            string[] lines = File.ReadAllLines(Path.Combine(TestPaths.OfficialMapsDir, "scm111ea.ini"));
             string path = TestPaths.Output("cli-unknown.ini");
             File.WriteAllLines(path, System.Linq.Enumerable.Concat(lines, new[] { "", "[STRUCTURES]", "0=Spain,ZZUNKNOWN,256,4500,0,None,1,1" }));
             (int code, string stdout, string stderr) = Run("info", path, "--game", TestPaths.GameDir);
@@ -56,7 +56,7 @@ namespace MobiusCli.Tests
         public void ReportsWhichModsAMapNeeds()
         {
             string tfMap = System.Linq.Enumerable.First(System.Linq.Enumerable.OrderBy(
-                Directory.EnumerateFiles(Path.Combine(TestPaths.ModDir, "CustomMaps"), "*.MPR"), f => f));
+                Directory.EnumerateFiles(TestPaths.TfMaps, "*.MPR"), f => f));
             (int code, string stdout, string stderr) = Run("info", tfMap, "--game", TestPaths.GameDir, "--mod", TestPaths.ModDir);
             Assert.True(code == 0, stderr);
             Assert.Contains("requires mods: ", stdout);
@@ -67,7 +67,7 @@ namespace MobiusCli.Tests
         public void ReportsAnAllVanillaMapAsVanillaSafe()
         {
             // The mod is active, but the map places none of its types.
-            (int code, string stdout, string stderr) = Run("info", Path.Combine(TestPaths.MapEdits, "scm05ea.ini"), "--game", TestPaths.GameDir, "--mod", TestPaths.ModDir);
+            (int code, string stdout, string stderr) = Run("info", Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini"), "--game", TestPaths.GameDir, "--mod", TestPaths.ModDir);
             Assert.True(code == 0, stderr);
             Assert.Contains("requires mods: none (vanilla-safe)", stdout);
         }

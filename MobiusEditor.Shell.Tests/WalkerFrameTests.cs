@@ -32,7 +32,7 @@ namespace MobiusEditor.Shell.Tests
         {
             using (MapDocument doc = new MapDocument(EditorHost.Shared))
             {
-                doc.Open(Path.Combine(TestPaths.MapEdits, "scm05ea.ini"));
+                doc.Open(Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini"));
                 // East is CCW facing index 6 of 8 (Titan: 8 facings x 12 walk frames),
                 // and CCW index 24 of 32 (Mammoth Mk. II: 32 facings x 8 walk frames).
                 Assert.Equal(6 * 12, RenderedFrame(doc, "tstitn"));

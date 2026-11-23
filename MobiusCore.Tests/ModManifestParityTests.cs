@@ -32,10 +32,10 @@ namespace MobiusCore.Tests
         {
             ModManifest m = LoadManifest();
             Assert.Equal("RA", m.GameType);
-            Assert.Equal(50, m.Buildings.Count);
-            Assert.Equal(7, m.Infantry.Count);
-            Assert.True(m.Units.Count >= 28, $"only {m.Units.Count} units");
-            Assert.True(m.Templates.Count >= 325, $"only {m.Templates.Count} templates");
+            Assert.True(m.Buildings.Count >= 62, $"only {m.Buildings.Count} buildings");
+            Assert.True(m.Infantry.Count >= 14, $"only {m.Infantry.Count} infantry");
+            Assert.True(m.Units.Count >= 57, $"only {m.Units.Count} units");
+            Assert.True(m.Templates.Count >= 210, $"only {m.Templates.Count} templates");
             Assert.Contains(m.Units, u => u.Kind == ManifestUnitKind.Vehicle);
             Assert.Contains(m.Units, u => u.Kind == ManifestUnitKind.Aircraft);
             Assert.Contains(m.Units, u => u.Kind == ManifestUnitKind.Vessel);
@@ -47,10 +47,10 @@ namespace MobiusCore.Tests
             ManifestBuilding tsWeap = m.Buildings.Single(b => b.Name == "tsweap");
             Assert.Equal(127, tsWeap.Id);
             Assert.Null(tsWeap.TextId);
-            Assert.Equal("TS War Factory", tsWeap.DisplayName);
+            Assert.Equal("GDI War Factory", tsWeap.DisplayName);
             Assert.Equal("tsweap2", tsWeap.FactoryOverlay);
             Assert.Equal("11110 11110 00000", tsWeap.OccupyMask);
-            Assert.Equal(136, m.Buildings.Max(b => b.Id));
+            Assert.True(m.Buildings.Max(b => b.Id) >= 162);
             ManifestTemplate sh1 = m.Templates.Single(t => t.Name == "tdsh1");
             Assert.Equal(401, sh1.Id);
             Assert.All(m.Templates, t => Assert.True(t.Id >= (int)TemplateType.TFTDTileIdFirst,

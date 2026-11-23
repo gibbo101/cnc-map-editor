@@ -26,7 +26,7 @@ namespace MobiusCore.Tests
         {
             if (plugin == null)
             {
-                plugin = EditorHost.Shared.Load(Path.Combine(TestPaths.MapEdits, "scm05ea.ini"), out _);
+                plugin = EditorHost.Shared.Load(Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini"), out _);
             }
             return plugin.Map;
         }
@@ -40,16 +40,16 @@ namespace MobiusCore.Tests
         public void StampWritesRowMajorPositionalIcons()
         {
             Map map = LoadMap();
-            TemplateType sh1 = Type(map, "tdsh1");
+            TemplateType sh09 = Type(map, "sh09");
             (Dictionary<int, Template> undo, Dictionary<int, Template> redo) = Dicts();
-            TemplateEdit.Place(map.TemplateTypes, map.Templates, sh1, new Point(10, 10), null, new DeterministicRandom(1), undo, redo);
+            TemplateEdit.Place(map.TemplateTypes, map.Templates, sh09, new Point(10, 10), null, new DeterministicRandom(1), undo, redo);
             for (int y = 0; y < 3; y++)
             {
                 for (int x = 0; x < 3; x++)
                 {
                     Template t = map.Templates[10 + y, 10 + x];
                     Assert.NotNull(t);
-                    Assert.Same(sh1, t.Type);
+                    Assert.Same(sh09, t.Type);
                     Assert.Equal(y * 3 + x, t.Icon);
                 }
             }
@@ -61,16 +61,16 @@ namespace MobiusCore.Tests
         public void MaskedIconsLeaveTheirCellsUntouchedButStillAdvanceTheIconNumber()
         {
             Map map = LoadMap();
-            // tdsh15: 3x3, mask "011 111 111" - icon 0 is filler.
-            TemplateType sh15 = Type(map, "tdsh15");
-            TemplateType sh1 = Type(map, "tdsh1");
+            // sh37: 3x3, mask "011 111 111" - icon 0 is filler.
+            TemplateType sh37 = Type(map, "sh37");
+            TemplateType sh09 = Type(map, "sh09");
             (Dictionary<int, Template> undo, Dictionary<int, Template> redo) = Dicts();
-            TemplateEdit.Place(map.TemplateTypes, map.Templates, sh1, new Point(20, 20), null, new DeterministicRandom(1), undo, redo);
+            TemplateEdit.Place(map.TemplateTypes, map.Templates, sh09, new Point(20, 20), null, new DeterministicRandom(1), undo, redo);
             (undo, redo) = Dicts();
-            TemplateEdit.Place(map.TemplateTypes, map.Templates, sh15, new Point(20, 20), null, new DeterministicRandom(1), undo, redo);
-            // Masked corner keeps the sh1 tile placed before; its neighbour got sh15's icon 1.
-            Assert.Same(sh1, map.Templates[20, 20].Type);
-            Assert.Same(sh15, map.Templates[20, 21].Type);
+            TemplateEdit.Place(map.TemplateTypes, map.Templates, sh37, new Point(20, 20), null, new DeterministicRandom(1), undo, redo);
+            // Masked corner keeps the sh09 tile placed before; its neighbour got sh37's icon 1.
+            Assert.Same(sh09, map.Templates[20, 20].Type);
+            Assert.Same(sh37, map.Templates[20, 21].Type);
             Assert.Equal(1, map.Templates[20, 21].Icon);
             Assert.Equal(8, redo.Count);
             Assert.False(undo.ContainsKey(20 * map.Metrics.Width + 20));
@@ -80,10 +80,10 @@ namespace MobiusCore.Tests
         public void PlacementClipsAtTheGridEdge()
         {
             Map map = LoadMap();
-            TemplateType sh1 = Type(map, "tdsh1");
+            TemplateType sh09 = Type(map, "sh09");
             (Dictionary<int, Template> undo, Dictionary<int, Template> redo) = Dicts();
             int w = map.Metrics.Width, h = map.Metrics.Height;
-            TemplateEdit.Place(map.TemplateTypes, map.Templates, sh1, new Point(w - 2, h - 2), null, new DeterministicRandom(1), undo, redo);
+            TemplateEdit.Place(map.TemplateTypes, map.Templates, sh09, new Point(w - 2, h - 2), null, new DeterministicRandom(1), undo, redo);
             Assert.Equal(4, redo.Count);
             Assert.Equal(0, map.Templates[h - 2, w - 2].Icon);
             Assert.Equal(4, map.Templates[h - 1, w - 1].Icon);
@@ -93,12 +93,12 @@ namespace MobiusCore.Tests
         public void SingleIconPickPlacesOneCellUsingTheThumbnailGrid()
         {
             Map map = LoadMap();
-            TemplateType sh1 = Type(map, "tdsh1");
+            TemplateType sh09 = Type(map, "sh09");
             (Dictionary<int, Template> undo, Dictionary<int, Template> redo) = Dicts();
-            TemplateEdit.Place(map.TemplateTypes, map.Templates, sh1, new Point(30, 30), new Point(1, 2), new DeterministicRandom(1), undo, redo);
+            TemplateEdit.Place(map.TemplateTypes, map.Templates, sh09, new Point(30, 30), new Point(1, 2), new DeterministicRandom(1), undo, redo);
             Template placed = Assert.Single(redo).Value;
-            Assert.Same(sh1, placed.Type);
-            Assert.Equal(2 * sh1.ThumbnailIconWidth + 1, placed.Icon);
+            Assert.Same(sh09, placed.Type);
+            Assert.Equal(2 * sh09.ThumbnailIconWidth + 1, placed.Icon);
             Assert.Same(placed, map.Templates[30, 30]);
         }
 
@@ -137,7 +137,7 @@ namespace MobiusCore.Tests
             // family has no art in the map's theater ends up all-false and placement no-ops,
             // matching the engine (and the fork, whose picker never offers such templates).
             Map map = LoadMap();
-            TemplateType sh1 = Type(map, "tdsh1");
+            TemplateType sh09 = Type(map, "sh09");
             TemplateType unavailable = new TemplateType(998, "fakeunavail", 2, 1, "CC") { IconMask = new bool[1, 2] };
             (Dictionary<int, Template> undo, Dictionary<int, Template> redo) = Dicts();
             TemplateEdit.Place(map.TemplateTypes, map.Templates, unavailable, new Point(90, 90), null, new DeterministicRandom(1), undo, redo);
@@ -149,20 +149,20 @@ namespace MobiusCore.Tests
         public void EraseClearsTheFootprintToNullAndSingleCellEraseClearsOneCell()
         {
             Map map = LoadMap();
-            TemplateType sh1 = Type(map, "tdsh1");
+            TemplateType sh09 = Type(map, "sh09");
             (Dictionary<int, Template> undo, Dictionary<int, Template> redo) = Dicts();
-            TemplateEdit.Place(map.TemplateTypes, map.Templates, sh1, new Point(60, 60), null, new DeterministicRandom(1), undo, redo);
+            TemplateEdit.Place(map.TemplateTypes, map.Templates, sh09, new Point(60, 60), null, new DeterministicRandom(1), undo, redo);
             (undo, redo) = Dicts();
-            TemplateEdit.Erase(map.Templates, sh1, null, new Point(60, 60), undo, redo);
+            TemplateEdit.Erase(map.Templates, sh09, null, new Point(60, 60), undo, redo);
             for (int y = 0; y < 3; y++)
                 for (int x = 0; x < 3; x++)
                     Assert.Null(map.Templates[60 + y, 60 + x]);
             Assert.Equal(9, redo.Count);
             Assert.All(redo.Values, v => Assert.Null(v));
 
-            TemplateEdit.Place(map.TemplateTypes, map.Templates, sh1, new Point(60, 60), null, new DeterministicRandom(1), undo, redo);
+            TemplateEdit.Place(map.TemplateTypes, map.Templates, sh09, new Point(60, 60), null, new DeterministicRandom(1), undo, redo);
             (undo, redo) = Dicts();
-            TemplateEdit.Erase(map.Templates, sh1, new Point(0, 0), new Point(61, 61), undo, redo);
+            TemplateEdit.Erase(map.Templates, sh09, new Point(0, 0), new Point(61, 61), undo, redo);
             Assert.Null(map.Templates[61, 61]);
             Assert.NotNull(map.Templates[60, 60]);
             Assert.Single(redo);
@@ -172,12 +172,12 @@ namespace MobiusCore.Tests
         public void UndoDictionariesCaptureBeforeValuesOnceAcrossAStroke()
         {
             Map map = LoadMap();
-            TemplateType sh1 = Type(map, "tdsh1");
+            TemplateType sh09 = Type(map, "sh09");
             Template original = map.Templates[70, 70];
             (Dictionary<int, Template> undo, Dictionary<int, Template> redo) = Dicts();
-            TemplateEdit.Place(map.TemplateTypes, map.Templates, sh1, new Point(70, 70), null, new DeterministicRandom(1), undo, redo);
+            TemplateEdit.Place(map.TemplateTypes, map.Templates, sh09, new Point(70, 70), null, new DeterministicRandom(1), undo, redo);
             // Same stroke stamps again over the same origin: the first snapshot survives.
-            TemplateEdit.Place(map.TemplateTypes, map.Templates, sh1, new Point(70, 70), null, new DeterministicRandom(1), undo, redo);
+            TemplateEdit.Place(map.TemplateTypes, map.Templates, sh09, new Point(70, 70), null, new DeterministicRandom(1), undo, redo);
             int cell = 70 * map.Metrics.Width + 70;
             Assert.Same(original, undo[cell]);
             // Replaying undo restores the pre-stroke state.

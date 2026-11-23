@@ -15,7 +15,7 @@ namespace MobiusEditor.Shell.Tests
         {
             using (MapDocument doc = new MapDocument(EditorHost.Shared))
             {
-                doc.Open(Path.Combine(TestPaths.MapEdits, "scm05ea.ini"));
+                doc.Open(Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini"));
                 doc.PlacementHouse = doc.Map.HouseTypes.First(h => h.Name == "USSR");
                 BuildingType buildingType = doc.AvailableBuildings().First(b => b.HasBib);
                 UnitType unitType = doc.AvailableUnits().First(t => t.IsGroundUnit);

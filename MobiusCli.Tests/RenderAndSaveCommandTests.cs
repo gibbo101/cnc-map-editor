@@ -19,7 +19,7 @@ namespace MobiusCli.Tests
         [Fact]
         public void RenderWritesAPngOfTheMapBounds()
         {
-            string map = Path.Combine(TestPaths.MapEdits, "scm05ea.ini");
+            string map = Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini");
             (int infoCode, string info, string infoErr) = Run("info", map, "--game", TestPaths.GameDir);
             Assert.True(infoCode == 0, infoErr);
             System.Text.RegularExpressions.Match bounds = System.Text.RegularExpressions.Regex.Match(info, @"bounds: \d+,\d+ (\d+)x(\d+)");
@@ -40,7 +40,7 @@ namespace MobiusCli.Tests
         {
             string name = "UGC_F1BE000000000006_0000000000000006_MAPDATA.MPR";
             string outPath = TestPaths.Output("cli-" + name);
-            (int code, string _, string stderr) = Run("save", Path.Combine(TestPaths.ModDir, "CustomMaps", name), outPath, "--game", TestPaths.GameDir, "--mod", TestPaths.ModDir);
+            (int code, string _, string stderr) = Run("save", Path.Combine(TestPaths.TfMaps, name), outPath, "--game", TestPaths.GameDir, "--mod", TestPaths.ModDir);
             Assert.True(code == 0, stderr);
             Assert.True(File.ReadAllBytes(outPath).SequenceEqual(File.ReadAllBytes(TestPaths.Oracle(Path.Combine("saves", name)))));
         }
@@ -48,7 +48,7 @@ namespace MobiusCli.Tests
         [Fact]
         public void SaveRefusesToOverwriteTheInput()
         {
-            string map = Path.Combine(TestPaths.ModDir, "CustomMaps", "UGC_F1BE000000000006_0000000000000006_MAPDATA.MPR");
+            string map = Path.Combine(TestPaths.TfMaps, "UGC_F1BE000000000006_0000000000000006_MAPDATA.MPR");
             (int code, string _, string stderr) = Run("save", map, map, "--game", TestPaths.GameDir, "--mod", TestPaths.ModDir);
             Assert.NotEqual(0, code);
             Assert.Contains("refusing", stderr);

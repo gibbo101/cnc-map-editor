@@ -22,7 +22,7 @@ namespace MobiusEditor.App.Tests
     {
         private static MainWindow OpenTemperate()
         {
-            string map = Path.Combine(TestPaths.MapEdits, "scm05ea.ini");
+            string map = Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini");
             MainWindow window = new MainWindow(new[] { map, "--game", TestPaths.GameDir, "--mod", TestPaths.ModDir });
             window.Show();
             Pump.UntilMapReady(window);
@@ -42,7 +42,7 @@ namespace MobiusEditor.App.Tests
         {
             MainWindow window = OpenTemperate();
             ListBox palette = window.FindControl<ListBox>("TemplatePalette");
-            PaletteEntry sh1Entry = palette.Items.OfType<PaletteEntry>().Single(p => (p.Type as TemplateType)?.Name == "tdsh1");
+            PaletteEntry sh1Entry = palette.Items.OfType<PaletteEntry>().Single(p => (p.Type as TemplateType)?.Name == "sh09");
             TemplateType sh1 = (TemplateType)sh1Entry.Type;
             palette.SelectedItem = sh1Entry;
             Template before = window.Document.Map.Templates[10, 10];
@@ -63,7 +63,7 @@ namespace MobiusEditor.App.Tests
         {
             MainWindow window = OpenTemperate();
             ListBox palette = window.FindControl<ListBox>("TemplatePalette");
-            palette.SelectedItem = palette.Items.OfType<PaletteEntry>().Single(p => (p.Type as TemplateType)?.Name == "tdsh1");
+            palette.SelectedItem = palette.Items.OfType<PaletteEntry>().Single(p => (p.Type as TemplateType)?.Name == "sh09");
             Point click = CellCenter(window, 20, 20);
             window.MouseDown(click, MouseButton.Left);
             window.MouseUp(click, MouseButton.Left);
@@ -80,7 +80,7 @@ namespace MobiusEditor.App.Tests
             MainWindow window = OpenTemperate();
             ListBox templates = window.FindControl<ListBox>("TemplatePalette");
             ListBox overlays = window.FindControl<ListBox>("OverlayPalette");
-            templates.SelectedItem = templates.Items.OfType<PaletteEntry>().Single(p => (p.Type as TemplateType)?.Name == "tdsh1");
+            templates.SelectedItem = templates.Items.OfType<PaletteEntry>().Single(p => (p.Type as TemplateType)?.Name == "sh09");
             overlays.SelectedItem = overlays.Items.OfType<PaletteEntry>().Single(p => (p.Type as OverlayType)?.Name == "brik");
             Assert.Null(templates.SelectedItem);
 
@@ -102,9 +102,9 @@ namespace MobiusEditor.App.Tests
             MainWindow window = OpenTemperate();
             ListBox palette = window.FindControl<ListBox>("TemplatePalette");
             var names = palette.Items.OfType<PaletteEntry>().Select(p => ((TemplateType)p.Type).Name).ToList();
-            Assert.Contains("tdsh1", names);
-            // Desert-only tiles live in the Interior slot; a Temperate map must not offer them.
-            Assert.DoesNotContain("tdsh51", names);
+            Assert.Contains("sh09", names);
+            // The mod's TD templates draw only in its TD theatres; a Temperate map must not offer them.
+            Assert.DoesNotContain("tdsh1", names);
         }
     }
 }

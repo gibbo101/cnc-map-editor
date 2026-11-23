@@ -25,7 +25,7 @@ namespace MobiusEditor.App.Tests
         [AvaloniaFact]
         public void OpensAMapFromArgumentsAndRendersIt()
         {
-            string map = Path.Combine(TestPaths.MapEdits, "scm111ea.ini");
+            string map = Path.Combine(TestPaths.OfficialMapsDir, "scm111ea.ini");
             MainWindow window = new MainWindow(new[] { map, "--game", TestPaths.GameDir });
             window.Show();
             Pump.UntilMapReady(window);

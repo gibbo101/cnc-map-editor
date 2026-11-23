@@ -19,7 +19,7 @@ namespace MobiusCore.Tests
     public class SmudgeEditTests
     {
         private static IGamePlugin Load() =>
-            EditorHost.Shared.Load(Path.Combine(TestPaths.MapEdits, "scm05ea.ini"), out _);
+            EditorHost.Shared.Load(Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini"), out _);
 
         private static (Dictionary<Point, Smudge> undo, Dictionary<Point, Smudge> redo) Journals() =>
             (new Dictionary<Point, Smudge>(), new Dictionary<Point, Smudge>());

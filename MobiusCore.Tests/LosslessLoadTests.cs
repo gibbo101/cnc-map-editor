@@ -16,7 +16,7 @@ namespace MobiusCore.Tests
     {
         private static string FixtureWithUnknownStructure()
         {
-            string[] lines = File.ReadAllLines(Path.Combine(TestPaths.MapEdits, "scm111ea.ini"));
+            string[] lines = File.ReadAllLines(Path.Combine(TestPaths.OfficialMapsDir, "scm111ea.ini"));
             string path = TestPaths.Output("unknown-structure.ini");
             File.WriteAllLines(path, lines.Append("").Append("[STRUCTURES]").Append("0=Spain,ZZUNKNOWN,256,4500,0,None,1,1"));
             return path;
@@ -25,7 +25,7 @@ namespace MobiusCore.Tests
         private static string FixtureWithUnknownObjects()
         {
             // The fixture map already has a [TERRAIN] section (a duplicate would be discarded), so inject into it.
-            System.Collections.Generic.List<string> lines = File.ReadAllLines(Path.Combine(TestPaths.MapEdits, "scm111ea.ini")).ToList();
+            System.Collections.Generic.List<string> lines = File.ReadAllLines(Path.Combine(TestPaths.OfficialMapsDir, "scm111ea.ini")).ToList();
             int terrain = lines.IndexOf("[TERRAIN]");
             Assert.True(terrain >= 0, "fixture has no [TERRAIN] section");
             lines.Insert(terrain + 1, "4503=ZZTREE");

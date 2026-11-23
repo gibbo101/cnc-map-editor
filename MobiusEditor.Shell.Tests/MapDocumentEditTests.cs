@@ -22,7 +22,7 @@ namespace MobiusEditor.Shell.Tests
             // Temperate: the TF TD-temperate tile family has art here. On other theaters a
             // template's Init leaves an all-false icon mask and placement correctly no-ops
             // (no art, no placement) — pinned in TemplateEditTests.
-            doc.Open(Path.Combine(TestPaths.MapEdits, "scm05ea.ini"));
+            doc.Open(Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini"));
             return doc;
         }
 
@@ -34,7 +34,7 @@ namespace MobiusEditor.Shell.Tests
         {
             using (MapDocument doc = Open())
             {
-                TemplateType sh1 = Template(doc, "tdsh1");
+                TemplateType sh1 = Template(doc, "sh09");
                 Template before = doc.Map.Templates[10, 10];
                 int changes = 0;
                 doc.Changed += (s, e) => changes++;
@@ -58,7 +58,7 @@ namespace MobiusEditor.Shell.Tests
         {
             using (MapDocument doc = Open())
             {
-                TemplateType sh1 = Template(doc, "tdsh1");
+                TemplateType sh1 = Template(doc, "sh09");
                 Template before20 = doc.Map.Templates[20, 20];
                 Template before30 = doc.Map.Templates[30, 30];
                 doc.BeginStroke();
@@ -79,7 +79,7 @@ namespace MobiusEditor.Shell.Tests
         {
             using (MapDocument doc = Open())
             {
-                TemplateType sh1 = Template(doc, "tdsh1");
+                TemplateType sh1 = Template(doc, "sh09");
                 doc.PlaceTemplate(new Point(40, 40), sh1);
                 doc.PlaceTemplate(new Point(50, 50), sh1);
                 doc.Undo();
@@ -95,7 +95,7 @@ namespace MobiusEditor.Shell.Tests
         {
             using (MapDocument doc = Open())
             {
-                TemplateType sh1 = Template(doc, "tdsh1");
+                TemplateType sh1 = Template(doc, "sh09");
                 TemplateType clear = doc.Map.TemplateTypes.First(t => t.Flags.HasFlag(TemplateTypeFlag.Clear));
                 doc.PlaceTemplate(new Point(60, 60), sh1);
                 doc.PlaceTemplate(new Point(60, 60), clear);
@@ -126,7 +126,7 @@ namespace MobiusEditor.Shell.Tests
                 string edited = TestPaths.Output("edit-undone.ini");
                 doc.Save(baseline);
                 doc.BeginStroke();
-                doc.PlaceTemplate(new Point(90, 90), Template(doc, "tdsh1"));
+                doc.PlaceTemplate(new Point(90, 90), Template(doc, "sh09"));
                 doc.PlaceOverlay(new Point(95, 95), OverlayOf(doc, "brik"));
                 doc.PlaceOverlay(new Point(97, 97), OverlayOf(doc, "gold01"));
                 doc.EndStroke();
@@ -158,7 +158,7 @@ namespace MobiusEditor.Shell.Tests
             using (MapDocument doc = Open())
             {
                 doc.Plugin.Dirty = false;
-                doc.PlaceTemplate(new Point(80, 80), Template(doc, "tdsh1"));
+                doc.PlaceTemplate(new Point(80, 80), Template(doc, "sh09"));
                 Assert.True(doc.Plugin.Dirty);
             }
         }

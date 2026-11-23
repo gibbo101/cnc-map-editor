@@ -25,7 +25,7 @@ namespace MobiusEditor.App.Tests
         [AvaloniaFact]
         public void HighZoomStaysSmallAndClicksLandOnTheRightCell()
         {
-            string map = Path.Combine(TestPaths.MapEdits, "scm05ea.ini");
+            string map = Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini");
             MainWindow window = new MainWindow(new[] { map, "--game", TestPaths.GameDir, "--mod", TestPaths.ModDir });
             window.Show();
             Pump.UntilMapReady(window);
@@ -50,14 +50,14 @@ namespace MobiusEditor.App.Tests
             scroller.Offset = new Vector(60 * 128, 60 * 128);
             Dispatcher.UIThread.RunJobs();
             ListBox palette = window.FindControl<ListBox>("TemplatePalette");
-            palette.SelectedItem = palette.Items.OfType<PaletteEntry>().Single(p => (p.Type as TemplateType)?.Name == "tdsh1");
+            palette.SelectedItem = palette.Items.OfType<PaletteEntry>().Single(p => (p.Type as TemplateType)?.Name == "sh09");
             Dispatcher.UIThread.RunJobs();
             Point panelOrigin = panel.TranslatePoint(new Point(0, 0), window).Value;
             Point click = new Point(panelOrigin.X + 61 * 128 + 64, panelOrigin.Y + 61 * 128 + 64);
             window.MouseDown(click, MouseButton.Left);
             window.MouseUp(click, MouseButton.Left);
             Dispatcher.UIThread.RunJobs();
-            Assert.Equal("tdsh1", window.Document.Map.Templates[new System.Drawing.Point(61, 61)]?.Type.Name);
+            Assert.Equal("sh09", window.Document.Map.Templates[new System.Drawing.Point(61, 61)]?.Type.Name);
         }
     }
 }

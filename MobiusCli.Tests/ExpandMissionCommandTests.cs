@@ -22,7 +22,7 @@ namespace MobiusCli.Tests
             return (code, o.ToString(), e.ToString());
         }
 
-        private static readonly string Source = Path.Combine(TestPaths.MapEdits, "scm05ea.ini");
+        private static readonly string Source = Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini");
 
         private static string WriteSpec(string name, string json)
         {

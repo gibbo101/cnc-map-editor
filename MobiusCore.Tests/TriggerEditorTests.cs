@@ -19,7 +19,7 @@ namespace MobiusCore.Tests
     public class TriggerEditorTests
     {
         private static IGamePlugin Load() =>
-            EditorHost.Shared.Load(Path.Combine(TestPaths.MapEdits, "scm05ea.ini"), out _);
+            EditorHost.Shared.Load(Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini"), out _);
 
         [Fact]
         public void AddAssignsAUniqueShortNameAndTheFirstHouse()
@@ -142,7 +142,7 @@ namespace MobiusCore.Tests
     public class TeamTypeEditorTests
     {
         private static IGamePlugin Load() =>
-            EditorHost.Shared.Load(Path.Combine(TestPaths.MapEdits, "scm05ea.ini"), out _);
+            EditorHost.Shared.Load(Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini"), out _);
 
         [Fact]
         public void AddRenameLadderUsesTheLongerTeamNameCap()

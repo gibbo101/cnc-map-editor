@@ -17,7 +17,7 @@ namespace MobiusCli.Tests
         [Fact]
         public void CleanOfficialMapValidates()
         {
-            (int code, string stdout, string stderr) = Run("validate", Path.Combine(TestPaths.MapEdits, "scm111ea.ini"), "--game", TestPaths.GameDir);
+            (int code, string stdout, string stderr) = Run("validate", Path.Combine(TestPaths.OfficialMapsDir, "scm111ea.ini"), "--game", TestPaths.GameDir);
             Assert.True(code == 0, stderr + stdout);
             Assert.Contains("ok", stdout);
         }
@@ -25,8 +25,7 @@ namespace MobiusCli.Tests
         [Fact]
         public void LegacyConversionsAreNotesNotProblems()
         {
-            string official = TestPaths.Output("official");
-            if (!File.Exists(Path.Combine(official, "scm01ea.ini"))) MobiusEditor.Headless.OfficialMaps.Extract(TestPaths.GameDir, official);
+            string official = TestPaths.OfficialMapsDir;
             (int code, string stdout, string stderr) = Run("validate", Path.Combine(official, "scm01ea.ini"), "--game", TestPaths.GameDir);
             Assert.True(code == 0, stderr + stdout);
             Assert.Contains("note: ", stdout);
@@ -36,7 +35,7 @@ namespace MobiusCli.Tests
         [Fact]
         public void MapWithUnknownEntryFailsValidation()
         {
-            string[] lines = File.ReadAllLines(Path.Combine(TestPaths.MapEdits, "scm111ea.ini"));
+            string[] lines = File.ReadAllLines(Path.Combine(TestPaths.OfficialMapsDir, "scm111ea.ini"));
             string path = TestPaths.Output("cli-validate-unknown.ini");
             File.WriteAllLines(path, System.Linq.Enumerable.Concat(lines, new[] { "", "[STRUCTURES]", "0=Spain,ZZUNKNOWN,256,4500,0,None,1,1" }));
             (int code, string stdout, string _) = Run("validate", path, "--game", TestPaths.GameDir);

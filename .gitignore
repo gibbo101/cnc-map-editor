@@ -9,4 +9,5 @@ TestResults/
 oracle/*.png
 oracle/saves/
 oracle/saves-official/
+oracle/inputs/
 artifacts/

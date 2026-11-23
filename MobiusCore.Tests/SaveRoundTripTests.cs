@@ -23,7 +23,7 @@ namespace MobiusCore.Tests
 
         public static IEnumerable<object[]> CustomMaps()
         {
-            string dir = Path.Combine(TestPaths.ModDir, "CustomMaps");
+            string dir = TestPaths.TfMaps;
             if (!Directory.Exists(dir)) yield break;
             foreach (string f in Directory.GetFiles(dir, "*.MPR").OrderBy(f => f)) yield return new object[] { Path.GetFileName(f) };
         }
@@ -39,16 +39,14 @@ namespace MobiusCore.Tests
         [MemberData(nameof(OfficialMaps))]
         public void SavedOfficialMapIsByteIdenticalToTheMonoEditorsSave(string mapName)
         {
-            string extracted = TestPaths.Output("official");
-            if (!File.Exists(Path.Combine(extracted, mapName))) MobiusEditor.Headless.OfficialMaps.Extract(TestPaths.GameDir, extracted);
-            RoundTrip(Path.Combine(extracted, mapName), TestPaths.Oracle(Path.Combine("saves-official", mapName)), mapName);
+            RoundTrip(Path.Combine(TestPaths.OfficialMapsDir, mapName), TestPaths.Oracle(Path.Combine("saves-official", mapName)), mapName);
         }
 
         [Theory]
         [MemberData(nameof(CustomMaps))]
         public void SavedMapIsByteIdenticalToTheMonoEditorsSave(string mapName)
         {
-            RoundTrip(Path.Combine(TestPaths.ModDir, "CustomMaps", mapName), TestPaths.Oracle(Path.Combine("saves", mapName)), mapName);
+            RoundTrip(Path.Combine(TestPaths.TfMaps, mapName), TestPaths.Oracle(Path.Combine("saves", mapName)), mapName);
         }
 
         private void RoundTrip(string mapPath, string oraclePath, string mapName)

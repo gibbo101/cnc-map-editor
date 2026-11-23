@@ -13,7 +13,7 @@ namespace MobiusEditor.Shell.Tests
         private static MapDocument OpenKeepOffTheGrass()
         {
             MapDocument doc = new MapDocument(EditorHost.Shared);
-            doc.Open(Path.Combine(TestPaths.MapEdits, "scm111ea.ini"));
+            doc.Open(Path.Combine(TestPaths.OfficialMapsDir, "scm111ea.ini"));
             return doc;
         }
 
@@ -72,7 +72,7 @@ namespace MobiusEditor.Shell.Tests
             MapDocument doc = new MapDocument(EditorHost.Shared);
             int changes = 0;
             doc.Changed += (s, e) => changes++;
-            doc.Open(Path.Combine(TestPaths.MapEdits, "scm111ea.ini"));
+            doc.Open(Path.Combine(TestPaths.OfficialMapsDir, "scm111ea.ini"));
             Assert.Equal(1, changes);
             doc.Dispose();
         }

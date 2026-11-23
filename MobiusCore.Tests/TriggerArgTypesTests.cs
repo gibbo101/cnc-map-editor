@@ -21,7 +21,7 @@ namespace MobiusCore.Tests
     public class TriggerArgTypesTests
     {
         private static IGamePlugin LoadRA() =>
-            EditorHost.Shared.Load(Path.Combine(TestPaths.MapEdits, "scm05ea.ini"), out _);
+            EditorHost.Shared.Load(Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini"), out _);
 
         private static IGamePlugin LoadTD() =>
             EditorHost.SharedFor(GameType.TiberianDawn).Load(TiberianDawnSessionTests.CommunityMap, out _);

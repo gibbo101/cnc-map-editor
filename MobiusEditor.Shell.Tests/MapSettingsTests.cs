@@ -19,7 +19,7 @@ namespace MobiusEditor.Shell.Tests
         {
             using (MapDocument doc = new MapDocument(EditorHost.Shared))
             {
-                doc.Open(Path.Combine(TestPaths.MapEdits, "scm05ea.ini"));
+                doc.Open(Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini"));
                 string originalName = doc.Map.BasicSection.Name;
                 doc.EditMapSettings(() =>
                 {

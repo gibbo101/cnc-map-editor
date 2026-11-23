@@ -19,7 +19,7 @@ namespace MobiusEditor.App.Tests
         [AvaloniaFact]
         public void RandomFillGeneratesAPopulatedSkirmishMap()
         {
-            string map = Path.Combine(TestPaths.MapEdits, "scm05ea.ini");
+            string map = Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini");
             MainWindow window = new MainWindow(new[] { map, "--game", TestPaths.GameDir, "--mod", TestPaths.ModDir });
             window.Show();
             Pump.UntilMapReady(window);

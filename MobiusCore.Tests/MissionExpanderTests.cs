@@ -20,7 +20,7 @@ namespace MobiusCore.Tests
     public class MissionExpanderTests
     {
         private static IGamePlugin LoadRA() =>
-            EditorHost.Shared.Load(Path.Combine(TestPaths.MapEdits, "scm05ea.ini"), out _);
+            EditorHost.Shared.Load(Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini"), out _);
 
         private static MissionSpec Parse(string json)
         {

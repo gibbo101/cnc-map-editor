@@ -25,7 +25,7 @@ namespace MobiusCore.Tests
         {
             if (plugin == null)
             {
-                plugin = EditorHost.Shared.Load(Path.Combine(TestPaths.MapEdits, "scm05ea.ini"), out _);
+                plugin = EditorHost.Shared.Load(Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini"), out _);
             }
             return plugin.Map;
         }

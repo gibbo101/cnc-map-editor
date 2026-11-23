@@ -44,7 +44,9 @@ dotnet run --project MobiusCli -- info <map> [--mod <dir>]              # the CL
 
 Tests read the game from the Steam library that holds it (`SteamAssist`) and the mod build from
 `../cnc-ra-tiberian-factions/build/remaster/Vanilla_RA` (override with `CNC_GAME_DIR` /
-`CNC_TF_MOD_DIR`, see `TestPaths.cs`). Always run with `DISPLAY` unset: nothing here needs a
+`CNC_TF_MOD_DIR`, see `TestPaths.cs`). Official maps are extracted from the game on first use;
+the 31-map TF pack the oracles were made from lives in `oracle/inputs/tf-maps/` (gitignored,
+copied in by hand; `CNC_TF_MAPS_DIR` overrides it). Always run with `DISPLAY` unset: nothing here needs a
 display and anything that tries to open one is a bug.
 
 - **Background `dotnet test` runs get killed on this machine** (observed 3/3 on 2026-09-02;

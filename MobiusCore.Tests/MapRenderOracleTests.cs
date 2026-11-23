@@ -35,7 +35,7 @@ namespace MobiusCore.Tests
         [InlineData("UGC_F1BE000000000006_0000000000000006_MAPDATA.MPR", "tf-map06-maplayers-1.0.png", true)]
         public void MapLayersMatchOraclePixelForPixel(string map, string oracleName, bool tfMap)
         {
-            string mapPath = tfMap ? Path.Combine(TestPaths.ModDir, "CustomMaps", map) : Path.Combine(TestPaths.MapEdits, map);
+            string mapPath = tfMap ? Path.Combine(TestPaths.TfMaps, map) : Path.Combine(TestPaths.OfficialMapsDir, map);
             string oraclePath = TestPaths.Oracle(oracleName);
             Assert.True(File.Exists(oraclePath), "Oracle missing; run oracle/regen.sh: " + oraclePath);
             EditorSession host = EditorHost.Shared;
