@@ -759,7 +759,7 @@ namespace MobiusEditor.Render
                 using (ImageAttributes imageAttributes = new ImageAttributes())
                 {
                     imageAttributes.SetColorMatrix(GetColorMatrix(Color.White, 1.0f, alphaFactor));
-                    if (factoryOverlayTile != null)
+                    if (factoryOverlayTile?.Image != null)
                     {
                         // Avoid factory overlay showing as semitransparent.
                         using (Bitmap factory = new Bitmap(maxSize.Width, maxSize.Height))
