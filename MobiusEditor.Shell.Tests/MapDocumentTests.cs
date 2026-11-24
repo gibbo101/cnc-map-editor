@@ -48,7 +48,7 @@ namespace MobiusEditor.Shell.Tests
             using (MapDocument doc = OpenKeepOffTheGrass())
             {
                 doc.Scale = 50; Assert.Equal(2.0, doc.Scale);
-                doc.Scale = 0; Assert.Equal(1.0 / 16, doc.Scale);
+                doc.Scale = 0; Assert.Equal(1.0 / 32, doc.Scale);
             }
         }
 
