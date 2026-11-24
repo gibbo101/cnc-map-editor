@@ -203,6 +203,7 @@ namespace MobiusCli
         /// <summary>Distinct mods that supplied the types the map actually places; empty = vanilla-safe.</summary>
         private static List<string> RequiredMods(Map map) =>
             map.Templates.Select(t => t.Value?.Type?.ModSource)
+                .Concat(map.Overlay.Select(o => o.Value?.Type?.ModSource))
                 .Concat(map.Buildings.Select(b => b.Occupier).OfType<Building>().Select(b => b.Type?.ModSource))
                 .Concat(map.Technos.Select(t => t.Occupier).OfType<Unit>().Select(u => u.Type?.ModSource))
                 .Concat(map.Technos.Select(t => t.Occupier).OfType<InfantryGroup>()

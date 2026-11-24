@@ -2,7 +2,7 @@
 
 A mod that adds entity types ships a `mapeditor.json` beside its `ccmod.json`. The editor
 reads it per active mod (`--mod <dir>`, or discovery via `cncmap mods`) and constructs the
-mod's building / unit / infantry / terrain-template types at runtime — nothing mod-specific
+mod's building / unit / infantry / terrain-template / overlay types at runtime — nothing mod-specific
 is compiled into the editor. Tiberian Factions generates its manifest with the mod repo's
 `scripts/editor_manifest.py`; that script's embedded tables and derivations are the source
 of truth for TF's data, this document is the source of truth for the format.
@@ -16,7 +16,7 @@ skip surfaces as a load warning (`cncmap validate`, `EditorSession.ManifestLoadW
 ```json
 { "format": 1, "game_type": "RA",
   "buildings": [ ... ], "units": [ ... ], "infantry": [ ... ], "templates": [ ... ],
-  "resources": [ ... ] }
+  "overlays": [ ... ], "resources": [ ... ] }
 ```
 
 - `format` — integer, must be `1`. Anything else skips the file (with a warning).
@@ -124,5 +124,24 @@ format 1): `remap_table`, `no_image_rule`.
 - `mask` — icon usage, `'0'` removes an icon, rows separated by spaces; `null` = all icons.
 - **No theatre data**: availability is resolved at runtime from the tileset XML
   (`TemplateType.Init`), so a template exists exactly where the mod ships art for it.
+
+## `overlays`
+
+```json
+{ "id": 28, "name": "tibts", "display_name": "TS Tiberium", "graphics_source": "tibts", "flags": ["Tiberium"] }
+```
+
+- `id` — the engine `OverlayType` id, the byte the map's `[OverlayPack]` stores; 0 to 127
+  (the pack's byte is signed, negative is empty). `name` — the INI name, lower case.
+- `text_id` or `display_name` — as for buildings. `graphics_source` — the art name when it
+  differs from `name`.
+- `flags` — `OverlayTypeFlag` names: `Wall` (wall connection icons), `Tiberium` (a resource
+  of its own: density icons, never folded into ore), `TiberiumOrGold` / `Gems` (ore-like or
+  gem-like: random variant and density within the mod's own types), `Solid`, `Pavement`,
+  `Concrete`, `WoodCrate`, `SteelCrate`, `Unplaceable`.
+- A save writes a mod overlay's own id. Stock ore and gems are folded into one id each for
+  compression, as Mobius does; a mod's never are.
+- An overlay id in a map that no loaded manifest declares is kept as an unknown entry and
+  written back on save (`validate` reports it as a problem).
 
 Reserved for a future format: unit `graphics_source`.

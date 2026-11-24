@@ -58,6 +58,17 @@ namespace MobiusEditor.Headless
         public UnitTypeFlag Flags { get; set; }
     }
 
+    public sealed class ManifestOverlay
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string TextId { get; set; }
+        /// <summary>Literal display name for types with no game-text entry; overrides TextId when set.</summary>
+        public string DisplayName { get; set; }
+        public string GraphicsSource { get; set; }
+        public OverlayTypeFlag Flags { get; set; }
+    }
+
     public sealed class ManifestInfantry
     {
         public int Id { get; set; }
@@ -103,6 +114,7 @@ namespace MobiusEditor.Headless
         public List<ManifestUnit> Units { get; } = new List<ManifestUnit>();
         public List<ManifestInfantry> Infantry { get; } = new List<ManifestInfantry>();
         public List<ManifestTemplate> Templates { get; } = new List<ManifestTemplate>();
+        public List<ManifestOverlay> Overlays { get; } = new List<ManifestOverlay>();
         public List<ManifestResource> Resources { get; } = new List<ManifestResource>();
 
         /// <summary>Reads a manifest file; null (with a warning) when it cannot be used at all.</summary>
@@ -135,6 +147,7 @@ namespace MobiusEditor.Headless
             ParseEntries(root["units"], "unit", modName, warnings, ParseUnit, manifest.Units);
             ParseEntries(root["infantry"], "infantry", modName, warnings, ParseInfantry, manifest.Infantry);
             ParseEntries(root["templates"], "template", modName, warnings, ParseTemplate, manifest.Templates);
+            ParseEntries(root["overlays"], "overlay", modName, warnings, ParseOverlay, manifest.Overlays);
             ParseEntries(root["resources"], "resource", modName, warnings, ParseResource, manifest.Resources);
             return manifest;
         }
@@ -216,6 +229,22 @@ namespace MobiusEditor.Headless
             Owner = Required<string>(o, "owner"),
             Flags = ParseFlags<UnitTypeFlag>(o["flags"]),
         };
+
+        // The overlay pack stores one signed byte per cell; negative means empty.
+        private static ManifestOverlay ParseOverlay(JObject o)
+        {
+            int id = Required<int>(o, "id");
+            if (id < 0 || id > 127) throw new FormatException($"overlay id {id} is outside 0 to 127");
+            return new ManifestOverlay
+            {
+                Id = id,
+                Name = Required<string>(o, "name"),
+                TextId = TextIdOrDisplayName(o),
+                DisplayName = (string)o["display_name"],
+                GraphicsSource = (string)o["graphics_source"],
+                Flags = ParseFlags<OverlayTypeFlag>(o["flags"]),
+            };
+        }
 
         private static ManifestTemplate ParseTemplate(JObject o) => new ManifestTemplate
         {

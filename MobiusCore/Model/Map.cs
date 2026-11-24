@@ -817,14 +817,13 @@ namespace MobiusEditor.Model
                         }
                     }
                 }
+                // The random pick stays within the overlay's own family: stock types, or its mod's.
                 OverlayType ovType = overlay.Type;
-                if (ovType.IsGem && gemTypes != null)
+                OverlayType[] family = ovType.IsGem ? gemTypes : ovType.IsTiberiumOrGold ? tiberiumOrGoldTypes : null;
+                family = family?.Where(t => t.ModSource == ovType.ModSource).ToArray();
+                if (family != null && family.Length > 0)
                 {
-                    overlay.Type = gemTypes[new DeterministicRandom(randomSeed ^ DeterministicRandom.CellSeed(location)).Next(gemTypes.Length)];
-                }
-                else if (ovType.IsTiberiumOrGold && tiberiumOrGoldTypes != null)
-                {
-                    overlay.Type = tiberiumOrGoldTypes[new DeterministicRandom(randomSeed ^ DeterministicRandom.CellSeed(location)).Next(tiberiumOrGoldTypes.Length)];
+                    overlay.Type = family[new DeterministicRandom(randomSeed ^ DeterministicRandom.CellSeed(location)).Next(family.Length)];
                 }
                 overlay.Icon = overlay.Type.IsGem ? GemStages[count] : TiberiumStages[count];
             }

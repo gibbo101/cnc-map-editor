@@ -40,7 +40,7 @@ namespace MobiusEditor.Headless
             ModDirs = (modDirs ?? Enumerable.Empty<string>()).ToList();
             List<ModManifest> manifests = new List<ModManifest>();
             List<string> manifestWarnings = new List<string>();
-            string manifestGame = gameType == GameType.TiberianDawn ? "TD" : gameType == GameType.RedAlert ? "RA" : gameType.ToString();
+            manifestGame = gameType == GameType.TiberianDawn ? "TD" : gameType == GameType.RedAlert ? "RA" : gameType.ToString();
             foreach (string dir in ModDirs)
             {
                 ModInfo mod = ModDiscovery.Read(dir);
@@ -103,9 +103,12 @@ namespace MobiusEditor.Headless
         /// owns the globals, which a session for the other game may have claimed since this
         /// session's ctor ran.
         /// </summary>
+        private readonly string manifestGame;
+
         private void PrepareTheater(TheaterType theater)
         {
             Globals.TheArchiveManager = Archives;
+            Globals.TheModManifests[manifestGame] = ModManifests;
             Globals.TheTeamColorManager = teamColors;
             Globals.TheGameTextManager = gameText;
             Archives.Reset(GameType, theater);

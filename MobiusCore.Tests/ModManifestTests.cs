@@ -40,6 +40,34 @@ namespace MobiusCore.Tests
             ] }";
 
         [Fact]
+        public void OverlaysParseWithTheirArtAndFlags()
+        {
+            List<string> warnings = new List<string>();
+            ModManifest m = ModManifest.Parse(@"{ ""format"": 1, ""game_type"": ""RA"", ""overlays"": [
+                { ""id"": 28, ""name"": ""tibts"", ""display_name"": ""TS Tiberium"", ""graphics_source"": ""tibts"", ""flags"": [""Tiberium""] },
+                { ""id"": 26, ""name"": ""tswall"", ""display_name"": ""TS Wall"", ""flags"": [""Wall""] } ] }", "TF", warnings);
+            Assert.Empty(warnings);
+            Assert.Equal(2, m.Overlays.Count);
+            ManifestOverlay tib = m.Overlays[0];
+            Assert.Equal(28, tib.Id);
+            Assert.Equal("tibts", tib.Name);
+            Assert.Equal("TS Tiberium", tib.DisplayName);
+            Assert.Equal("tibts", tib.GraphicsSource);
+            Assert.Equal(OverlayTypeFlag.Tiberium, tib.Flags);
+            Assert.Equal(OverlayTypeFlag.Wall, m.Overlays[1].Flags);
+        }
+
+        [Fact]
+        public void AnOverlayIdOutsideThePacksByteRangeIsSkippedWithAWarning()
+        {
+            List<string> warnings = new List<string>();
+            ModManifest m = ModManifest.Parse(@"{ ""format"": 1, ""game_type"": ""RA"", ""overlays"": [
+                { ""id"": 128, ""name"": ""xbig"", ""display_name"": ""Too Big"" } ] }", "TF", warnings);
+            Assert.Empty(m.Overlays);
+            Assert.Contains(warnings, w => w.Contains("xbig"));
+        }
+
+        [Fact]
         public void ParsesEveryCategory()
         {
             List<string> warnings = new List<string>();

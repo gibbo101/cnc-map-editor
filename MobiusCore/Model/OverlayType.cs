@@ -72,6 +72,8 @@ namespace MobiusEditor.Model
         public Bitmap Thumbnail { get; set; }
         public string GraphicsSource { get; private set; }
         public int ForceTileNr { get; private set; }
+        /// <summary>The mod whose manifest supplied this type; null for the game's own.</summary>
+        public string ModSource { get; set; }
         public bool[,] OccupyMask => new bool[1, 1] { { true } };
         public bool[,] BaseOccupyMask => new bool[1, 1] { { true } };
         public bool[,][] OverlapMask => new bool[1, 1][] { { new bool[] { false, false, false, false, false } } };

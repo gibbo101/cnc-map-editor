@@ -657,13 +657,14 @@ namespace MobiusEditor.RedAlert
             List<BuildingType> buildingTypes = ModTypeFactory.MergeBuildings(BuildingTypes.GetTypes(), manifests, Globals.AllowWallBuildings, modTypeWarnings);
             List<InfantryType> infantryTypes = ModTypeFactory.MergeInfantry(InfantryTypes.GetTypes(), manifests, modTypeWarnings);
             List<UnitType> unitTypes = ModTypeFactory.MergeUnits(UnitTypes.GetTypes(false), manifests, modTypeWarnings);
+            List<OverlayType> overlayTypes = ModTypeFactory.MergeOverlays(OverlayTypes.GetTypes(), manifests, modTypeWarnings);
             foreach (string warning in modTypeWarnings) CoreDiagnostics.Report("Mod manifest", warning);
             technoTypes = infantryTypes.Cast<ITechnoType>().Concat(unitTypes.Cast<ITechnoType>()).ToList();
             IEnumerable<UnitType> mapUnitTypes = Globals.DisableAirUnits ? unitTypes.Where(t => !t.IsAircraft) : unitTypes;
 
             Map = new Map(basicSection, null, gameTypeInfo.MapSize, typeof(House), houseTypes, null,
                 TheaterTypes.GetTypes(), templateTypes,
-                TerrainTypes.GetTypes(), OverlayTypes.GetTypes(), SmudgeTypes.GetTypes(Globals.ConvertCraters),
+                TerrainTypes.GetTypes(), overlayTypes, SmudgeTypes.GetTypes(Globals.ConvertCraters),
                 EventTypes.GetTypes(), cellEventTypes, unitEventTypes, structureEventTypes, terrainEventTypes,
                 ActionTypes.GetTypes(), cellActionTypes, unitActionTypes, structureActionTypes, terrainActionTypes,
                 MissionTypes.GetTypes(), MissionTypes.GetUnassignableTypes(), MissionTypes.MISSION_GUARD, MissionTypes.MISSION_STOP, MissionTypes.MISSION_HARVEST,
@@ -4424,8 +4425,8 @@ namespace MobiusEditor.RedAlert
 
         private void SaveOverlayPack(INI ini)
         {
-            byte? goldToUse = (byte?)Map.OverlayTypes.FirstOrDefault(ovl => ovl.IsTiberiumOrGold)?.ID;
-            byte? gemToUse = (byte?)Map.OverlayTypes.FirstOrDefault(ovl => ovl.IsGem)?.ID;
+            byte? goldToUse = (byte?)Map.OverlayTypes.FirstOrDefault(ovl => ovl.IsTiberiumOrGold && ovl.ModSource == null)?.ID;
+            byte? gemToUse = (byte?)Map.OverlayTypes.FirstOrDefault(ovl => ovl.IsGem && ovl.ModSource == null)?.ID;
             // Unknown ids go back where they were, unless a known overlay has since taken the cell.
             Dictionary<int, byte> unknownOverlay = Map.UnknownEntries.Where(u => u.Section == "OverlayPack")
                 .ToDictionary(u => int.Parse(u.Key), u => byte.Parse(u.Value));
@@ -4442,12 +4443,13 @@ namespace MobiusEditor.RedAlert
                             if (overlay != null)
                             {
                                 byte id = (byte)overlay.Type.ID;
-                                // reduce to single type for better compression
-                                if (overlay.Type.IsTiberiumOrGold && goldToUse.HasValue)
+                                // Stock ore and gems reduce to one type each for better compression; a mod's resource keeps its own id.
+                                bool stock = overlay.Type.ModSource == null;
+                                if (stock && overlay.Type.IsTiberiumOrGold && goldToUse.HasValue)
                                 {
                                     id = goldToUse.Value;
                                 }
-                                if (overlay.Type.IsGem && gemToUse.HasValue)
+                                if (stock && overlay.Type.IsGem && gemToUse.HasValue)
                                 {
                                     id = gemToUse.Value;
                                 }
