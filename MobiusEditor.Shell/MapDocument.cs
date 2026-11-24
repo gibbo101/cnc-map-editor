@@ -32,7 +32,7 @@ namespace MobiusEditor.Shell
 
         private double scale = 0.25;
         /// <summary>Render scale as a fraction of the original 128 px tile; clamped to what the renderer handles.</summary>
-        public double Scale { get => scale; set => scale = Math.Clamp(value, 1.0 / 16, 2.0); }
+        public double Scale { get => scale; set => scale = Math.Clamp(value, 1.0 / 32, 2.0); }
         public Size TileSize => new Size(Math.Max(1, (int)Math.Round(Globals.OriginalTileWidth * Scale)), Math.Max(1, (int)Math.Round(Globals.OriginalTileHeight * Scale)));
 
         public event EventHandler Changed;

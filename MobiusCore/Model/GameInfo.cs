@@ -195,6 +195,8 @@ namespace MobiusEditor.Model
         /// <param name="megaMap">True if this plugin will be handling a megamap.</param>
         /// <returns></returns>
         public abstract IGamePlugin CreatePlugin(bool mapImage, bool megaMap);
+        /// <summary>A plugin for a map file of the given NewINIFormat; games whose grid never varies ignore it.</summary>
+        public virtual IGamePlugin CreatePlugin(bool mapImage, bool megaMap, int iniFormat) => CreatePlugin(mapImage, megaMap);
         /// <summary>
         /// Initialises the classic files for this game. If <paramref name="forRemaster"/> is false, this should do more detailed checks on which assets are required.
         /// </summary>

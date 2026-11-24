@@ -593,6 +593,11 @@ namespace MobiusEditor.RedAlert
         }
 
         public GamePluginRA(bool mapImage)
+            : this(mapImage, Constants.MaxSize)
+        {
+        }
+
+        public GamePluginRA(bool mapImage, Size grid)
         {
             IEnumerable<Waypoint> playerWaypoints = Enumerable.Range(0, multiStartPoints).Select(i => new Waypoint(String.Format("P{0}", i), Waypoint.GetFlagForMpId(i)));
             IEnumerable<Waypoint> generalWaypoints = Enumerable.Range(multiStartPoints, totalNumberedPoints - multiStartPoints).Select(i => new Waypoint(i.ToString()));
@@ -662,7 +667,7 @@ namespace MobiusEditor.RedAlert
             technoTypes = infantryTypes.Cast<ITechnoType>().Concat(unitTypes.Cast<ITechnoType>()).ToList();
             IEnumerable<UnitType> mapUnitTypes = Globals.DisableAirUnits ? unitTypes.Where(t => !t.IsAircraft) : unitTypes;
 
-            Map = new Map(basicSection, null, gameTypeInfo.MapSize, typeof(House), houseTypes, null,
+            Map = new Map(basicSection, null, grid, typeof(House), houseTypes, null,
                 TheaterTypes.GetTypes(), templateTypes,
                 TerrainTypes.GetTypes(), overlayTypes, SmudgeTypes.GetTypes(Globals.ConvertCraters),
                 EventTypes.GetTypes(), cellEventTypes, unitEventTypes, structureEventTypes, terrainEventTypes,

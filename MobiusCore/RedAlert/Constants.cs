@@ -19,6 +19,9 @@ namespace MobiusEditor.RedAlert
     public static class Constants
     {
         public static readonly Size MaxSize = new Size(128, 128);
+        /// <summary>The grid of a NewINIFormat=4 map: cells are y*256+x, for mods whose DLL reads it.</summary>
+        public static readonly Size BigGridSize = new Size(256, 256);
+        public const int BigGridIniFormat = 4;
 
         public const int MaxBriefLengthClassic = 1022;
         public const int BriefLineCutoffClassic = 74;

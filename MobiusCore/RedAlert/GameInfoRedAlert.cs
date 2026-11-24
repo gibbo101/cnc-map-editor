@@ -117,6 +117,8 @@ namespace MobiusEditor.RedAlert
         }
 
         public override IGamePlugin CreatePlugin(bool mapImage, bool megaMap) => new GamePluginRA(mapImage);
+        public override IGamePlugin CreatePlugin(bool mapImage, bool megaMap, int iniFormat) =>
+            new GamePluginRA(mapImage, iniFormat >= Constants.BigGridIniFormat ? Constants.BigGridSize : Constants.MaxSize);
 
         public override void InitClassicFiles(MixfileManager mfm, List<string> loadErrors, List<string> fileLoadErrors, bool forRemaster)
         {

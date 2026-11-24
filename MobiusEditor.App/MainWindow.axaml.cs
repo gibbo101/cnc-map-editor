@@ -732,9 +732,8 @@ namespace MobiusEditor.App
         }
 
         /// <summary>
-        /// A freshly opened map starts fitted to the viewport — on a small screen that means a
-        /// far smaller render surface, which is most of the difference between smooth and
-        /// laggy. Returns false while the viewport is not laid out yet (a retry is queued),
+        /// A freshly opened map starts with its playable area fitted to the viewport and scrolled
+        /// into view. Returns false while the viewport is not laid out yet (a retry is queued),
         /// so the first expensive render never happens at the wrong scale.
         /// </summary>
         private bool FitToViewport()
@@ -747,11 +746,16 @@ namespace MobiusEditor.App
                 return false;
             }
             fittedForPlugin = document.Plugin;
-            double mapW = document.Map.Metrics.Width * 128.0, mapH = document.Map.Metrics.Height * 128.0;
-            double[] steps = { 1, 0.5, 0.25, 0.125, 1.0 / 16 };
+            System.Drawing.Rectangle bounds = document.Map.Bounds;
+            double mapW = (bounds.Width + 2) * 128.0, mapH = (bounds.Height + 2) * 128.0;
+            double[] steps = { 1, 0.5, 0.25, 0.125, 1.0 / 16, 1.0 / 32 };
             double fit = steps.FirstOrDefault(s => mapW * s <= vw && mapH * s <= vh);
-            if (fit == 0) fit = 1.0 / 16;
+            if (fit == 0) fit = 1.0 / 32;
             if (document.Scale > fit) document.Scale = fit;
+            double cell = document.TileSize.Width;
+            Avalonia.Threading.Dispatcher.UIThread.Post(
+                () => Scroller.Offset = new Vector(Math.Max(0, (bounds.X - 1) * cell), Math.Max(0, (bounds.Y - 1) * cell)),
+                Avalonia.Threading.DispatcherPriority.Loaded);
             return true;
         }
 

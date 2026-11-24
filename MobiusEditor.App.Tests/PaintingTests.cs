@@ -29,13 +29,7 @@ namespace MobiusEditor.App.Tests
             return window;
         }
 
-        private static Point CellCenter(MainWindow window, int cellX, int cellY)
-        {
-            Image image = window.FindControl<Image>("MapImage");
-            Point origin = image.TranslatePoint(new Point(0, 0), window).Value;
-            int tile = (int)(128 * window.Document.Scale);
-            return new Point(origin.X + cellX * tile + tile / 2, origin.Y + cellY * tile + tile / 2);
-        }
+        private static Point CellCenter(MainWindow window, int cellX, int cellY) => Pump.CellCenter(window, cellX, cellY);
 
         [AvaloniaFact]
         public void ClickingTheCanvasPaintsTheSelectedTemplateAndCtrlZUndoesIt()

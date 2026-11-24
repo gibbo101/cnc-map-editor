@@ -89,6 +89,13 @@ namespace MobiusEditor.Headless
         }
 
         /// <summary>The theater a map file declares, read before the plugin exists because the managers must be pointed at it first.</summary>
+        /// <summary>The map file's NewINIFormat, or 0 when it has none.</summary>
+        public static int PeekIniFormat(string mapPath)
+        {
+            System.Text.RegularExpressions.Match m = System.Text.RegularExpressions.Regex.Match(File.ReadAllText(mapPath), @"(?im)^\s*NewINIFormat\s*=\s*(\d+)");
+            return m.Success && int.TryParse(m.Groups[1].Value, out int format) ? format : 0;
+        }
+
         public TheaterType PeekTheater(string mapPath)
         {
             string text = File.ReadAllText(mapPath);
@@ -174,7 +181,7 @@ namespace MobiusEditor.Headless
             byte[] binContent = binPath == null ? null : File.ReadAllBytes(binPath);
             // Classic TD terrain is 64x64 (8 KiB of cells); the editor's 128x128 "megamap" .bin is four times that.
             bool megaMap = GameType == GameType.RedAlert || (binContent != null && binContent.Length >= 128 * 128 * 2);
-            IGamePlugin plugin = GameInfo.CreatePlugin(false, megaMap);
+            IGamePlugin plugin = GameInfo.CreatePlugin(false, megaMap, PeekIniFormat(mapPath));
             IEnumerable<string> initErrors = InitializePlugin(plugin);
             errors = ManifestLoadWarnings.Concat(initErrors)
                 .Concat(plugin.Load(mapPath, mapPath, File.ReadAllBytes(mapPath), binPath, binContent, ref ft)).ToArray();

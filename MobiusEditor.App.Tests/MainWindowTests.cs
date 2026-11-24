@@ -39,6 +39,22 @@ namespace MobiusEditor.App.Tests
         }
 
         [AvaloniaFact]
+        public void OpensAFormatFourMapOnItsBigGrid()
+        {
+            string ts = TestPaths.Oracle(Path.Combine("inputs", "ts-theatres"));
+            string map = Path.Combine(ts, "CCDATA", "TFTS1005.INI");
+            MainWindow window = new MainWindow(new[] { map, "--game", TestPaths.GameDir, "--mod", TestPaths.ModDir, "--mod", ts });
+            window.Show();
+            Pump.UntilMapReady(window);
+            Assert.Equal(256, window.Document.Map.Metrics.Width);
+            Assert.Equal(new System.Drawing.Rectangle(43, 87, 169, 82), window.Document.Map.Bounds);
+            Assert.NotEmpty(window.Document.Map.TilePatches);
+            Bitmap frame = window.CaptureRenderedFrame();
+            Assert.True(frame.PixelSize.Width > 100 && frame.PixelSize.Height > 100);
+            frame.Save(TestPaths.Output("main-window-crater.png"));
+        }
+
+        [AvaloniaFact]
         public void StartsEmptyWithoutAMap()
         {
             MainWindow window = new MainWindow(new[] { "--game", TestPaths.GameDir });

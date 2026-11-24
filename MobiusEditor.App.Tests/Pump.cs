@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.VisualTree;
 using Avalonia.Threading;
 using MobiusEditor.App;
 using Xunit;
@@ -12,6 +14,18 @@ namespace MobiusEditor.App.Tests
     /// </summary>
     internal static class Pump
     {
+        /// <summary>Scrolls the cell into view, then gives its centre in window coordinates.</summary>
+        public static Avalonia.Point CellCenter(MainWindow window, int cellX, int cellY)
+        {
+            int tile = (int)(128 * window.Document.Scale);
+            ScrollViewer scroller = window.FindControl<ScrollViewer>("Scroller");
+            scroller.Offset = new Avalonia.Vector(System.Math.Max(0, cellX * tile - 64), System.Math.Max(0, cellY * tile - 64));
+            Dispatcher.UIThread.RunJobs();
+            Image image = window.FindControl<Image>("MapImage");
+            Avalonia.Point origin = image.TranslatePoint(new Avalonia.Point(0, 0), window).Value;
+            return new Avalonia.Point(origin.X + cellX * tile + tile / 2, origin.Y + cellY * tile + tile / 2);
+        }
+
         public static void UntilMapReady(MainWindow window)
         {
             Image image = window.FindControl<Image>("MapImage");
