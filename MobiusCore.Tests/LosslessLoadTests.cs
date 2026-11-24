@@ -80,6 +80,40 @@ namespace MobiusCore.Tests
         }
 
         [Fact]
+        public void AnUnknownSectionSurvivesASaveVerbatim()
+        {
+            // TF's TS maps link tunnel mouths as "n=enter cell,exit cell,steps".
+            string[] lines = File.ReadAllLines(Path.Combine(TestPaths.OfficialMapsDir, "scm111ea.ini"));
+            string path = TestPaths.Output("unknown-section.ini");
+            File.WriteAllLines(path, lines.Concat(new[] { "", "[TFTubes]", "0=4500,4620,7", "1=4620,4500,7" }));
+            IGamePlugin plugin = EditorHost.Shared.Load(path, out _);
+            string outPath = TestPaths.Output("unknown-section-saved.ini");
+            plugin.Save(outPath, FileType.INI);
+            string[] saved = File.ReadAllLines(outPath);
+            int idx = System.Array.IndexOf(saved, "[TFTubes]");
+            Assert.True(idx >= 0, "no [TFTubes] in saved map");
+            Assert.Equal(new[] { "0=4500,4620,7", "1=4620,4500,7" }, saved.Skip(idx + 1).Take(2).ToArray());
+        }
+
+        [Fact]
+        public void ATsMapsTunnelsSurviveASave()
+        {
+            string map = TestPaths.Oracle(Path.Combine("inputs", "ts-theatres", "CCDATA", "TFTS1014.INI"));
+            string[] Tubes(string path)
+            {
+                string[] lines = File.ReadAllLines(path);
+                int idx = System.Array.IndexOf(lines, "[TFTubes]");
+                Assert.True(idx >= 0, "no [TFTubes] in " + path);
+                return lines.Skip(idx + 1).TakeWhile(l => l.Length > 0 && !l.StartsWith("[")).ToArray();
+            }
+            IGamePlugin plugin = EditorHost.Shared.Load(map, out _);
+            string outPath = TestPaths.Output("tfts1014-saved.ini");
+            plugin.Save(outPath, FileType.INI);
+            Assert.NotEmpty(Tubes(map));
+            Assert.Equal(Tubes(map), Tubes(outPath));
+        }
+
+        [Fact]
         public void UnknownStructureIsReportedNotDropped()
         {
             EditorSession session = EditorHost.Shared;
