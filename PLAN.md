@@ -269,6 +269,20 @@ optional `map` section in `mapeditor.json` (maps that fit 128 keep saving as for
 (3) TD theatres for TF's current maps, replacing the oracle pack with `td_map_to_ra.py convert`
 output and retiring the compiled-in `[TFTDTiles]` code; (4) the TS-HD pack loading with TF.
 
+**Tile patches (TF's "TS Theatres" add-on, 2026-11-24; order vs format 4 waits on Luke).** A
+converted TS map is a plain RA INI (TEMPERATE or SNOW) whose templates are land types only
+(CLEAR1 clear, W1 water, B1 rock); what shows is TS's render, shipped as the launcher's per-map
+TILEPATCHES: `Data/XML/TILEPATCHES/MAPS/RA/<KEY>_MAPPATCHES.XML` (`<Entry>` X,Y relative to the
+bounds' top-left, PatchName) → `Data/XML/TILEPATCHES/PATCHES/<NAME>_PATCH.XML` (DirectoryPath,
+TextureName, X, Y) → `Data/ART/TEXTURES/SRGB/PATCHES/<NAME>/<TEXTURENAME>-00.DDS` (128 px DXT).
+EA ships the same for its own maps in CONFIG.MEG. KEY = the running map's file stem; custom-list
+maps (UGC_….MPR) get an empty key, so they never get patches. Patch names are
+`<GAME>_<KEY>_<nnnn>`, unique per map. The add-on is its own mod folder (own ccmod.json, loads
+after TF) holding the patches, DDS and CCDATA INIs. Plan: a separate patch layer read CONFIG.MEG
+then each loaded mod (last wins), off in the Mobius oracles; a converted map is recognised from
+its data (patches cover the bounds, templates only CLEAR1/W1/B1) and terrain edits warn. Fixture:
+the TF session sends one converted map's files after its first pack build.
+
 ## Previous block (2026-09-02 session end — Luke playtests the Deck build; findings next session)
 
 **STATE: everything pushed and green at `f031cf6`; Deck deployed + smoke-verified (a
