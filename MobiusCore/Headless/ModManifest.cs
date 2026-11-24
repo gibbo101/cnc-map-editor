@@ -116,6 +116,8 @@ namespace MobiusEditor.Headless
         public List<ManifestTemplate> Templates { get; } = new List<ManifestTemplate>();
         public List<ManifestOverlay> Overlays { get; } = new List<ManifestOverlay>();
         public List<ManifestResource> Resources { get; } = new List<ManifestResource>();
+        /// <summary>The mod's DLL reads Red Alert maps on the 256 grid (NewINIFormat=4), so the editor may make them.</summary>
+        public bool DeclaresBigGrid { get; private set; }
 
         /// <summary>Reads a manifest file; null (with a warning) when it cannot be used at all.</summary>
         public static ModManifest Load(string path, string modName, List<string> warnings)
@@ -149,6 +151,12 @@ namespace MobiusEditor.Headless
             ParseEntries(root["templates"], "template", modName, warnings, ParseTemplate, manifest.Templates);
             ParseEntries(root["overlays"], "overlay", modName, warnings, ParseOverlay, manifest.Overlays);
             ParseEntries(root["resources"], "resource", modName, warnings, ParseResource, manifest.Resources);
+            if (root["map"] is JObject map)
+            {
+                int? grid = (int?)map["grid"], iniFormat = (int?)map["ini_format"];
+                if (grid == 256 && iniFormat == 4) manifest.DeclaresBigGrid = true;
+                else warnings.Add($"{modName}: map grid {grid} with ini_format {iniFormat} is not supported (the editor knows grid 256, ini_format 4); ignoring it.");
+            }
             return manifest;
         }
 

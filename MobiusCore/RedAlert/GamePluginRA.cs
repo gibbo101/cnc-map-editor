@@ -696,6 +696,7 @@ namespace MobiusEditor.RedAlert
                 Map.Theater = Map.TheaterTypes.Where(t => t.Equals(theater)).FirstOrDefault() ?? Map.TheaterTypes.FirstOrDefault() ?? TheaterTypes.Temperate;
                 Map.TopLeft = new Point(1, 1);
                 Map.Size = Map.Metrics.Size - new Size(2, 2);
+                ((BasicSection)Map.BasicSection).NewINIFormat = Map.Metrics.Width > Constants.MaxSize.Width ? Constants.BigGridIniFormat : 3;
                 Map.BasicSection.Player = Map.HouseTypes.FirstOrDefault()?.Name;
                 Map.BasicSection.Name = Constants.EmptyMapName;
                 UpdateBasePlayerHouse();

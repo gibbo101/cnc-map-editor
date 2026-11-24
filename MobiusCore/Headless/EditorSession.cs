@@ -146,12 +146,17 @@ namespace MobiusEditor.Headless
         }
 
         /// <summary>Creates a fresh empty map in the given theater (the game's first when null).</summary>
-        public IGamePlugin New(string theaterName, out string[] errors)
+        /// <summary>The first loaded mod whose manifest declares the 256 grid; null when none does.</summary>
+        public string BigGridMod => ModManifests.FirstOrDefault(m => m.DeclaresBigGrid)?.ModName;
+
+        /// <summary>A fresh empty map; the 256 grid only when a loaded mod declares it.</summary>
+        public IGamePlugin New(string theaterName, out string[] errors, bool bigGrid = false)
         {
+            if (bigGrid && BigGridMod == null) throw new InvalidOperationException("no loaded mod declares the 256 grid (a \"map\" section in its mapeditor.json)");
             TheaterType[] theaters = GameInfo.AllTheaters.ToArray();
             TheaterType theater = theaters.FirstOrDefault(t => t.Name.Equals(theaterName ?? "", StringComparison.OrdinalIgnoreCase)) ?? theaters[0];
             PrepareTheater(theater);
-            IGamePlugin plugin = GameInfo.CreatePlugin(false, true);
+            IGamePlugin plugin = GameInfo.CreatePlugin(false, true, bigGrid ? RedAlert.Constants.BigGridIniFormat : 0);
             IEnumerable<string> initErrors = InitializePlugin(plugin);
             plugin.New(theater.Name);
             errors = ManifestLoadWarnings.Concat(initErrors).ToArray();

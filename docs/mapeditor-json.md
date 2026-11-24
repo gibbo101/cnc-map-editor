@@ -16,12 +16,23 @@ skip surfaces as a load warning (`cncmap validate`, `EditorSession.ManifestLoadW
 ```json
 { "format": 1, "game_type": "RA",
   "buildings": [ ... ], "units": [ ... ], "infantry": [ ... ], "templates": [ ... ],
-  "overlays": [ ... ], "resources": [ ... ] }
+  "overlays": [ ... ], "resources": [ ... ],
+  "map": { "grid": 256, "ini_format": 4 } }
 ```
 
 - `format` — integer, must be `1`. Anything else skips the file (with a warning).
 - `game_type` — `"RA"` or `"TD"`; a manifest for the other game is ignored by the session.
 - Every section is optional and defaults to empty.
+
+## `map`
+
+Optional. `{ "grid": 256, "ini_format": 4 }` declares that the mod's DLL reads Red Alert maps on
+the 256-wide grid (`NewINIFormat=4`, cells `y*256+x`). It is the only supported value; any other
+is ignored with a warning. With it loaded, the editor makes new maps past 126 cells a side
+(`cncmap new --grid 256`, the New dialog's larger sizes) and saves them as format 4, and
+`cncmap info` lists the mod under `requires mods`. Format-4 maps open whether or not a mod
+declares the grid, but without one `validate` reports them as a problem: the stock game can't
+load them. Maps that fit the 128 grid stay format 3.
 
 ## Merge semantics
 

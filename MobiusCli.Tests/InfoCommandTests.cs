@@ -52,6 +52,43 @@ namespace MobiusCli.Tests
             Assert.Contains("load errors: 0", stdout);
         }
 
+        private static string TsTheatres => TestPaths.Oracle(Path.Combine("inputs", "ts-theatres"));
+        private static string Crater => Path.Combine(TsTheatres, "CCDATA", "TFTS1005.INI");
+
+        [Fact]
+        public void ABigGridMapNeedsTheModThatDeclaresTheGrid()
+        {
+            (int code, string stdout, string stderr) = Run("info", Crater, "--game", TestPaths.GameDir,
+                "--mod", MobiusCore.Tests.FormatFourTests.GridMod(), "--mod", TsTheatres);
+            Assert.True(code == 0, stderr);
+            Assert.Contains("size: 256x256", stdout);
+            Assert.Contains("requires mods: GridMod", stdout);
+        }
+
+        [Fact]
+        public void ValidateFailsABigGridMapWhenNoModDeclaresTheGrid()
+        {
+            (int code, string stdout, string _) = Run("validate", Crater, "--game", TestPaths.GameDir, "--mod", TsTheatres);
+            Assert.Equal(1, code);
+            Assert.Contains("256", stdout);
+        }
+
+        [Fact]
+        public void NewMakesABigGridMapOnlyWhenAModDeclaresIt()
+        {
+            string outPath = TestPaths.Output("cli-new-big.ini");
+            if (File.Exists(outPath)) File.Delete(outPath);
+            (int refused, string _, string refusal) = Run("new", outPath, "--grid", "256", "--game", TestPaths.GameDir);
+            Assert.NotEqual(0, refused);
+            Assert.Contains("256", refusal);
+            Assert.False(File.Exists(outPath));
+            (int code, string stdout, string stderr) = Run("new", outPath, "--grid", "256", "--game", TestPaths.GameDir,
+                "--mod", MobiusCore.Tests.FormatFourTests.GridMod());
+            Assert.True(code == 0, stderr);
+            Assert.Contains("NewINIFormat=4", File.ReadAllLines(outPath));
+            Assert.Contains("bounds 254x254", stdout);
+        }
+
         [Fact]
         public void ReportsWhichModsAMapNeeds()
         {

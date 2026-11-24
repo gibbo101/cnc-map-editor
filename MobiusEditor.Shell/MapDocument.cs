@@ -55,9 +55,14 @@ namespace MobiusEditor.Shell
         /// file until Save. The playable bounds default to the full playable area and can be
         /// given smaller — they are centered on the fixed cell grid the format dictates.
         /// </summary>
+        /// <summary>The largest playable side a new map can have: 254 when a loaded mod declares the 256 grid, else 126.</summary>
+        public int MaxPlayableSize => (Session.BigGridMod != null ? MobiusEditor.RedAlert.Constants.BigGridSize.Width : Session.GameInfo.MapSize.Width) - 2;
+
         public void NewMap(string theater = null, Size? playableSize = null)
         {
-            Plugin = Session.New(theater, out string[] notes);
+            int small = Session.GameInfo.MapSize.Width - 2;
+            bool bigGrid = Session.BigGridMod != null && playableSize.HasValue && (playableSize.Value.Width > small || playableSize.Value.Height > small);
+            Plugin = Session.New(theater, out string[] notes, bigGrid);
             if (playableSize.HasValue)
             {
                 Size cells = new Size(Plugin.Map.Metrics.Width, Plugin.Map.Metrics.Height);

@@ -58,6 +58,24 @@ namespace MobiusCore.Tests
         }
 
         [Fact]
+        public void TheMapSectionDeclaresTheBigGrid()
+        {
+            List<string> warnings = new List<string>();
+            ModManifest m = ModManifest.Parse(@"{ ""format"": 1, ""game_type"": ""RA"", ""map"": { ""grid"": 256, ""ini_format"": 4 } }", "TF", warnings);
+            Assert.Empty(warnings);
+            Assert.True(m.DeclaresBigGrid);
+        }
+
+        [Fact]
+        public void AnUnsupportedGridIsIgnoredWithAWarning()
+        {
+            List<string> warnings = new List<string>();
+            ModManifest m = ModManifest.Parse(@"{ ""format"": 1, ""game_type"": ""RA"", ""map"": { ""grid"": 512, ""ini_format"": 5 } }", "TF", warnings);
+            Assert.False(m.DeclaresBigGrid);
+            Assert.Contains(warnings, w => w.Contains("512"));
+        }
+
+        [Fact]
         public void AnOverlayIdOutsideThePacksByteRangeIsSkippedWithAWarning()
         {
             List<string> warnings = new List<string>();

@@ -22,13 +22,14 @@ namespace MobiusEditor.App
             TheaterList.ItemsSource = document.Session.GameInfo.AllTheaters.Where(t => !t.IsModTheater).Select(t => t.Name).ToList();
             TheaterList.SelectedIndex = 0;
             // The cell grid is fixed by the format; the choice is the playable bounds.
-            int maxPlayable = System.Math.Max(document.Session.GameInfo.MapSize.Width, document.Session.GameInfo.MapSize.Height) - 2;
+            int maxPlayable = document.MaxPlayableSize;
             WidthNud.Maximum = HeightNud.Maximum = maxPlayable;
             WidthNud.Value = HeightNud.Value = maxPlayable;
             // Standard presets fill the boxes; the boxes stay editable for odd sizes.
             (string Label, int Size)[] presets =
             {
                 ($"Full ({maxPlayable} × {maxPlayable})", maxPlayable),
+                ("Huge (192 × 192)", 192),
                 ("Large (96 × 96)", 96),
                 ("Medium (64 × 64)", 64),
                 ("Small (48 × 48)", 48),

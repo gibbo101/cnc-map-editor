@@ -41,7 +41,7 @@ namespace MobiusCli
             o.WriteLine("triggers: " + map.Triggers.Count);
             o.WriteLine("teamtypes: " + map.TeamTypes.Count);
             o.WriteLine("waypoints: " + map.Waypoints.Count(w => w.Cell.HasValue));
-            List<string> requiredMods = RequiredMods(map);
+            List<string> requiredMods = RequiredMods(map, session);
             o.WriteLine(requiredMods.Count == 0 ? "requires mods: none (vanilla-safe)" : "requires mods: " + string.Join(", ", requiredMods));
             o.WriteLine("unknown entries: " + map.UnknownEntries.Count);
             foreach (UnknownEntry u in map.UnknownEntries) o.WriteLine("  " + u);
@@ -60,11 +60,16 @@ namespace MobiusCli
             IGamePlugin plugin = session.Load(mapPath, out string[] notes);
             int problems = 0;
             foreach (string n in notes) o.WriteLine("note: " + n);
-            List<string> requiredMods = RequiredMods(plugin.Map);
+            List<string> requiredMods = RequiredMods(plugin.Map, session);
             // Needing a mod is not a problem while the mod is active; without it the map's
             // content would already fail as unknown entries below.
             if (requiredMods.Count > 0) o.WriteLine("note: requires mods: " + string.Join(", ", requiredMods));
             foreach (UnknownEntry u in plugin.Map.UnknownEntries) { o.WriteLine("unknown: " + u); problems++; }
+            if (plugin.Map.Metrics.Width > MobiusEditor.RedAlert.Constants.MaxSize.Width && session.BigGridMod == null)
+            {
+                o.WriteLine($"problem: the map is on the {plugin.Map.Metrics.Width} grid (NewINIFormat=4), and no loaded mod declares it; the stock game can't load it.");
+                problems++;
+            }
             string blocking = plugin.Validate(FileType.INI, false, true);
             if (!string.IsNullOrWhiteSpace(blocking)) { o.WriteLine("blocking: " + blocking.Trim()); problems++; }
             string suffix = notes.Length == 0 ? "" : $" ({notes.Length} note(s))";
@@ -135,10 +140,12 @@ namespace MobiusCli
         /// </summary>
         public static int New(Invocation inv, EditorSession session, TextWriter o)
         {
-            if (inv.Positional.Count < 1) throw new ArgumentException("new needs an output path: cncmap new <out> [--theater <name>]");
+            if (inv.Positional.Count < 1) throw new ArgumentException("new needs an output path: cncmap new <out> [--theater <name>] [--grid 256]");
             string outPath = inv.Positional[0];
             if (File.Exists(outPath)) throw new ArgumentException("refusing to overwrite existing file " + outPath);
-            IGamePlugin plugin = session.New(inv.Option("theater"), out string[] notes);
+            string grid = inv.Option("grid", "128");
+            if (grid != "128" && grid != "256") throw new ArgumentException("--grid is 128 or 256");
+            IGamePlugin plugin = session.New(inv.Option("theater"), out string[] notes, grid == "256");
             foreach (string n in notes) o.WriteLine("note: " + n);
             Map map = plugin.Map;
             Waypoint[] starts = map.Waypoints.Where(w => w.Flags.HasFlag(WaypointFlag.PlayerStart)).Take(2).ToArray();
@@ -200,9 +207,10 @@ namespace MobiusCli
             return new Point(x, y);
         }
 
-        /// <summary>Distinct mods that supplied the types the map actually places; empty = vanilla-safe.</summary>
-        private static List<string> RequiredMods(Map map) =>
+        /// <summary>Distinct mods that supplied the types the map places, and the mod declaring its grid when it's past 128; empty = vanilla-safe.</summary>
+        private static List<string> RequiredMods(Map map, EditorSession session) =>
             map.Templates.Select(t => t.Value?.Type?.ModSource)
+                .Append(map.Metrics.Width > MobiusEditor.RedAlert.Constants.MaxSize.Width ? session.BigGridMod : null)
                 .Concat(map.Overlay.Select(o => o.Value?.Type?.ModSource))
                 .Concat(map.Buildings.Select(b => b.Occupier).OfType<Building>().Select(b => b.Type?.ModSource))
                 .Concat(map.Technos.Select(t => t.Occupier).OfType<Unit>().Select(u => u.Type?.ModSource))

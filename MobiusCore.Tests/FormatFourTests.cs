@@ -58,6 +58,38 @@ namespace MobiusCore.Tests
             Assert.Equal(new[] { 28751, 41416, 39236, 25533 }, Enumerable.Range(0, 4).Select(i => reloaded.Map.Waypoints[i].Cell ?? -1).ToArray());
         }
 
+        public static string GridMod()
+        {
+            string mod = TestPaths.Output(Path.Combine("fake-mods-grid", "GridMod"));
+            Directory.CreateDirectory(Path.Combine(mod, "Data"));
+            File.WriteAllText(Path.Combine(mod, "ccmod.json"), "{ \"name\": \"GridMod\", \"game_type\": \"RA\", \"version_high\": 1, \"version_low\": 0 }");
+            File.WriteAllText(Path.Combine(mod, "mapeditor.json"), "{ \"format\": 1, \"game_type\": \"RA\", \"map\": { \"grid\": 256, \"ini_format\": 4 } }");
+            return mod;
+        }
+
+        [Fact]
+        public void ANewBigMapNeedsAModThatDeclaresTheGrid()
+        {
+            Assert.Throws<System.InvalidOperationException>(() => EditorHost.Shared.New(null, out _, bigGrid: true));
+
+            EditorSession session = new EditorSession(TestPaths.GameDir, GameType.RedAlert, new[] { GridMod() });
+            Assert.Equal("GridMod", session.BigGridMod);
+            IGamePlugin plugin = session.New(null, out _, bigGrid: true);
+            Assert.Equal(256, plugin.Map.Metrics.Width);
+            Map map = plugin.Map;
+            Waypoint[] starts = map.Waypoints.Where(w => w.Flags.HasFlag(WaypointFlag.PlayerStart)).Take(2).ToArray();
+            map.Metrics.GetCell(new System.Drawing.Point(200, 200), out int far);
+            starts[0].Cell = far;
+            map.Metrics.GetCell(new System.Drawing.Point(10, 10), out int near);
+            starts[1].Cell = near;
+            string outPath = TestPaths.Output("new-big.ini");
+            plugin.Save(outPath, FileType.INI);
+            Assert.Contains("NewINIFormat=4", File.ReadAllLines(outPath));
+            IGamePlugin reloaded = session.Load(outPath, out _);
+            Assert.Equal(256, reloaded.Map.Metrics.Width);
+            Assert.Equal(far, reloaded.Map.Waypoints[0].Cell);
+        }
+
         [Fact]
         public void AFormatThreeMapStaysOnTheOneTwentyEightGrid()
         {
