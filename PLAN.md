@@ -264,9 +264,13 @@ info names the declaring mod, validate fails an undeclared big map. TF's overlay
 its manifest on branch ts-maps (909a7887c, unpushed); against that build both TS maps load with 0
 unknown entries.
 
-**Open, in order:** (1) TF adds the `map` key to editor_manifest.py (asked; key shape confirmed)
-and ts-maps reaches TF main. (2) TF session to judge TIBTS drawn as frame = density against the
-game. (3) The manual: the held map-editor section gains tile patches, overlays and big maps;
+**Also (4f8d308):** overlay `canvas` (HD px, centred on the cell) and `layouts` (TF's cell hash),
+so TS Tiberium draws as the game's carpet; an edit within two cells of such an overlay redraws
+the whole map.
+
+**Open, in order:** (1) TF adds `canvas: 320, layouts: 8` to tibts/tibtsblue (asked); its `map`
+key is on ts-maps (73596fe4c); ts-maps reaches TF main, then rerun against TF's main build. (2) TF
+session to confirm the carpet matches the game. (3) The manual: the held map-editor section gains tile patches, overlays and big maps;
 Bigger maps drops "no editor writes them". (4) TD theatres for TF's maps; TS-HD pack with TF;
 growing an existing 128-grid map onto the 256 grid.
 
