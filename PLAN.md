@@ -258,12 +258,17 @@ the terrain from CONFIG.MEG + TEXTURES_PATCHES_SRGB.MEG + mod loose files + a mo
 load and save on the 256 grid, the window opens fitted to the bounds down to 1/32 (90a85ff).
 Fixtures: `oracle/inputs/ts-theatres/` (TFTS1036 Tiers of Sorrow, TFTS1005 Crater, their MEGs).
 
-**Open, in order:** (1) TF adds overlays 26–29 (TS walls, TIBTS, TIBTSBLUE) to its
-editor_manifest.py: asked of the TF session; until then TS maps report them as unknown
-(kept). (2) Making maps past 128: the mod opt-in (`map` section in mapeditor.json: grid 256,
-ini_format 4), the New dialog / `cncmap new` offering it, resizing bounds past 126. (3) The
-manual: the held map-editor section gains tile patches, overlays and big maps, and Bigger maps
-drops "no editor writes them". (4) TD theatres for TF's maps; TS-HD pack with TF.
+**Also shipped (8a7fbce):** the `map` manifest section (`{"grid":256,"ini_format":4}`, Luke: TF
+itself declares it); `cncmap new --grid 256` and the New dialog make big maps only with it;
+info names the declaring mod, validate fails an undeclared big map. TF's overlays 26–29 are in
+its manifest on branch ts-maps (909a7887c, unpushed); against that build both TS maps load with 0
+unknown entries.
+
+**Open, in order:** (1) TF adds the `map` key to editor_manifest.py (asked; key shape confirmed)
+and ts-maps reaches TF main. (2) TF session to judge TIBTS drawn as frame = density against the
+game. (3) The manual: the held map-editor section gains tile patches, overlays and big maps;
+Bigger maps drops "no editor writes them". (4) TD theatres for TF's maps; TS-HD pack with TF;
+growing an existing 128-grid map onto the 256 grid.
 
 ## Previous block (2026-11-23 — generator out, fixtures self-contained, manual section next)
 
