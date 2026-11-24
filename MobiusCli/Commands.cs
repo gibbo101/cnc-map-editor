@@ -152,53 +152,6 @@ namespace MobiusCli
         }
 
         /// <summary>
-        /// Generates a random skirmish map: spaced player starts, tree cover, ore by every
-        /// start and gems between them. Deterministic — the same seed and dials always
-        /// produce the same map.
-        /// </summary>
-        public static int Generate(Invocation inv, EditorSession session, TextWriter o)
-        {
-            if (inv.Positional.Count < 1) throw new ArgumentException("generate needs an output path: cncmap generate <out> [--theater <name>] [--seed <n>] [--players <n>] [--trees 0..1] [--ore 0..1] [--water 0..1] [--water-style lakes|river|ocean|islands]");
-            string outPath = inv.Positional[0];
-            if (File.Exists(outPath)) throw new ArgumentException("refusing to overwrite existing file " + outPath);
-            MapGeneratorOptions options = new MapGeneratorOptions
-            {
-                Seed = int.Parse(inv.Option("seed", "1")),
-                Players = int.Parse(inv.Option("players", "4")),
-                Trees = double.Parse(inv.Option("trees", "0.5"), System.Globalization.CultureInfo.InvariantCulture),
-                Ore = double.Parse(inv.Option("ore", "0.5"), System.Globalization.CultureInfo.InvariantCulture),
-                Water = double.Parse(inv.Option("water", "0.5"), System.Globalization.CultureInfo.InvariantCulture),
-                Style = Enum.TryParse(inv.Option("water-style", "lakes"), true, out WaterStyle style) ? style
-                    : throw new ArgumentException("unknown --water-style (none|lakes|river|ocean|islands)"),
-                Lakes = OptInt(inv, "lakes"),
-                Islands = OptInt(inv, "islands"),
-                RiverWidth = OptInt(inv, "river-width"),
-                Fords = OptInt(inv, "fords"),
-                OceanDepth = OptInt(inv, "ocean-depth"),
-                OceanEdge = inv.Option("ocean-edge") is string oe
-                    ? Array.IndexOf(new[] { "north", "south", "east", "west" }, oe.ToLowerInvariant()) is int idx && idx >= 0 ? idx
-                        : throw new ArgumentException("unknown --ocean-edge (north|south|east|west)")
-                    : (int?)null,
-                Causeways = OptBool(inv, "causeways"),
-                Villages = OptInt(inv, "villages"),
-                Roads = OptBool(inv, "roads"),
-                Tiberium = double.Parse(inv.Option("tiberium", "0"), System.Globalization.CultureInfo.InvariantCulture),
-                Coast = Enum.TryParse(inv.Option("coast", "mixed"), true, out CoastFlavor coast) ? coast
-                    : throw new ArgumentException("unknown --coast (mixed|beach|cliff)"),
-            };
-            IGamePlugin plugin = session.New(inv.Option("theater"), out string[] notes);
-            foreach (string n in notes) o.WriteLine("note: " + n);
-            foreach (string w in MapGenerator.Generate(plugin, options)) o.WriteLine("note: " + w);
-            string invalid = plugin.Validate(FileType.INI, false, false);
-            if (invalid != null) throw new InvalidOperationException("generated map failed validation: " + invalid);
-            plugin.Save(outPath, FileType.INI);
-            Map generated = plugin.Map;
-            int starts = generated.Waypoints.Count(w => w.Flags.HasFlag(WaypointFlag.PlayerStart) && w.Cell.HasValue);
-            o.WriteLine($"generated {plugin.GameInfo.GameType} map, theater {generated.Theater.Name}, seed {options.Seed}, {starts} starts; wrote {outPath}");
-            return 0;
-        }
-
-        /// <summary>
         /// Expands a JSON mission spec (patterns + raw rows) into the map's triggers and
         /// teamtypes, and saves to --out (never the input). Refused entirely — nothing
         /// written — when any pattern fails to build or the expanded triggers fail the
@@ -248,12 +201,6 @@ namespace MobiusCli
         }
 
         /// <summary>Distinct mods that supplied the types the map actually places; empty = vanilla-safe.</summary>
-        private static int? OptInt(Invocation inv, string name) =>
-            inv.Option(name) is string v ? int.Parse(v) : (int?)null;
-
-        private static bool? OptBool(Invocation inv, string name) =>
-            inv.Option(name) is string v ? !v.Equals("false", StringComparison.OrdinalIgnoreCase) && !v.Equals("off", StringComparison.OrdinalIgnoreCase) : (bool?)null;
-
         private static List<string> RequiredMods(Map map) =>
             map.Templates.Select(t => t.Value?.Type?.ModSource)
                 .Concat(map.Buildings.Select(b => b.Occupier).OfType<Building>().Select(b => b.Type?.ModSource))

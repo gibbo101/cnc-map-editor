@@ -34,10 +34,10 @@ docs/                format contracts. mapeditor-json.md = the per-mod type mani
 ```bash
 export PATH="$HOME/.dotnet:$PATH"
 dotnet build MobiusCore
-env -u DISPLAY dotnet test MobiusCore.Tests --filter Category!=Oracle   # inner loop, seconds
-env -u DISPLAY dotnet test MobiusCli.Tests                              # CLI, ~1 min
-env -u DISPLAY dotnet test MobiusEditor.Shell.Tests                     # GUI view-models, seconds
-env -u DISPLAY dotnet test MobiusEditor.App.Tests                       # Avalonia headless UI, seconds
+env -u DISPLAY dotnet test MobiusCore.Tests --filter Category!=Oracle   # inner loop, ~2 min
+env -u DISPLAY dotnet test MobiusCli.Tests                              # CLI, ~2 min
+env -u DISPLAY dotnet test MobiusEditor.Shell.Tests                     # GUI view-models, ~3.5 min
+env -u DISPLAY dotnet test MobiusEditor.App.Tests                       # Avalonia headless UI, ~5 min
 env -u DISPLAY dotnet test MobiusCore.Tests                              # + oracle tier (~11 min): renders + 261 byte-exact round trips
 dotnet run --project MobiusCli -- info <map> [--mod <dir>]              # the CLI itself
 ```
@@ -51,15 +51,12 @@ display and anything that tries to open one is a bug.
 
 - **Background `dotnet test` runs get killed on this machine** (observed 3/3 on 2026-09-02;
   cause unknown). Run tiers in the foreground in <10-minute pieces. The oracle tier splits by
-  class: `OfficialMapsTests|TransitionMinerTests` (~9 min), `SaveRoundTripTests` (~14 min —
-  the one chunk that must go long), `MapRenderOracleTests` (~1 min).
+  class: `OfficialMapsTests` (seconds), `SaveRoundTripTests` (~14 min — the one chunk that
+  must go long), `MapRenderOracleTests` (~1.5 min).
 - **Never run two `dotnet test` invocations of the same project concurrently** — they race on
   build outputs and `artifacts/test-output/`, producing phantom failures that vanish on rerun.
-- The mined corpus (`MobiusCore/Resources/mined-transitions.txt`) regenerates via the
-  oracle-tier miner test, then copy `artifacts/test-output/mined-transitions.txt` over the
-  resource, keeping the 3-line header. Its family list lives in `TransitionMinerTests` — a
-  family missing there (how fords/bridges went unmined until 2026-09-02) silently reads as
-  "the corpus has none".
+- The random map generator and its mined corpus are on branch `random-map-generator`, out of
+  main until Luke brings them back.
 
 ## Rules
 

@@ -74,18 +74,6 @@ namespace MobiusEditor.Shell
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
-        /// <summary>A fresh map filled by the random skirmish generator; the fill is the map's starting state, not an undoable edit.</summary>
-        public void NewRandomMap(string theater, Size? playableSize, MapGeneratorOptions options)
-        {
-            NewMap(theater, playableSize);
-            string[] warnings = MapGenerator.Generate(Plugin, options).ToArray();
-            LoadNotes = LoadNotes.Concat(warnings).ToArray();
-            undoRedo.Clear();
-            ResetStroke();
-            InvalidateRenderCache();
-            Changed?.Invoke(this, EventArgs.Empty);
-        }
-
         private sealed class UndoRedoArgs : EventArgs, IUndoRedoEventArgs<MapDocument>
         {
             public bool Cancelled { get; set; }

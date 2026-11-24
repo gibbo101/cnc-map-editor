@@ -34,8 +34,8 @@ disabled air units).
 
 ## `resources`
 
-Harvestable resource flavors the mod supports beyond the game's ore/gems, used by the
-random map generator (the Tiberium dial):
+Harvestable resource flavors the mod supports beyond the game's ore/gems. The editor parses
+and validates them; nothing reads them while the random map generator is out of the editor:
 
 ```json
 { "flavor": "tiberium", "overlays": ["tib01"], "spawner_building": "tdblossom" }

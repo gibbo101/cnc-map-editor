@@ -42,18 +42,6 @@ namespace MobiusEditor.App
                     WidthNud.Value = HeightNud.Value = presets[SizePreset.SelectedIndex].Size;
                 }
             };
-            WaterStyleCombo.ItemsSource = new[] { "Lakes", "River", "Ocean", "Islands", "None" };
-            WaterStyleCombo.SelectedIndex = 0;
-            CoastCombo.ItemsSource = new[] { "Mixed", "Beach", "Cliff" };
-            CoastCombo.SelectedIndex = 0;
-            RiverKindCombo.ItemsSource = new[] { "Auto", "Stream", "Wide", "Broad" };
-            RiverKindCombo.SelectedIndex = 0;
-            RandomFill.IsCheckedChanged += (s, e) =>
-            {
-                bool random = RandomFill.IsChecked == true;
-                RandomPanel.IsVisible = random;
-                EmptyMapHint.IsVisible = !random;
-            };
             OkButton.Click += async (s, e) =>
             {
                 if (!(TheaterList.SelectedItem is string theater))
@@ -68,30 +56,7 @@ namespace MobiusEditor.App
                 CreateProgressLabel.Text = "Creating " + theater + " map…";
                 CreateProgress.IsVisible = true;
                 System.Drawing.Size playable = new System.Drawing.Size((int)(WidthNud.Value ?? 126), (int)(HeightNud.Value ?? 126));
-                if (RandomFill.IsChecked == true)
-                {
-                    MobiusEditor.Headless.MapGeneratorOptions options = new MobiusEditor.Headless.MapGeneratorOptions
-                    {
-                        Seed = (int)(SeedNud.Value ?? 1),
-                        Players = (int)(PlayersNud.Value ?? 4),
-                        Trees = TreesSlider.Value,
-                        Ore = OreSlider.Value,
-                        Water = WaterSlider.Value,
-                        Style = System.Enum.TryParse(WaterStyleCombo.SelectedItem as string, out MobiusEditor.Headless.WaterStyle style)
-                            ? style : MobiusEditor.Headless.WaterStyle.Lakes,
-                        Villages = (int)(VillagesNud.Value ?? 0),
-                        Tiberium = TiberiumSlider.Value,
-                        Roads = RoadsCheck.IsChecked == true,
-                        Coast = System.Enum.TryParse(CoastCombo.SelectedItem as string, out MobiusEditor.Headless.CoastFlavor coast)
-                            ? coast : MobiusEditor.Headless.CoastFlavor.Mixed,
-                        RiverWidth = RiverKindCombo.SelectedIndex > 0 ? RiverKindCombo.SelectedIndex : null,
-                    };
-                    await System.Threading.Tasks.Task.Run(() => document.NewRandomMap(theater, playable, options));
-                }
-                else
-                {
-                    await System.Threading.Tasks.Task.Run(() => document.NewMap(theater, playable));
-                }
+                await System.Threading.Tasks.Task.Run(() => document.NewMap(theater, playable));
                 Close();
             };
             CancelButton.Click += (s, e) => Close();

@@ -248,7 +248,28 @@ Wine.** It would not inform the native build at all, nothing is blocked today th
 would unblock (campaign authoring is deferred behind the AI milestone), and a working stopgap
 would only tempt the native editor to slip. Not part of the plan.
 
-## RESUME HERE (2026-09-02 session end — Luke playtests the Deck build; findings next session)
+## RESUME HERE (2026-11-23 — generator out, fixtures self-contained, manual section next)
+
+**The random map generator is out of main (Luke, 2026-11-23: not satisfied, no more time on
+it for now).** Everything below about lakes, rivers, islands, coasts, the coast walker, the
+mined corpus and the bridge arc lives on branch `random-map-generator` (tip `e6c9e2e`, the
+last commit with it, all tiers green). Bring it back by merging that branch. The manifest's
+`resources` section is still parsed; nothing reads it until then.
+
+**Fixtures:** official maps are extracted from the game on first use (`TestPaths.OfficialMapsDir`);
+the TF pack is `oracle/inputs/tf-maps/` (31 maps from a June backup, an older TF format: both
+Mobius and this core drop its `[TFTDTiles]` under current TF, and the oracle saves were
+regenerated to match). TF retired `[TFTDTiles]` on 2026-10-19 (TD maps now load in TD theatres
+with TD template ids in `[MapPack]`).
+
+**Next, in order:** (1) the Field Manual's own map-editor section (layout agreed with Luke:
+index, faithful-to-Mobius, mapeditor.json, command line, triggers and missions; worktree, the
+manual's checkout is another session's); (2) format-4 big maps, opted into by a mod through an
+optional `map` section in `mapeditor.json` (maps that fit 128 keep saving as format 3);
+(3) TD theatres for TF's current maps, replacing the oracle pack with `td_map_to_ra.py convert`
+output and retiring the compiled-in `[TFTDTiles]` code; (4) the TS-HD pack loading with TF.
+
+## Previous block (2026-09-02 session end — Luke playtests the Deck build; findings next session)
 
 **STATE: everything pushed and green at `f031cf6`; Deck deployed + smoke-verified (a
 stream-river map generated ON the Deck).** All four fast tiers + full oracle (chunked)
