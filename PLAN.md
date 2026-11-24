@@ -248,7 +248,24 @@ Wine.** It would not inform the native build at all, nothing is blocked today th
 would unblock (campaign authoring is deferred behind the AI milestone), and a working stopgap
 would only tempt the native editor to slip. Not part of the plan.
 
-## RESUME HERE (2026-11-23 — generator out, fixtures self-contained, manual section next)
+## RESUME HERE (2026-11-24 — TS Theatres maps open; manual held until it all works)
+
+**Shipped 2026-11-24 (Luke: "go ahead, hold the manual till it's all working"):** unknown
+overlay ids survive a save and fail validate (0b13420); mods declare `overlays` in
+mapeditor.json, a mod resource keeps its own id (59f9a10); the launcher's tile patches draw over
+the terrain from CONFIG.MEG + TEXTURES_PATCHES_SRGB.MEG + mod loose files + a mod's own MEGs
+(8cbb19c, layer `TilePatches`, in `GameView`, off in the Mobius oracles); NewINIFormat=4 maps
+load and save on the 256 grid, the window opens fitted to the bounds down to 1/32 (90a85ff).
+Fixtures: `oracle/inputs/ts-theatres/` (TFTS1036 Tiers of Sorrow, TFTS1005 Crater, their MEGs).
+
+**Open, in order:** (1) TF adds overlays 26–29 (TS walls, TIBTS, TIBTSBLUE) to its
+editor_manifest.py: asked of the TF session; until then TS maps report them as unknown
+(kept). (2) Making maps past 128: the mod opt-in (`map` section in mapeditor.json: grid 256,
+ini_format 4), the New dialog / `cncmap new` offering it, resizing bounds past 126. (3) The
+manual: the held map-editor section gains tile patches, overlays and big maps, and Bigger maps
+drops "no editor writes them". (4) TD theatres for TF's maps; TS-HD pack with TF.
+
+## Previous block (2026-11-23 — generator out, fixtures self-contained, manual section next)
 
 **The random map generator is out of main (Luke, 2026-11-23: not satisfied, no more time on
 it for now).** Everything below about lakes, rivers, islands, coasts, the coast walker, the
