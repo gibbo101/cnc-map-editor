@@ -75,6 +75,33 @@ namespace MobiusCore.Tests
         }
 
         [Fact]
+        public void AModOverlayWithNoArtIsKeptAndDrawsNothing()
+        {
+            // A converted map's walls are drawn by the map's picture, so the overlay ships no art.
+            string mod = TestPaths.Output(Path.Combine("fake-mods-overlay", "NoArtMod"));
+            Directory.CreateDirectory(Path.Combine(mod, "Data"));
+            File.WriteAllText(Path.Combine(mod, "ccmod.json"), "{ \"name\": \"NoArtMod\", \"game_type\": \"RA\", \"version_high\": 1, \"version_low\": 0 }");
+            File.WriteAllText(Path.Combine(mod, "mapeditor.json"), @"{ ""format"": 1, ""game_type"": ""RA"", ""overlays"": [
+                { ""id"": 103, ""name"": ""xpicwall"", ""display_name"": ""Picture Wall"" } ] }");
+            EditorSession session = new EditorSession(TestPaths.GameDir, GameType.RedAlert, new[] { mod });
+            IGamePlugin plugin = session.Load(MapWithOverlayId(103), out string[] errors);
+            Assert.Equal("xpicwall", plugin.Map.Overlay[Cell]?.Type.Name);
+            Assert.DoesNotContain(errors, e => e.Contains("xpicwall"));
+            Assert.DoesNotContain(session.New(null, out _).Map.OverlayTypes.Where(t => t.ExistsInTheater), t => t.Name == "xpicwall");
+
+            string outPath = TestPaths.Output("no-art-overlay-saved.ini");
+            plugin.Save(outPath, FileType.INI);
+            INI saved = new INI();
+            saved.Parse(File.ReadAllText(outPath));
+            bool modified = false;
+            Assert.Equal(103, INITools.DecompressLCWSection(saved["OverlayPack"], new CellMetrics(128, 128), 1, new List<string>(), ref modified)[Cell]);
+
+            IGamePlugin reloaded = session.Load(outPath, out _);
+            Assert.False(MobiusEditor.Render.MapRenderer.RenderOverlay(reloaded.GameInfo, new System.Drawing.Point(60, 60), null,
+                new System.Drawing.Size(32, 32), 0.25, reloaded.Map.Overlay[Cell], false).RenderAction != null);
+        }
+
+        [Fact]
         public void AModOverlayLoadsAsKnownAndKeepsItsIdThroughASave()
         {
             EditorSession session = new EditorSession(TestPaths.GameDir, GameType.RedAlert, new[] { ModWithOreLikeOverlay() });

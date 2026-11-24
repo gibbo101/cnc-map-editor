@@ -577,6 +577,10 @@ namespace MobiusEditor.Render
         public static RenderInfo RenderOverlay(GameInfo gameInfo, Point topLeft, Rectangle? mapBounds, Size tileSize, double tileScale, Overlay overlay, bool fullOpaque, int gridWidth = 0)
         {
             OverlayType ovtype = overlay.Type;
+            if (ovtype.ModSource != null && !ovtype.ExistsInTheater)
+            {
+                return new RenderInfo(Point.Empty, null, 0, null, false);
+            }
             string name = ovtype.GraphicsSource;
             int icon = ovtype.IsConcrete || ovtype.IsResource || ovtype.IsWall || ovtype.ForceTileNr == -1 ? overlay.Icon : ovtype.ForceTileNr;
             if (ovtype.IsResource && gridWidth > 0)

@@ -2828,7 +2828,8 @@ namespace MobiusEditor.RedAlert
                     modified = true;
                     continue;
                 }
-                if (Globals.FilterTheaterObjects && !overlayType.ExistsInTheater)
+                // A mod's overlay may ship no art (its map's own picture draws it); only the game's own are dropped.
+                if (Globals.FilterTheaterObjects && !overlayType.ExistsInTheater && overlayType.ModSource == null)
                 {
                     errors.Add(String.Format("Overlay '{0}' is not available in the set theater; skipping.", overlayType.Name));
                     modified = true;
@@ -2888,7 +2889,8 @@ namespace MobiusEditor.RedAlert
                     modified = true;
                     continue;
                 }
-                if (Globals.FilterTheaterObjects && !overlayType.ExistsInTheater)
+                // A mod's overlay may ship no art (its map's own picture draws it); only the game's own are dropped.
+                if (Globals.FilterTheaterObjects && !overlayType.ExistsInTheater && overlayType.ModSource == null)
                 {
                     errors.Add(String.Format("Overlay '{0}' is not available in the set theater; skipping.", overlayType.Name));
                     modified = true;
