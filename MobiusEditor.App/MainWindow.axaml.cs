@@ -549,7 +549,7 @@ namespace MobiusEditor.App
         private void UpdateIndicatorLayers()
         {
             if (document == null || !document.IsOpen) return;
-            MobiusEditor.Model.MapLayerFlag layers = MobiusEditor.Model.MapLayerFlag.MapLayers;
+            MobiusEditor.Model.MapLayerFlag layers = MobiusEditor.Model.MapLayerFlag.GameView;
             if (SelectedCellTrigger != null) layers |= MobiusEditor.Model.MapLayerFlag.CellTriggers;
             if (SelectedWaypoint >= 0) layers |= MobiusEditor.Model.MapLayerFlag.WaypointsIndic;
             if (document.Layers != layers)

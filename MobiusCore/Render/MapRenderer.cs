@@ -284,6 +284,30 @@ namespace MobiusEditor.Render
                     }
                 }
             }
+            if ((layers & MapLayerFlag.TilePatches) != MapLayerFlag.None && map.TilePatches.Count > 0)
+            {
+                foreach (Point location in renderLocations())
+                {
+                    if (!map.TilePatches.TryGetValue(new Point(location.X - map.Bounds.X, location.Y - map.Bounds.Y), out string texture))
+                    {
+                        continue;
+                    }
+                    string patchName = "patch_" + texture + "_" + tileSize.Width + "x" + tileSize.Height + (isSmooth ? "_smooth" : String.Empty);
+                    Bitmap patchImg = cacheManager.GetImage(patchName);
+                    if (patchImg == null)
+                    {
+                        Bitmap source = Globals.TheTilesetManager.GetTexture(System.IO.Path.ChangeExtension(texture, ".TGA"), null, 0, false);
+                        if (source == null)
+                        {
+                            continue;
+                        }
+                        patchImg = source.Width == tileSize.Width && source.Height == tileSize.Height ? source
+                            : source.HighQualityScale(tileSize.Width, tileSize.Height, backupCompositingQuality, backupInterpolationMode, backupSmoothingMode, backupPixelOffsetMode);
+                        cacheManager.AddImage(patchName, patchImg);
+                    }
+                    graphics.DrawImage(patchImg, new Rectangle(location.X * tileSize.Width, location.Y * tileSize.Height, tileSize.Width, tileSize.Height));
+                }
+            }
             // Since high-quality scaling is now done on the tiles themselves, the actual map tile painting is done
             // with pixel interpolation mode because it is faster, and the tiles are already correctly sized anyway.
             // So now, restore the actual requested settings.

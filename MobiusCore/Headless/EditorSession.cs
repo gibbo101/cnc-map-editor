@@ -63,6 +63,18 @@ namespace MobiusEditor.Headless
             foreach (GameInfo gi in infos.Where(g => g != null)) gameFolders[gi.GameType] = gi.ClassicFolderRemasterData;
             Archives = new MegafileManager(Path.Combine(gameDir, "DATA"), gameDir, modPaths, null, gameFolders);
             foreach (string meg in GameInfo.RemasterMegFiles) Archives.LoadArchive(meg);
+            Archives.LoadArchive(TilePatchTexturesMeg);
+            // A mod's DLL mounts archives of its own; one named like a game archive would replace that archive instead.
+            HashSet<string> gameMegs = new HashSet<string>(Directory.EnumerateFiles(DataFolder(gameDir)).Select(Path.GetFileName), StringComparer.OrdinalIgnoreCase);
+            foreach (string dir in ModDirs)
+            {
+                string data = Directory.Exists(dir) ? DataFolder(dir) : null;
+                if (data == null) continue;
+                foreach (string meg in Directory.EnumerateFiles(data, "*.*").Where(f => f.EndsWith(".MEG", StringComparison.OrdinalIgnoreCase)).OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
+                {
+                    if (!gameMegs.Contains(Path.GetFileName(meg))) Archives.LoadArchive(Path.GetFullPath(meg));
+                }
+            }
             List<string> loadErrors = new List<string>(), fileLoadErrors = new List<string>();
             foreach (GameInfo gi in infos.Where(g => g != null)) gi.InitClassicFiles(Archives.ClassicFileManager, loadErrors, fileLoadErrors, true);
             Globals.TheArchiveManager = Archives;
@@ -104,6 +116,10 @@ namespace MobiusEditor.Headless
         /// session's ctor ran.
         /// </summary>
         private readonly string manifestGame;
+
+        private static string DataFolder(string root) =>
+            Directory.EnumerateDirectories(root).FirstOrDefault(d => string.Equals(Path.GetFileName(d), "DATA", StringComparison.OrdinalIgnoreCase));
+        private const string TilePatchTexturesMeg = "TEXTURES_PATCHES_SRGB.MEG";
 
         private void PrepareTheater(TheaterType theater)
         {
@@ -162,6 +178,7 @@ namespace MobiusEditor.Headless
             IEnumerable<string> initErrors = InitializePlugin(plugin);
             errors = ManifestLoadWarnings.Concat(initErrors)
                 .Concat(plugin.Load(mapPath, mapPath, File.ReadAllBytes(mapPath), binPath, binContent, ref ft)).ToArray();
+            plugin.Map.TilePatches = TilePatchIndex.Load(Archives, GameType == GameType.TiberianDawn ? "TD" : "RA", Path.GetFileNameWithoutExtension(mapPath));
             return plugin;
         }
     }

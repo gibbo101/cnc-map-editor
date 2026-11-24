@@ -237,6 +237,7 @@ namespace MobiusCli
             string outPath = inv.Positional[1];
             double scale = double.Parse(inv.Option("scale", "0.25"), System.Globalization.CultureInfo.InvariantCulture);
             bool boundsOnly = inv.Option("bounds-only", "false") == "true";
+            MapLayerFlag layers = inv.Option("no-tile-patches", "false") == "true" ? MapLayerFlag.MapLayers : MapLayerFlag.GameView;
             IGamePlugin plugin = session.Load(mapPath, out _);
             Size tileSize = new Size(Math.Max(1, (int)Math.Round(Globals.OriginalTileWidth * scale)), Math.Max(1, (int)Math.Round(Globals.OriginalTileHeight * scale)));
             Map map = plugin.Map;
@@ -245,7 +246,7 @@ namespace MobiusCli
                 full.SetResolution(96, 96);
                 using (Graphics g = Graphics.FromImage(full))
                 {
-                    MapRenderer.Render(plugin.GameInfo, map, g, null, MapLayerFlag.MapLayers, scale, false, Globals.TheShapeCacheManager);
+                    MapRenderer.Render(plugin.GameInfo, map, g, null, layers, scale, false, Globals.TheShapeCacheManager);
                 }
                 if (boundsOnly)
                 {

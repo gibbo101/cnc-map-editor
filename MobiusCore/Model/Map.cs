@@ -64,11 +64,15 @@ namespace MobiusEditor.Model
         CrateOutlines   /**/ = 1 << 23,
         EffectRadius    /**/ = 1 << 24,
         HomeAreaBox     /**/ = 1 << 25,
+        /// <summary>The launcher's per-map tile patches, drawn over the templates as the game shows them.</summary>
+        TilePatches     /**/ = 1 << 26,
 
         Technos = Terrain | Infantry | Units | Buildings,
         OverlayAll = Resources | Walls | Overlay,
         /// <summary>Listing of layers that are hard-painted onto the map image.</summary>
         MapLayers = Template | Terrain | Resources | Walls | Overlay | Smudge | Infantry | Units | Buildings | Waypoints | FootballArea,
+        /// <summary>The map as the game shows it: the map layers with the launcher's tile patches.</summary>
+        GameView = MapLayers | TilePatches,
         /// <summary>Listing of layers that don't need a full map repaint.</summary>
         Indicators = Boundaries | WaypointsIndic | CellTriggers | TechnoTriggers | BuildingRebuild | BuildingFakes | OverlapOutlines
             | MapSymmetry | MapGrid | LandTypes | TechnoOccupancy | WaypointRadius | CrateOutlines | EffectRadius | HomeAreaBox,
@@ -236,6 +240,9 @@ namespace MobiusEditor.Model
 
         /// <summary>Entries kept verbatim because the active profile does not know their type; written back on save.</summary>
         public readonly List<UnknownEntry> UnknownEntries = new List<UnknownEntry>();
+
+        /// <summary>The launcher's tile patches for this map: bounds-relative cell → texture path. Never saved.</summary>
+        public IReadOnlyDictionary<Point, string> TilePatches { get; set; } = new Dictionary<Point, string>();
 
         public TheaterType Theater { get => MapSection.Theater; set => MapSection.Theater = value; }
 

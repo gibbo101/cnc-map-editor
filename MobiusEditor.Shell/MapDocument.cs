@@ -22,7 +22,7 @@ namespace MobiusEditor.Shell
         public IGamePlugin Plugin { get; private set; }
         public string Path { get; private set; }
         public string[] LoadNotes { get; private set; } = Array.Empty<string>();
-        public MapLayerFlag Layers { get; set; } = MapLayerFlag.MapLayers;
+        public MapLayerFlag Layers { get; set; } = MapLayerFlag.GameView;
         public bool IsOpen => Plugin != null;
         public Map Map => Plugin?.Map;
         public string Title => Plugin == null ? "No map"
