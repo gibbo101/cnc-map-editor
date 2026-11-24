@@ -67,6 +67,10 @@ namespace MobiusEditor.Headless
         public string DisplayName { get; set; }
         public string GraphicsSource { get; set; }
         public OverlayTypeFlag Flags { get; set; }
+        /// <summary>HD pixel size the game draws the sprite at, centred on its cell; null fits one cell.</summary>
+        public int? Canvas { get; set; }
+        /// <summary>Frame sets per resource stage; null or 1 is one set.</summary>
+        public int? Layouts { get; set; }
     }
 
     public sealed class ManifestInfantry
@@ -243,6 +247,9 @@ namespace MobiusEditor.Headless
         {
             int id = Required<int>(o, "id");
             if (id < 0 || id > 127) throw new FormatException($"overlay id {id} is outside 0 to 127");
+            int? canvas = (int?)o["canvas"], layouts = (int?)o["layouts"];
+            if (canvas <= 0) throw new FormatException($"overlay canvas {canvas} must be positive");
+            if (layouts <= 0) throw new FormatException($"overlay layouts {layouts} must be positive");
             return new ManifestOverlay
             {
                 Id = id,
@@ -251,6 +258,8 @@ namespace MobiusEditor.Headless
                 DisplayName = (string)o["display_name"],
                 GraphicsSource = (string)o["graphics_source"],
                 Flags = ParseFlags<OverlayTypeFlag>(o["flags"]),
+                Canvas = canvas,
+                Layouts = layouts,
             };
         }
 

@@ -62,6 +62,31 @@ namespace MobiusEditor.Shell.Tests
         }
 
         [Fact]
+        public void EditsBesideOverlaysWiderThanACellMatchAFullRender()
+        {
+            string mod = TestPaths.Output(Path.Combine("fake-mods-overlay", "CanvasShellMod"));
+            Directory.CreateDirectory(Path.Combine(mod, "Data"));
+            File.WriteAllText(Path.Combine(mod, "ccmod.json"), "{ \"name\": \"CanvasShellMod\", \"game_type\": \"RA\", \"version_high\": 1, \"version_low\": 0 }");
+            File.WriteAllText(Path.Combine(mod, "mapeditor.json"), @"{ ""format"": 1, ""game_type"": ""RA"", ""overlays"": [
+                { ""id"": 101, ""name"": ""xbig"", ""display_name"": ""Big"", ""graphics_source"": ""gold04"", ""flags"": [""Tiberium""], ""canvas"": 320 } ] }");
+            using (MapDocument doc = new MapDocument(new MobiusEditor.Headless.EditorSession(TestPaths.GameDir, GameType.RedAlert, new[] { mod })))
+            {
+                doc.Open(Path.Combine(TestPaths.OfficialMapsDir, "scm05ea.ini"));
+                doc.Scale = 1.0 / 16;
+                OverlayType big = doc.AvailableOverlays().Single(o => o.Name == "xbig");
+                for (int x = 30; x < 36; x++) doc.PlaceOverlay(new Point(x, 30), big);
+                using (doc.Render()) { }
+                TemplateType template = doc.AvailableTemplates().First(t => !t.Flags.HasFlag(TemplateTypeFlag.Clear));
+                doc.PlaceTemplate(new Point(32, 31), template);
+                doc.EraseOverlay(new Point(33, 30));
+                using (Bitmap incremental = doc.Render())
+                {
+                    AssertIdentical(incremental, doc);
+                }
+            }
+        }
+
+        [Fact]
         public void NeighborWallHealingIsRepaintedWithoutBeingJournaled()
         {
             using (MapDocument doc = Open())

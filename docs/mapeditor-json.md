@@ -150,6 +150,12 @@ format 1): `remap_table`, `no_image_rule`.
   of its own: density icons, never folded into ore), `TiberiumOrGold` / `Gems` (ore-like or
   gem-like: random variant and density within the mod's own types), `Solid`, `Pavement`,
   `Concrete`, `WoodCrate`, `SteelCrate`, `Unplaceable`.
+- `canvas` — optional, the HD pixel size the game draws the sprite at, centred on its cell (TF's
+  TS Tiberium: 320, i.e. 2.5 cells, as its DLL reports the overlay 60 classic px wide). Without
+  it the sprite is fitted into its one cell, as Mobius draws every overlay.
+- `layouts` — optional, for resources: the art holds that many sets of 12 density stages, and a
+  cell's frame is `stage + 12 * layout`, `layout = ((cell * 2654435761) >> 16) % layouts` in
+  unsigned 32-bit arithmetic, `cell = y * grid width + x`. Without it the frame is the stage.
 - A save writes a mod overlay's own id. Stock ore and gems are folded into one id each for
   compression, as Mobius does; a mod's never are.
 - An overlay id in a map that no loaded manifest declares is kept as an unknown entry and

@@ -360,7 +360,7 @@ namespace MobiusEditor.Render
                     bool paintAsOverlay = overlay.Type.IsOverlay && (layers & MapLayerFlag.Overlay) != MapLayerFlag.None;
                     if (paintAsWall || paintAsResource || paintAsOverlay)
                     {
-                        overlappingRenderList.Add(RenderOverlay(gameInfo, location, map.Bounds, tileSize, tileScale, overlay, false));
+                        overlappingRenderList.Add(RenderOverlay(gameInfo, location, map.Bounds, tileSize, tileScale, overlay, false, map.Metrics.Width));
                         paintedOverlay.Add((overlay, location));
                     }
                 }
@@ -564,20 +564,42 @@ namespace MobiusEditor.Render
             }
         }
 
-        public static RenderInfo RenderOverlay(GameInfo gameInfo, Point topLeft, Rectangle? mapBounds, Size tileSize, double tileScale, Overlay overlay, bool fullOpaque)
+        /// <summary>Where a sprite with a canvas size draws, centred on its cell; null when it fits its one cell.</summary>
+        public static Rectangle? OverlayCanvas(OverlayType type, Point cell, double tileScale)
+        {
+            if (!type.Canvas.HasValue) return null;
+            int size = (int)Math.Round(type.Canvas.Value * tileScale);
+            int cellSize = (int)Math.Round(Globals.OriginalTileWidth * tileScale);
+            return new Rectangle(cell.X * cellSize + cellSize / 2 - size / 2, cell.Y * cellSize + cellSize / 2 - size / 2, size, size);
+        }
+
+        /// <param name="gridWidth">The map's grid width, for frames picked per cell; 0 uses the first layout.</param>
+        public static RenderInfo RenderOverlay(GameInfo gameInfo, Point topLeft, Rectangle? mapBounds, Size tileSize, double tileScale, Overlay overlay, bool fullOpaque, int gridWidth = 0)
         {
             OverlayType ovtype = overlay.Type;
             string name = ovtype.GraphicsSource;
             int icon = ovtype.IsConcrete || ovtype.IsResource || ovtype.IsWall || ovtype.ForceTileNr == -1 ? overlay.Icon : ovtype.ForceTileNr;
+            if (ovtype.IsResource && gridWidth > 0)
+            {
+                icon = ovtype.FrameFor(icon, topLeft.Y * gridWidth + topLeft.X);
+            }
             bool isTeleport = gameInfo != null && gameInfo.GameType == GameType.SoleSurvivor && ovtype == SoleSurvivor.OverlayTypes.Teleport && Globals.AdjustSoleTeleports;
             bool success = Globals.TheTilesetManager.GetTileData(name, icon, out Tile tile, true, false);
             if (tile != null && tile.Image != null)
             {
                 int actualTopLeftX = topLeft.X * tileSize.Width;
                 int actualTopLeftY = topLeft.Y * tileSize.Height;
-                Rectangle overlayBounds = RenderBounds(tile.Image.Size, new Size(1, 1), tileScale);
-                overlayBounds.X += actualTopLeftX;
-                overlayBounds.Y += actualTopLeftY;
+                Rectangle overlayBounds;
+                if (OverlayCanvas(ovtype, topLeft, tileScale) is Rectangle canvas)
+                {
+                    overlayBounds = canvas;
+                }
+                else
+                {
+                    overlayBounds = RenderBounds(tile.Image.Size, new Size(1, 1), tileScale);
+                    overlayBounds.X += actualTopLeftX;
+                    overlayBounds.Y += actualTopLeftY;
+                }
                 float alphaFactor = 1.0f;
                 if (!fullOpaque && overlay.IsPreview)
                 {

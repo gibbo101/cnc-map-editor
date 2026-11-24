@@ -58,6 +58,19 @@ namespace MobiusCore.Tests
         }
 
         [Fact]
+        public void AnOverlayCanGiveItsCanvasAndLayouts()
+        {
+            List<string> warnings = new List<string>();
+            ModManifest m = ModManifest.Parse(@"{ ""format"": 1, ""game_type"": ""RA"", ""overlays"": [
+                { ""id"": 28, ""name"": ""tibts"", ""display_name"": ""TS Tiberium"", ""flags"": [""Tiberium""], ""canvas"": 320, ""layouts"": 8 },
+                { ""id"": 29, ""name"": ""xbad"", ""display_name"": ""Bad"", ""canvas"": 0 } ] }", "TF", warnings);
+            ManifestOverlay tib = Assert.Single(m.Overlays);
+            Assert.Equal(320, tib.Canvas);
+            Assert.Equal(8, tib.Layouts);
+            Assert.Contains(warnings, w => w.Contains("xbad"));
+        }
+
+        [Fact]
         public void TheMapSectionDeclaresTheBigGrid()
         {
             List<string> warnings = new List<string>();

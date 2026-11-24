@@ -74,6 +74,19 @@ namespace MobiusEditor.Model
         public int ForceTileNr { get; private set; }
         /// <summary>The mod whose manifest supplied this type; null for the game's own.</summary>
         public string ModSource { get; set; }
+        /// <summary>HD pixel size the game draws the sprite at, centred on its cell; null fits one cell.</summary>
+        public int? Canvas { get; set; }
+        /// <summary>Frame sets per resource stage, picked per cell by <see cref="FrameFor"/>.</summary>
+        public int Layouts { get; set; } = 1;
+        public const int StagesPerLayout = 12;
+
+        /// <summary>The art frame for a stage on a cell: stage + 12 * ((cell * 2654435761) >> 16) % Layouts, in 32-bit arithmetic.</summary>
+        public int FrameFor(int stage, int cell)
+        {
+            if (Layouts <= 1) return stage;
+            uint layout = (unchecked((uint)cell * 2654435761u) >> 16) % (uint)Layouts;
+            return stage + StagesPerLayout * (int)layout;
+        }
         public bool[,] OccupyMask => new bool[1, 1] { { true } };
         public bool[,] BaseOccupyMask => new bool[1, 1] { { true } };
         public bool[,][] OverlapMask => new bool[1, 1][] { { new bool[] { false, false, false, false, false } } };

@@ -51,7 +51,7 @@ namespace MobiusEditor.Headless
             Merge(vanilla, manifests, m => Infantry(m).OrderBy(i => i.ID), i => i.ID, i => i.Name, "infantry", warnings);
 
         public static List<OverlayType> Overlays(ModManifest manifest) =>
-            manifest.Overlays.Select(o => new OverlayType(o.Id, o.Name, o.DisplayName ?? o.TextId, o.Flags, o.GraphicsSource, -1) { ModSource = manifest.ModName }).ToList();
+            manifest.Overlays.Select(o => new OverlayType(o.Id, o.Name, o.DisplayName ?? o.TextId, o.Flags, o.GraphicsSource, -1) { ModSource = manifest.ModName, Canvas = o.Canvas, Layouts = o.Layouts ?? 1 }).ToList();
 
         public static List<OverlayType> MergeOverlays(IEnumerable<OverlayType> vanilla, IEnumerable<ModManifest> manifests, List<string> warnings) =>
             Merge(vanilla, manifests, m => Overlays(m).OrderBy(o => o.ID), o => o.ID, o => o.Name, "overlay", warnings);

@@ -1203,7 +1203,7 @@ namespace MobiusEditor.Shell
             Size tile = TileSize;
             int width = Map.Metrics.Width * tile.Width, height = Map.Metrics.Height * tile.Height;
             bool reusable = renderCacheValid && renderCache != null && renderCacheScale == Scale && renderCacheLayers == Layers
-                && renderCache.Width == width && renderCache.Height == height;
+                && renderCache.Width == width && renderCache.Height == height && !NearWideOverlay();
             if (!reusable)
             {
                 renderCache?.Dispose();
@@ -1296,6 +1296,26 @@ namespace MobiusEditor.Shell
             {
                 if (Map.Metrics.GetLocation(cell, out Point location)) dirtyCells.Add(location);
             }
+        }
+
+        /// <summary>
+        /// True when an overlay drawn wider than its cell sits within two cells of an edit: a partial
+        /// repaint would cover the part of its canvas that reaches past the repainted ring.
+        /// </summary>
+        private bool NearWideOverlay()
+        {
+            foreach (Point p in dirtyCells)
+            {
+                for (int dy = -2; dy <= 2; dy++)
+                {
+                    for (int dx = -2; dx <= 2; dx++)
+                    {
+                        Point n = new Point(p.X + dx, p.Y + dy);
+                        if (n.X >= 0 && n.Y >= 0 && n.X < Map.Metrics.Width && n.Y < Map.Metrics.Height && Map.Overlay[n]?.Type.Canvas != null) return true;
+                    }
+                }
+            }
+            return false;
         }
 
         private HashSet<Point> ExpandedDirtyCells()

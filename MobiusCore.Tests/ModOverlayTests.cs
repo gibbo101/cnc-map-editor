@@ -41,6 +41,39 @@ namespace MobiusCore.Tests
             return mod;
         }
 
+        [Theory]
+        [InlineData(0, 0)]
+        [InlineData(1, 7)]
+        [InlineData(2, 6)]
+        [InlineData(129, 4)]
+        [InlineData(1000, 3)]
+        [InlineData(65535, 1)]
+        public void LayoutsFollowTheCellHash(int cell, int layout)
+        {
+            OverlayType tib = new OverlayType(28, "tibts", "TS Tiberium", OverlayTypeFlag.Tiberium) { Layouts = 8 };
+            Assert.Equal(5 + 12 * layout, tib.FrameFor(5, cell));
+            Assert.Equal(5, new OverlayType(25, "tib01", "Tiberium", OverlayTypeFlag.Tiberium).FrameFor(5, cell));
+        }
+
+        [Fact]
+        public void ACanvasOverlayDrawsPastItsCellCentredOnIt()
+        {
+            string mod = TestPaths.Output(Path.Combine("fake-mods-overlay", "CanvasMod"));
+            Directory.CreateDirectory(Path.Combine(mod, "Data"));
+            File.WriteAllText(Path.Combine(mod, "ccmod.json"), "{ \"name\": \"CanvasMod\", \"game_type\": \"RA\", \"version_high\": 1, \"version_low\": 0 }");
+            File.WriteAllText(Path.Combine(mod, "mapeditor.json"), @"{ ""format"": 1, ""game_type"": ""RA"", ""overlays"": [
+                { ""id"": 101, ""name"": ""xbig"", ""display_name"": ""Big"", ""graphics_source"": ""gold04"", ""flags"": [""Tiberium""], ""canvas"": 384 },
+                { ""id"": 102, ""name"": ""xsmall"", ""display_name"": ""Small"", ""graphics_source"": ""gold04"", ""flags"": [""Tiberium""] } ] }");
+            EditorSession session = new EditorSession(TestPaths.GameDir, GameType.RedAlert, new[] { mod });
+            IGamePlugin plugin = session.Load(Path.Combine(TestPaths.OfficialMapsDir, "scm111ea.ini"), out _);
+            OverlayType big = plugin.Map.OverlayTypes.Single(t => t.Name == "xbig");
+            OverlayType small = plugin.Map.OverlayTypes.Single(t => t.Name == "xsmall");
+            // A 384 px canvas covers three cells, the middle one its own; one cell (128 px) stays within it.
+            Assert.Equal(new System.Drawing.Rectangle(-128, -128, 384, 384), MobiusEditor.Render.MapRenderer.OverlayCanvas(big, new System.Drawing.Point(0, 0), 1.0));
+            Assert.Equal(new System.Drawing.Rectangle(128, 64, 192, 192), MobiusEditor.Render.MapRenderer.OverlayCanvas(big, new System.Drawing.Point(3, 2), 0.5));
+            Assert.Null(MobiusEditor.Render.MapRenderer.OverlayCanvas(small, new System.Drawing.Point(3, 2), 0.5));
+        }
+
         [Fact]
         public void AModOverlayLoadsAsKnownAndKeepsItsIdThroughASave()
         {
