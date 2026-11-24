@@ -719,6 +719,11 @@ namespace MobiusEditor.Render
                 alphaFactor = alphaFactor.Restrict(0, 1);
             }
             BuildingType bType = building.Type;
+            // A mod's building with no art of its own is drawn by the map (its picture or per-map art).
+            if (bType.ModSource != null && !bType.ExistsInTheater)
+            {
+                return new RenderInfo(Point.Empty, null, 0, null, false);
+            }
             string image = String.IsNullOrEmpty(bType.ImageOverride) ? bType.GraphicsSource : bType.ImageOverride;
             int icon = bType.FrameOffset;
             int maxIcon = 0;

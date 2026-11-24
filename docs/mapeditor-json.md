@@ -79,7 +79,10 @@ and validates them; nothing reads them while the random map generator is out of 
   `factory_overlay` — overlay art for factories; `frame_offset` — first art frame.
 - `z_order` — `"default"`, `"paved"` or `"flat"`.
 - `flags` — array of `BuildingTypeFlag` member names: `Factory`, `Bib`, `Fake`, `Turret`,
-  `SingleFrame`, `NoRemap`, `GapGenerator`, `TheaterDependent`, `Wall`, `NoRules`.
+  `SingleFrame`, `NoRemap`, `GapGenerator`, `TheaterDependent`, `Wall`, `NoRules`,
+  `Unplaceable` (never offered in the building palette; the type only round-trips what a map
+  already places). A mod building whose art the editor can't find draws nothing and is kept
+  on load, whatever the theatre.
 - Defaults when omitted: powers/storage/frame_offset `0`, `capturable` false, masks and
   string fields `null`, `flags` empty.
 

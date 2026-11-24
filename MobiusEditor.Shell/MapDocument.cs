@@ -624,7 +624,7 @@ namespace MobiusEditor.Shell
 
         public IReadOnlyList<BuildingType> AvailableBuildings() =>
             Map == null ? (IReadOnlyList<BuildingType>)Array.Empty<BuildingType>()
-                        : Map.BuildingTypes.Where(t => t.ExistsInTheater).ToList();
+                        : Map.BuildingTypes.Where(t => t.ExistsInTheater && !t.Flags.HasFlag(BuildingTypeFlag.Unplaceable)).ToList();
 
         /// <summary>
         /// Places a building with the fork's defaults (placement house, full strength,

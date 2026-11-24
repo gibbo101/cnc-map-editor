@@ -46,6 +46,8 @@ namespace MobiusEditor.Model
         Wall             /**/ = 1 << 9,
         /// <summary>This type typically has no rules present in the rules file, and needs specific checks on that.</summary>
         NoRules          /**/ = 1 << 10,
+        /// <summary>Never offered for placement: the type only round-trips what a map already places.</summary>
+        Unplaceable      /**/ = 1 << 11,
     }
 
     [DebuggerDisplay("{Name}")]

@@ -2481,7 +2481,7 @@ namespace MobiusEditor.RedAlert
                     Map.UnknownEntries.Add(new UnknownEntry("STRUCTURES", kvp.Key, kvp.Value, "unknown type " + tokens[1]));
                     continue;
                 }
-                if (Globals.FilterTheaterObjects && buildingType.IsTheaterDependent && !buildingType.ExistsInTheater)
+                if (Globals.FilterTheaterObjects && buildingType.IsTheaterDependent && !buildingType.ExistsInTheater && buildingType.ModSource == null)
                 {
                     errors.Add(String.Format("Structure '{0}' is not available in the set theater; skipping.", buildingType.Name));
                     modified = true;
@@ -2666,7 +2666,7 @@ namespace MobiusEditor.RedAlert
                     modified = true;
                     continue;
                 }
-                if (Globals.FilterTheaterObjects && buildingType.IsTheaterDependent && !buildingType.ExistsInTheater)
+                if (Globals.FilterTheaterObjects && buildingType.IsTheaterDependent && !buildingType.ExistsInTheater && buildingType.ModSource == null)
                 {
                     errors.Add(String.Format("Base rebuild entry {0} references structure '{1}' which is not available in the set theater; skipping.", key, buildingType.Name));
                     modified = true;

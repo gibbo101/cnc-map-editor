@@ -268,6 +268,9 @@ unknown entries.
 so TS Tiberium draws as the game's carpet; an edit within two cells of such an overlay redraws
 the whole map.
 
+**Also:** a mod building with no art (TF's RA2CIV, id 163, drawn by the map) loads in any
+theatre, draws nothing and saves back; the manifest flag `Unplaceable` keeps it off the palette.
+
 **Open, in order:** (1) TF adds `canvas: 320, layouts: 8` to tibts/tibtsblue (asked); its `map`
 key is on ts-maps (73596fe4c); ts-maps reaches TF main, then rerun against TF's main build. (2) TF
 session to confirm the carpet matches the game. (3) The manual: the held map-editor section gains tile patches, overlays and big maps;
