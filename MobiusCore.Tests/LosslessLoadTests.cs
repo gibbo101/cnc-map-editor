@@ -3,6 +3,7 @@ using System.Linq;
 using MobiusEditor.Headless;
 using MobiusEditor.Interface;
 using MobiusEditor.Model;
+using MobiusEditor.Utility;
 using Xunit;
 
 namespace MobiusCore.Tests
@@ -51,6 +52,31 @@ namespace MobiusCore.Tests
             int idx = System.Array.IndexOf(saved, "[" + section + "]");
             Assert.True(idx >= 0, "no [" + section + "] in saved map");
             Assert.Contains(saved.Skip(idx + 1).TakeWhile(l => !l.StartsWith("[")), l => l.EndsWith(savedLineSuffix));
+        }
+
+        [Fact]
+        public void UnknownOverlayIdsSurviveSaveAndAreReported()
+        {
+            INI ini = new INI();
+            ini.Parse(File.ReadAllText(Path.Combine(TestPaths.OfficialMapsDir, "scm111ea.ini")));
+            CellMetrics metrics = new CellMetrics(128, 128);
+            bool modified = false;
+            byte[] overlay = INITools.DecompressLCWSection(ini["OverlayPack"], metrics, 1, new System.Collections.Generic.List<string>(), ref modified);
+            const int cell = 60 * 128 + 60;
+            overlay[cell] = 100;
+            ini.Sections.Remove("OverlayPack");
+            INITools.CompressLCWSection(ini.Sections.Add("OverlayPack"), overlay);
+            string path = TestPaths.Output("unknown-overlay.ini");
+            File.WriteAllText(path, ini.ToString());
+
+            IGamePlugin plugin = EditorHost.Shared.Load(path, out _);
+            Assert.Contains(plugin.Map.UnknownEntries, u => u.Section == "OverlayPack" && u.Key == cell.ToString() && u.Value == "100");
+            string outPath = TestPaths.Output("unknown-overlay-saved.ini");
+            plugin.Save(outPath, FileType.INI);
+            INI saved = new INI();
+            saved.Parse(File.ReadAllText(outPath));
+            byte[] savedOverlay = INITools.DecompressLCWSection(saved["OverlayPack"], metrics, 1, new System.Collections.Generic.List<string>(), ref modified);
+            Assert.Equal(100, savedOverlay[cell]);
         }
 
         [Fact]

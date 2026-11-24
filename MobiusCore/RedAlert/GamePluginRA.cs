@@ -2811,15 +2811,8 @@ namespace MobiusEditor.RedAlert
                 OverlayType overlayType = Map.OverlayTypes.Where(t => t.Equals(overlayId)).FirstOrDefault();
                 if (overlayType == null)
                 {
-                    if (point.Y == 0 || point.Y == lastLine)
-                    {
-                        errors.Add(String.Format("Overlay can not be placed on the first and last lines of the map. Cell: '{0}', Id: '{1}' (unknown); skipping.", i, overlayId));
-                    }
-                    else
-                    {
-                        errors.Add(String.Format("Overlay ID {0} references unknown overlay.", overlayId));
-                    }
-                    modified = true;
+                    errors.Add(String.Format("Overlay ID {0} at cell {1} references unknown overlay; kept as-is.", overlayId, i));
+                    Map.UnknownEntries.Add(new UnknownEntry("OverlayPack", i.ToString(), overlayId.ToString(), "unknown overlay id " + overlayId));
                     continue;
                 }
                 if (point.Y == 0 || point.Y == lastLine)
@@ -4433,6 +4426,9 @@ namespace MobiusEditor.RedAlert
         {
             byte? goldToUse = (byte?)Map.OverlayTypes.FirstOrDefault(ovl => ovl.IsTiberiumOrGold)?.ID;
             byte? gemToUse = (byte?)Map.OverlayTypes.FirstOrDefault(ovl => ovl.IsGem)?.ID;
+            // Unknown ids go back where they were, unless a known overlay has since taken the cell.
+            Dictionary<int, byte> unknownOverlay = Map.UnknownEntries.Where(u => u.Section == "OverlayPack")
+                .ToDictionary(u => int.Parse(u.Key), u => byte.Parse(u.Value));
             byte[] overlayPack;
             using (MemoryStream stream = new MemoryStream())
             {
@@ -4459,7 +4455,7 @@ namespace MobiusEditor.RedAlert
                             }
                             else
                             {
-                                writer.Write(Byte.MaxValue);
+                                writer.Write(unknownOverlay.TryGetValue(y * Map.Metrics.Width + x, out byte unknownId) ? unknownId : Byte.MaxValue);
                             }
                         }
                     }
