@@ -270,6 +270,11 @@ the whole map.
 
 **Also:** a mod building with no art (TF's RA2CIV, id 163, drawn by the map) loads in any
 theatre, draws nothing and saves back; the manifest flag `Unplaceable` keeps it off the palette.
+TF's converter cuts each RA2 building's body out of the picture (TF `ra2-maps`,
+`docs/ra2-theatres.md`), so the editor likely shows only its shadow. **Waiting on Luke:** the
+editor draws them from the map's own `[TFCivilianArt]` ZIPs + `[TFCivilians]` rectangles
+(recommended), or TF makes each RA2 building its own type with shared art. Oracle and App tiers
+not rerun since this change.
 
 **Open, in order:** (1) TF adds `canvas: 320, layouts: 8` to tibts/tibtsblue (asked); its `map`
 key is on ts-maps (73596fe4c); ts-maps reaches TF main, then rerun against TF's main build. (2) TF
